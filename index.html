@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 V3.3…</div>
 <script>
 'use strict';
 const frame=document.getElementById('legacy');
@@ -89,13 +89,34 @@ function boot(win,doc){
     if (targetNew) {
       e.preventDefault(); e.stopPropagation();
       win.showConfirm('重新开始', '确定要完全重新开始吗？将清空所有进度、手机聊天记录和个人设定。', () => {
+        // 1) 手机端数据
         localStorage.removeItem('sft_phone_v1');
         for (let i = localStorage.length - 1; i >= 0; i--) {
           const key = localStorage.key(i);
           if (key && key.startsWith('sft_phone_story_')) localStorage.removeItem(key);
         }
-        if(win.STORE) localStorage.removeItem(win.STORE);
-        window.top.location.reload();
+
+        // 2) 游戏主存档
+        //    legacy.html 中的 STORE 是顶层 const，不会挂到 window 上，
+        //    因此不能直接用 win.STORE；用 win.eval 在 iframe 内部作用域读取，
+        //    并保留一个兜底键名，确保一定能删掉存档。
+        let storeKey = '';
+        try { storeKey = win.eval('typeof STORE === "string" ? STORE : ""'); } catch (err) {}
+        if (!storeKey) storeKey = 'yueying-visual-novel-v16';
+        localStorage.removeItem(storeKey);
+
+        // 3) 其它本地资源（自定义字体）
+        localStorage.removeItem('yueying-custom-font');
+
+        // 4) 重启
+        try {
+          window.top.location.reload();
+        } catch (err) {
+          try {
+            document.getElementById('boot').classList.remove('hide');
+            frame.src = './legacy.html?v=' + Date.now();
+          } catch (e2) { location.reload(); }
+        }
       });
       return;
     }
@@ -309,7 +330,7 @@ function boot(win,doc){
 
     injectScript('./story-engine.js');
     injectScript('./js/mvu.js');
-    console.log('[启动器] V3.2 注入成功');
+    console.log('[启动器] V3.3 注入成功');
   });
 }
 </script>
