@@ -315,6 +315,11 @@ function boot(win,doc){
     syncStateToParent();
     setInterval(syncStateToParent,3000);
     if(typeof win.renderScene==='function')win.renderScene();
+    
+    // 【新增】巡逻机制：每秒钟检查一次，如果手机按钮被原版逻辑覆盖了，就立刻补回去
+    setInterval(() => {
+      installPhoneUI();
+    }, 1000);
   });
 }
 </script>

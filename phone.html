@@ -106,6 +106,7 @@ html,body{height:100%;width:100%;background:#111;overflow:hidden;color:var(--tex
 .btn.ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--line);}
 .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
 .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s;}
+.modal-mask[hidden]{display:none !important;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 .modal-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:400px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:slideUp .25s var(--ease);}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
