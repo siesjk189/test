@@ -39,13 +39,12 @@ function boot(win,doc){
     if(!doc.getElementById('phoneOverlay')){
       const ov=doc.createElement('div');ov.id='phoneOverlay';ov.hidden=true;
       ov.style.cssText='position:fixed;inset:0;z-index:9997;background:#111;display:flex;align-items:center;justify-content:center;';
-      // 缓存时间戳，防止手机浏览器死缓存
-      ov.innerHTML='<iframe id="phoneFrame" src="./phone.html?v='+Date.now()+'" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
+      ov.innerHTML='<iframe id="phoneFrame" src="./phone.html?v=10" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
       doc.body.appendChild(ov);
     }
   }
 
-  // 【核心修复】直接 Eval 注入，强行突破所有浏览器的跨域限制
+  // 拦截手机按钮
   doc.addEventListener('click', (e) => {
     const target = e.target.closest('[data-action="open-phone"]');
     if (target) {
@@ -54,7 +53,6 @@ function boot(win,doc){
       const f = doc.getElementById('phoneFrame');
       if (f && f.contentWindow) {
         try {
-          // 准备头像数据
           const imgs = win.state.images || [];
           (win.state.characters || []).forEach(c => {
             if(!c.portraitUrl) {
@@ -71,10 +69,29 @@ function boot(win,doc){
             mvu: win.state.mvu,
             settings: win.state.settings
           };
-          // 暴力注入，同源下 100% 成功
           f.contentWindow.eval(`if(window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
         } catch(err) { console.warn('同步失败', err); }
       }
+    }
+  }, true);
+
+  // 拦截“重新开始”按钮，彻底清空所有数据并刷新页面
+  doc.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action="new-story"]');
+    if (target) {
+      e.preventDefault();
+      e.stopPropagation();
+      win.showConfirm('重新开始', '确定要完全重新开始吗？将清空所有进度、手机聊天记录和个人设定（公告无需重看）。', () => {
+        localStorage.removeItem('sft_phone_v1');
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sft_phone_story_')) {
+            localStorage.removeItem(key);
+          }
+        }
+        if(win.STORE) localStorage.removeItem(win.STORE);
+        window.top.location.reload();
+      });
     }
   }, true);
 
@@ -223,15 +240,17 @@ function boot(win,doc){
   function hookCore(){
     const origRenderScene=win.renderScene;
     win.renderScene=function(){
-      // 拦截默认开场剧情：给秦梧加好友
-      const current = win.state.story[win.state.cursor];
-      if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
-        const p = getPhoneData();
-        p.contacts = p.contacts || [];
-        if (!p.contacts.includes('qinwu')) {
-          p.contacts.push('qinwu');
-          localStorage.setItem('sft_phone_v1', JSON.stringify(p));
-          if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
+      // 【安全加固】防止空数据导致崩溃
+      if(win.state && win.state.story && win.state.story.length > 0) {
+        const current = win.state.story[win.state.cursor];
+        if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
+          const p = getPhoneData();
+          p.contacts = p.contacts || [];
+          if (!p.contacts.includes('qinwu')) {
+            p.contacts.push('qinwu');
+            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+            if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
+          }
         }
       }
 
@@ -252,11 +271,14 @@ function boot(win,doc){
 
     const origRenderHome=win.renderHome;
     win.renderHome=function(){
-      if(!isStoryMode())return origRenderHome.call(this);
+      if(!isStoryMode()) {
+        // AI 模式下：完全去掉了“继续剧情”，只保留面板
+        return `<p class="section-intro">当前进度 ${win.state.cursor+1} / ${win.state.story.length}。所有数据保存在此浏览器中。</p><div class="menu-grid">${[['save','存档'],['load','读档'],['memory','记忆'],['settings','设定'],['images','立绘库'],['backgrounds','背景库'],['api','API 配置'],['voice','语音配置'],['imageapi','生图 API'],['notice','公告'],['replay','剧情回放']].map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div><div class="actions"><button class="danger-btn" data-action="new-story">重新开始</button></div>`;
+      }
+      
       const menuList=[['notice','公告'],['replay','剧情回放']];
       return `<p class="section-intro">当前处于剧情模式，剧情由所选剧本演绎。</p>
-        <div class="menu-grid">${menuList.map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div>
-        <div class="actions"><button class="primary-btn" data-action="close-panel">继续剧情</button></div>`;
+        <div class="menu-grid">${menuList.map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div>`;
     };
 
     if(typeof win.buildSystem==='function'){
