@@ -657,6 +657,11 @@ function baseState(){
 }
 
 let state=loadState(), panel='home', settingsTab='world', busy=false, summarizing=false, audio=null, persistTimer=null;
+
+// 把 state 暴露给 window（用 getter，保证 state 被重新赋值时仍然同步）
+// 这样 index.html 里的 win.state 才不是 undefined，hookScene 才能立即安装，
+// “获得秦梧联系方式”等基于 state.story 的检测才能正常工作。
+Object.defineProperty(window, 'state', { get: () => state, configurable: true });
 let builtinReady=false, isEditingMap=false, mapDragging=false, dragTarget=null, dragStartX=0, dragStartY=0;
 let panelContext = 'scene';
 
