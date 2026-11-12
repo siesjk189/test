@@ -341,7 +341,7 @@ function saveCharSettings(){
   openChat(curChatId); 
 }
 
-// ★ 核心请求逻辑：加入身份限制与地点判定
+// ★ 核心请求逻辑：结合线下记忆，判定身份，限制地点
 async function callAI(){
   const api=parentApi();
   if(!api.endpoint||!api.key){(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（尚未配置 API）',t:Date.now()});savePhone();renderChat();return;}
@@ -405,7 +405,7 @@ ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location
     for(const inv of invites) {
        // 判断是不是玩家主动发起的邀请（通过看最后一句玩家的话）
        const lastUserMsg = P.chats[curChatId].slice().reverse().find(m => m.r === 'user');
-       const isPlayerInvite = lastUserMsg && (lastUserMsg.c.includes('邀请你去') || lastUserMsg.c.includes('我们去') || lastUserMsg.c.includes('走吧'));
+       const isPlayerInvite = lastUserMsg && (lastUserMsg.c.includes('邀请你去') || lastUserMsg.c.includes('我们去') || lastUserMsg.c.includes('走吧') || lastUserMsg.c.includes('一起去'));
        
        if (isPlayerInvite) {
            // 玩家发起的，AI同意，直接生效，不需要再弹卡片
@@ -436,10 +436,10 @@ ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location
   }
 }
 
-
-// ★ 拦截 AI 瞎编地点
+// ★ 兼容中文全角括号、冒号，防止 AI 格式不对，同时校验地点
 function extractInvites(text,char){
-  const invites=[];const re=/\[约见邀请[:：]([^\]]+)\]/g;
+  const invites=[];
+  const re=/(?:\[|【)约见邀请[:：\s]*([^\]】]+)(?:\]|】)/g;
   const mapLocs = (LOCAL_STATE.mapSpots || []).map(s => s.name);
   
   const cleanText=text.replace(re,(all,body)=>{
@@ -447,15 +447,13 @@ function extractInvites(text,char){
     if(parts.length>=2){
       const location=parts[1];
       
-      // 如果 AI 说的地点不在大地图里（兼容模糊匹配），就不生成卡片
       let isValid = mapLocs.length === 0 || mapLocs.includes(location) || mapLocs.some(l => location.includes(l) || l.includes(location));
       
       if(isValid) {
         const days=Number(parts[2])||0;
         invites.push({id:'inv_'+Date.now()+Math.random().toString(36).slice(2,6),charId:char.id,charName:char.name||parts[0],location,daysFromNow:days,from:'char',createdAt:Date.now()});
-        return ''; // 成功了，把标记从聊天文本里删掉
+        return ''; 
       } else {
-        // 如果 AI 瞎编了地点，不生成卡片，保留文字提醒
         return `（${char.name} 想约你去${location}，但那个地方好像去不了……）`;
       }
     }
@@ -479,20 +477,30 @@ function respondInvite(invId,agree){
   }
 }
 
-// ★ 约见弹窗：只允许选大地图地点
+// ★ 终极修复：直接扒取父窗口的真实地图地点
 function openInviteDialog(){
   if(!curChatId)return;
   const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char)return;
   
-  // 直接从大地图获取你的地点，不再瞎编
-  const locs = (LOCAL_STATE.mapSpots || []).map(s => s.name);
-  if(locs.length === 0) locs.push('学校', '酒吧'); // 兜底
+  let locs = [];
+  try {
+    if (window.parent && window.parent.state && Array.isArray(window.parent.state.mapSpots) && window.parent.state.mapSpots.length > 0) {
+       locs = window.parent.state.mapSpots.map(s => s.name);
+    } 
+    else if (LOCAL_STATE && LOCAL_STATE.mapSpots && LOCAL_STATE.mapSpots.length > 0) {
+       locs = LOCAL_STATE.mapSpots.map(s => s.name);
+    }
+  } catch(e) { console.warn("获取地点失败", e); }
+
+  if(locs.length === 0) {
+    locs = ['学校', '商场', '美食街', '公园', '酒吧', '海滩', '郊外', '居住区', '夜市'];
+  }
   
   const locOpts=locs.map(l=>`<option value="${escAttr(l)}">${escHtml(l)}</option>`).join('');
   openModal('约见角色',`<div class="field"><label>地点</label><select id="inv-loc">${locOpts}</select></div><div class="field"><label>时间</label><select id="inv-when"><option value="0">现在</option><option value="1">1天后</option><option value="3">3天后</option><option value="7">7天后</option></select></div>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-invite">发送邀请</button>`);
 }
 
-// ★ 发送邀请：玩家只是发一句话，由 AI 决定是否发卡片
+// ★ 发送邀请：玩家只是发一句话，由 AI 决定是否发卡片/直接生效
 function submitInvite(){
   const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char){closeModal();return;}
   const loc=document.getElementById('inv-loc').value;const days=Number(document.getElementById('inv-when').value)||0;
@@ -531,7 +539,7 @@ function renderMode(){
   const meetupHtml=P.activeMeetup?`<div class="meetup-card"><div class="mc-title">📅 进行中的约见</div><div class="mc-info">角色：${escHtml(P.activeMeetup.charName)}<br>地点：${escHtml(P.activeMeetup.location)}<br>时间：${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}<br><button class="btn danger" style="margin-top:8px;padding:6px 12px;font-size:12px;" data-action="cancel-meetup">取消约见</button></div></div>`:'<div class="loading">当前没有约见</div>';
   
   box.innerHTML=`
-    <div class="sec"><div class="sec-title">模式</div><div class="row"><button class="mode-btn ${modeAi?'on':''}" onclick="setMode('ai')">AI 自由模式</button><button class="mode-btn ${modeStory?'on':''}" onclick="setMode('story')">剧情模式</button></div><div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7;">${modeAi?'AI 会根据人设与世界书自动续写剧情。':'按所选剧本演绎，支持分支、立绘、场景切换。'}</div></div>
+    <div class="sec"><div class="sec-title">模式</div><div class="row"><button class="mode-btn ${modeAi?'on':''}" onclick="setMode('ai')">自由模式</button><button class="mode-btn ${modeStory?'on':''}" onclick="setMode('story')">剧情模式</button></div><div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7;">${modeAi?'AI 会根据人设与世界书自动续写剧情。':'按所选剧本演绎，支持分支、立绘、场景切换。'}</div></div>
     <div class="sec"><div class="sec-title">我的资料</div>
       <div class="field"><label>头像链接</label><input value="${escAttr(prof.avatar)}" placeholder="https://..." oninput="setProfile('avatar',this.value)"></div>
       <div class="field"><label>聊天背景图链接</label><input value="${escAttr(prof.chatBg)}" placeholder="https://...（留空为纯色）" oninput="setProfile('chatBg',this.value)"></div>
