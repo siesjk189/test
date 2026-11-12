@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
+<title>手机</title>
+<style>
+:root{--p-ink:oklch(0.16 0.018 255);--p-paper:oklch(0.96 0.008 240);--p-blue:oklch(0.65 0.16 250);--radius:8px;--ease:cubic-bezier(.25,1,.5,1);--success:oklch(0.65 0.16 145);--danger:oklch(0.7 0.16 25);}
+body.theme-dark{--bg:oklch(0.16 0.018 255);--text:oklch(0.96 0.008 240);--muted:oklch(0.72 0.018 250);--surface:oklch(0.21 0.022 255 / .94);--surface-2:oklch(0.27 0.025 255 / .8);--glass:oklch(0.15 0.02 255 / .8);--line:oklch(0.8 0.025 250 / .18);--accent:oklch(0.65 0.16 250);--bubble-ai:oklch(0.25 0.03 255);--bubble-user:oklch(0.35 0.12 145);--bubble-text:oklch(0.96 0.008 240);}
+body.theme-light{--bg:oklch(0.94 0.01 240);--text:oklch(0.16 0.018 255);--muted:oklch(0.45 0.025 250);--surface:oklch(0.98 0.008 240 / .94);--surface-2:oklch(0.92 0.015 240 / .8);--glass:oklch(0.98 0.008 240 / .85);--line:oklch(0.16 0.018 255 / .15);--accent:oklch(0.5 0.15 250);--bubble-ai:oklch(1 0 0);--bubble-user:oklch(0.85 0.1 145);--bubble-text:oklch(0.16 0.018 255);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:"Noto Serif CJK SC","Source Han Serif SC","Songti SC","Microsoft YaHei",serif;}
+html,body{height:100%;width:100%;background:#111;overflow:hidden;color:var(--text);}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);max-width:520px;margin:0 auto;transition:background .3s,color .3s;}
+#nav{height:52px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;position:relative;backdrop-filter:blur(14px);}
+#nav-title{font-weight:600;font-size:16px;letter-spacing:.05em;}
+#nav-close{position:absolute;left:14px;font-size:20px;cursor:pointer;color:var(--text);background:transparent;border:0;padding:6px;line-height:1;border-radius:50%;transition:background .2s;}
+#nav-close:hover{background:var(--line);}
+#nav-action{position:absolute;right:14px;color:var(--accent);font-size:13px;cursor:pointer;background:transparent;border:0;padding:6px 12px;border-radius:6px;letter-spacing:.05em;}
+#nav-action:hover{background:var(--line);}
+#viewport{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.page{display:none;min-height:100%;}
+.page.active{display:block;}
+.cell{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface);cursor:pointer;transition:background .2s;}
+.cell:hover{background:var(--surface-2);}
+.avatar{width:48px;height:48px;border-radius:var(--radius);object-fit:cover;background:var(--surface-2);flex-shrink:0;margin-right:12px;}
+.cell-body{flex:1;min-width:0;}
+.cell-name{font-size:15px;color:var(--text);}
+.cell-sub{font-size:12px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.empty{color:var(--muted);text-align:center;padding:60px 20px;font-size:14px;}
+#tabbar{height:60px;flex-shrink:0;display:flex;background:var(--surface);border-top:1px solid var(--line);backdrop-filter:blur(14px);}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--muted);cursor:pointer;gap:3px;letter-spacing:.05em;transition:color .2s;}
+.tab .ico{font-size:18px;}
+.tab.active{color:var(--accent);}
+#chat{position:absolute;inset:0;background:var(--bg) center/cover;z-index:20;display:none;flex-direction:column;max-width:520px;margin:0 auto;}
+#chat::before{content:"";position:absolute;inset:0;background:var(--glass);z-index:-1;backdrop-filter:blur(2px);}
+#chat-nav{height:52px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;position:relative;flex-shrink:0;z-index:2;backdrop-filter:blur(14px);}
+#chat-nav .back{position:absolute;left:12px;font-size:24px;cursor:pointer;padding:6px 12px;}
+#chat-nav .title{width:100%;text-align:center;font-weight:600;font-size:16px;letter-spacing:.05em;}
+#chat-nav .actions{position:absolute;right:12px;display:flex;gap:6px;}
+#chat-nav .actions button{background:var(--surface-2);border:1px solid var(--line);color:var(--text);font-size:12px;padding:6px 12px;border-radius:var(--radius);cursor:pointer;letter-spacing:.05em;}
+#chat-nav .actions button:hover{background:var(--accent);color:var(--p-paper);border-color:var(--accent);}
+#chat-area{flex:1;overflow-y:auto;padding:16px;position:relative;z-index:1;}
+.msg{display:flex;margin-bottom:14px;}
+.msg.user{flex-direction:row-reverse;}
+.msg .avatar{width:38px;height:38px;margin:0 8px;border-radius:6px;}
+.bubble{max-width:72%;padding:10px 14px;font-size:14.5px;line-height:1.6;background:var(--bubble-ai);color:var(--bubble-text);border-radius:10px;word-break:break-word;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.msg.user .bubble{background:var(--bubble-user);}
+.sys-line{text-align:center;margin:10px 0;}
+.sys-line span{display:inline-block;font-size:11px;color:var(--muted);background:var(--surface-2);padding:4px 12px;border-radius:12px;letter-spacing:.05em;}
+.invite-card{margin:8px 38px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;box-shadow:0 4px 16px rgba(0,0,0,.15);}
+.invite-card .ic-title{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:8px;letter-spacing:.05em;}
+.invite-card .ic-info{font-size:13px;color:var(--text);line-height:1.7;margin-bottom:10px;}
+.invite-card .ic-actions{display:flex;gap:8px;}
+.invite-card .ic-actions button{flex:1;padding:8px;font-size:13px;border-radius:6px;border:0;cursor:pointer;letter-spacing:.05em;}
+.invite-card .ic-actions .ok{background:var(--success);color:#fff;}
+.invite-card .ic-actions .no{background:var(--surface-2);color:var(--text);border:1px solid var(--line);}
+#chat-bar{padding:10px;background:var(--surface);border-top:1px solid var(--line);display:flex;gap:8px;flex-shrink:0;z-index:2;}
+#chat-in{flex:1;height:38px;border:1px solid var(--line);border-radius:var(--radius);padding:0 12px;font-size:14px;outline:none;background:var(--surface-2);color:var(--text);font-family:inherit;}
+#chat-in:focus{border-color:var(--accent);}
+#chat-send{padding:0 18px;background:var(--accent);color:var(--p-paper);border:0;border-radius:var(--radius);font-size:14px;cursor:pointer;letter-spacing:.05em;}
+.mo-cover{height:200px;background:var(--surface-2) center/cover;position:relative;margin-bottom:50px;}
+.mo-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.5));}
+.mo-user{position:absolute;right:18px;bottom:-22px;display:flex;align-items:center;gap:12px;z-index:2;}
+.mo-user span{color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);font-weight:600;letter-spacing:.05em;}
+.mo-user img{width:72px;height:72px;border-radius:var(--radius);border:2px solid #fff;object-fit:cover;background:var(--surface-2);box-shadow:0 4px 16px rgba(0,0,0,.3);}
+.post{background:var(--surface);padding:16px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px;}
+.post .avatar{margin:0;}
+.post-body{flex:1;min-width:0;}
+.post-author{color:var(--accent);font-weight:600;font-size:14px;letter-spacing:.05em;}
+.post-text{margin-top:6px;font-size:14.5px;white-space:pre-wrap;line-height:1.7;color:var(--text);}
+.post-time{margin-top:6px;font-size:11px;color:var(--muted);}
+.post-comments{background:var(--surface-2);border-radius:var(--radius);padding:10px 12px;margin-top:10px;font-size:13px;line-height:1.7;color:var(--text);}
+.post-comments .cm{margin-bottom:4px;}
+.post-comments .cm b{color:var(--accent);font-weight:600;}
+.post-actions{display:flex;gap:10px;margin-top:12px;}
+.post-actions button{font-size:12px;padding:5px 12px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line);color:var(--text);cursor:pointer;letter-spacing:.05em;}
+.post-actions button:hover{border-color:var(--accent);color:var(--accent);}
+.sec{padding:16px;background:var(--surface);border-bottom:1px solid var(--line);}
+.sec-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:.05em;}
+.sec-title::before{content:"";width:3px;height:14px;background:var(--accent);border-radius:2px;}
+.row{display:flex;gap:8px;flex-wrap:wrap;}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.field label{font-size:12px;color:var(--muted);letter-spacing:.05em;}
+.field input{width:100%;height:40px;border:1px solid var(--line);border-radius:var(--radius);padding:0 12px;font-size:14px;outline:none;background:var(--surface-2);color:var(--text);font-family:inherit;}
+.field input:focus{border-color:var(--accent);}
+.mode-btn{padding:9px 20px;font-size:13.5px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);color:var(--text);cursor:pointer;transition:.15s;letter-spacing:.05em;}
+.mode-btn.on{border-color:var(--accent);background:var(--accent);color:var(--p-paper);}
+.story-item{display:flex;align-items:center;padding:12px 14px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;border:1px solid var(--line);transition:.15s;}
+.story-item.on{border-color:var(--accent);background:color-mix(in oklab,var(--accent) 15%,var(--surface-2));}
+.story-item .meta{flex:1;min-width:0;}
+.story-item .title{font-size:14px;color:var(--text);font-weight:500;letter-spacing:.05em;}
+.story-item .sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.story-item .badge{font-size:11px;color:var(--accent);background:color-mix(in oklab,var(--accent) 20%,transparent);padding:3px 10px;border-radius:10px;font-weight:500;letter-spacing:.05em;}
+.mat-group{margin-bottom:16px;}
+.mat-group-title{font-size:12px;color:var(--muted);margin-bottom:8px;padding-left:2px;letter-spacing:.05em;}
+.mat-item{padding:12px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:8px;border:1px solid var(--line);}
+.mat-head{display:flex;align-items:center;gap:8px;}
+.mat-name{flex:1;font-size:14px;color:var(--text);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.05em;}
+.mat-toggle{display:flex;gap:4px;flex-shrink:0;}
+.mat-toggle button{padding:5px 12px;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:12px;cursor:pointer;transition:.15s;}
+.mat-toggle button.on{background:var(--accent);color:var(--p-paper);border-color:var(--accent);}
+.mat-custom-input{width:100%;margin-top:10px;height:38px;border:1px solid var(--line);border-radius:6px;padding:0 10px;font-size:13px;outline:none;background:var(--surface);color:var(--text);box-sizing:border-box;font-family:inherit;}
+.mat-custom-input:focus{border-color:var(--accent);}
+.loading{color:var(--muted);font-size:13px;padding:20px 0;text-align:center;}
+.btn{padding:10px 18px;border-radius:var(--radius);border:0;background:var(--accent);color:var(--p-paper);font-size:14px;cursor:pointer;letter-spacing:.05em;}
+.btn.ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--line);}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);width:100%;max-width:400px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:slideUp .25s var(--ease);}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-header h3{font-size:16px;font-weight:600;letter-spacing:.05em;color:var(--text);}
+.modal-header button{background:transparent;border:0;font-size:18px;color:var(--muted);cursor:pointer;padding:4px;line-height:1;}
+.modal-body{padding:18px 20px;overflow-y:auto;font-size:14px;line-height:1.7;color:var(--text);flex:1;}
+.modal-body textarea{width:100%;min-height:100px;border:1px solid var(--line);border-radius:var(--radius);padding:10px;font-size:14px;outline:none;background:var(--surface-2);color:var(--text);font-family:inherit;resize:vertical;box-sizing:border-box;}
+.modal-body textarea:focus{border-color:var(--accent);}
+.modal-body input,.modal-body select{width:100%;height:40px;border:1px solid var(--line);border-radius:var(--radius);padding:0 12px;font-size:14px;outline:none;background:var(--surface-2);color:var(--text);font-family:inherit;box-sizing:border-box;}
+.modal-body input:focus,.modal-body select:focus{border-color:var(--accent);}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;}
+.modal-footer button{padding:9px 18px;font-size:14px;border-radius:var(--radius);cursor:pointer;letter-spacing:.05em;}
+.modal-footer .primary{background:var(--accent);color:var(--p-paper);border:0;}
+.modal-footer .secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--line);}
+.rel-item{padding:12px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:8px;border:1px solid var(--line);}
+.rel-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.rel-names{flex:1;font-size:14px;font-weight:500;color:var(--text);}
+.rel-del{background:transparent;border:0;color:var(--danger);font-size:16px;cursor:pointer;padding:2px 8px;}
+.rel-relation{font-size:12px;color:var(--muted);}
+.meetup-card{padding:12px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:8px;border:1px solid var(--accent);}
+.meetup-card .mc-title{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.05em;}
+.meetup-card .mc-info{font-size:13px;color:var(--text);line-height:1.7;}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:color-mix(in oklab,var(--accent) 20%,transparent);color:var(--accent);letter-spacing:.05em;}
+</style>
+</head>
+<body class="theme-light">
+<div id="app">
+  <div id="nav">
+    <button id="nav-close" onclick="closePhone()">✕</button>
+    <div id="nav-title">消息</div>
+    <button id="nav-action" onclick="navAction()" style="display:none">发布</button>
+  </div>
+  <div id="viewport">
+    <div id="p-msg" class="page active"></div>
+    <div id="p-moments" class="page"></div>
+    <div id="p-mode" class="page"></div>
+  </div>
+  <div id="tabbar">
+    <div class="tab active" data-tab="msg" onclick="switchTab('msg',this)"><span class="ico">💬</span><span>消息</span></div>
+    <div class="tab" data-tab="moments" onclick="switchTab('moments',this)"><span class="ico">🌙</span><span>朋友圈</span></div>
+    <div class="tab" data-tab="mode" onclick="switchTab('mode',this)"><span class="ico">⚙️</span><span>设置</span></div>
+  </div>
+</div>
+
+<div id="chat">
+  <div id="chat-nav">
+    <div class="back" onclick="closeChat()">‹</div>
+    <div class="title" id="chat-title">聊天</div>
+    <div class="actions"><button onclick="openInviteDialog()">约见</button></div>
+  </div>
+  <div id="chat-area"></div>
+  <div id="chat-bar">
+    <input id="chat-in" placeholder="输入消息..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button id="chat-send" onclick="sendChat()">发送</button>
+  </div>
+</div>
+
+<div id="modal" class="modal-mask" hidden>
+  <div class="modal-panel">
+    <div class="modal-header"><h3 id="modalTitle">提示</h3><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const PKEY='sft_phone_v1',MANIFEST_KEY='sft_phone_manifest_cache',BUILTIN_KEY='sft_phone_builtin_materials';
+const STORY_KEY=(id)=>'sft_phone_story_'+id;
+let P=loadPhone();
+function defaultPhone(){return{chats:{},moments:[],mode:'ai',activeStoryId:null,userProfile:{avatar:'',chatBg:'',momentsCover:''},materialOverrides:{},activeMeetup:null,pendingInvites:[],relations:{}};}
+function loadPhone(){try{const o=JSON.parse(localStorage.getItem(PKEY))||{};const base=defaultPhone();return Object.assign(base,o,{userProfile:Object.assign(base.userProfile,o.userProfile||{}),materialOverrides:o.materialOverrides||{},relations:o.relations||{},pendingInvites:o.pendingInvites||[],moments:o.moments||[],chats:o.chats||{}});}catch(e){return defaultPhone();}}
+function savePhone(){try{localStorage.setItem(PKEY,JSON.stringify(P));}catch(e){}}
+
+let MANIFEST=[],BUILTIN_MATS=[];
+async function loadManifest(){try{const c=JSON.parse(localStorage.getItem(MANIFEST_KEY)||'null');if(c)MANIFEST=c;}catch(e){}try{const r=await fetch('./stories/manifest.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();let arr=Array.isArray(j)?j:(j.stories||[]);arr=arr.map((s,i)=>typeof s==='string'?{id:'s'+(i+1),title:s,file:'./stories/'+s+'.txt'}:s);MANIFEST=arr;localStorage.setItem(MANIFEST_KEY,JSON.stringify(MANIFEST));}catch(e){console.warn('[phone] 剧本清单加载失败：',e);}}
+async function loadBuiltinMaterials(){try{const c=JSON.parse(localStorage.getItem(BUILTIN_KEY)||'null');if(c)BUILTIN_MATS=c;}catch(e){}try{const r=await fetch('./materials/builtin.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();BUILTIN_MATS=Array.isArray(j)?j:(j.materials||[]);localStorage.setItem(BUILTIN_KEY,JSON.stringify(BUILTIN_MATS));}catch(e){console.warn('[phone] 内置素材加载失败：',e);}}
+
+const PW=window.parent;
+function parentState(){try{return PW.state||{};}catch(e){return{};}}
+function parentChars(){return parentState().characters||[];}
+function parentPlayer(){return parentState().player||{};}
+function parentApi(){return parentState().api||{};}
+function parentMvu(){return parentState().mvu||{};}
+function parentEnableMvu(){const s=parentState();return !!(s.settings&&s.settings.enableMVU);}
+function applyTheme(){const s=parentState();const theme=(s.settings&&s.settings.theme)||'light';document.body.className='theme-'+theme;}
+function mvuCurrentDay(){const m=parentMvu();const d=(m['基础信息']&&m['基础信息']['日期'])||{};return (Number(d['年'])||3000)*360+(Number(d['月'])||1)*30+(Number(d['日'])||1);}
+function mvuCharFav(n){const m=parentMvu();const f=m['好感度']||{};return Number(f[n])||0;}
+
+let curTab='msg';
+function switchTab(tab,el){curTab=tab;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('p-'+tab).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('nav-title').textContent={msg:'消息',moments:'朋友圈',mode:'设置'}[tab];document.getElementById('nav-action').style.display=tab==='moments'?'block':'none';if(tab==='msg')renderMsgList();if(tab==='moments')renderMoments();if(tab==='mode')renderMode();}
+function navAction(){if(curTab==='moments')postMoment();}
+function closePhone(){try{PW.closePhoneOverlay?PW.closePhoneOverlay():(PW.document.getElementById('phoneOverlay').hidden=true);}catch(e){}}
+async function phoneRefresh(){applyTheme();await loadManifest();await loadBuiltinMaterials();switchTab(curTab,document.querySelector('.tab.active'));}
+window.phoneRefresh=phoneRefresh;
+
+function escHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function escAttr(s){return escHtml(s).replace(/`/g,'');}
+function openModal(title,bodyHtml,footerHtml){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=bodyHtml;document.getElementById('modalFooter').innerHTML=footerHtml||'';document.getElementById('modal').hidden=false;}
+function closeModal(){document.getElementById('modal').hidden=true;}
+function toast(msg){const el=document.createElement('div');el.style.cssText='position:fixed;top:30px;left:50%;transform:translateX(-50%);background:var(--surface);color:var(--text);padding:10px 20px;border-radius:var(--radius);border:1px solid var(--line);z-index:200;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.3);';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2200);}
+
+function renderMsgList(){const chars=parentChars();const box=document.getElementById('p-msg');if(!chars.length){box.innerHTML='<div class="empty">主界面还没有角色</div>';return;}box.innerHTML=chars.map(c=>{const list=P.chats[c.id]||[];const last=list.length?list[list.length-1]:null;const sub=last?(last.c||'').slice(0,22):'还没有聊过';const hasPending=(P.pendingInvites||[]).find(inv=>String(inv.charId)===String(c.id)&&inv.from==='char');const badge=hasPending?' <span class="tag">约见</span>':'';return `<div class="cell" onclick="openChat('${c.id}')"><img class="avatar" src="${escAttr(c.portraitUrl||c.a||'')}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="cell-body"><div class="cell-name">${escHtml(c.name||'')}${badge}</div><div class="cell-sub">${escHtml(sub)}</div></div></div>`;}).join('');}
+
+let curChatId=null;
+function openChat(id){curChatId=id;const c=parentChars().find(x=>String(x.id)===String(id));document.getElementById('chat-title').textContent=c?(c.name||''):'聊天';const chatEl=document.getElementById('chat');chatEl.style.backgroundImage=P.userProfile.chatBg?`url('${escAttr(P.userProfile.chatBg)}')`:'none';chatEl.style.display='flex';renderChat();}
+function closeChat(){document.getElementById('chat').style.display='none';curChatId=null;}
+function renderChat(){const box=document.getElementById('chat-area');const list=P.chats[curChatId]||[];const c=parentChars().find(x=>String(x.id)===String(curChatId));const avatarC=c?(c.portraitUrl||c.a||''):'';const avatarMe=P.userProfile.avatar||'';let invitesHtml='';const pendingForThis=(P.pendingInvites||[]).filter(inv=>String(inv.charId)===String(curChatId)&&inv.from==='char');for(const inv of pendingForThis){invitesHtml+=`<div class="invite-card"><div class="ic-title">📅 ${escHtml(inv.charName)} 邀请你线下见面</div><div class="ic-info">地点：${escHtml(inv.location)}<br>时间：${inv.daysFromNow===0?'现在':inv.daysFromNow+'天后'}</div><div class="ic-actions"><button class="ok" onclick="respondInvite('${inv.id}',true)">同意</button><button class="no" onclick="respondInvite('${inv.id}',false)">拒绝</button></div></div>`;}box.innerHTML=invitesHtml+list.map(m=>{if(m.r==='sys')return `<div class="sys-line"><span>${escHtml(m.c)}</span></div>`;const isUser=m.r==='user';const av=isUser?avatarMe:avatarC;return `<div class="msg ${isUser?'user':''}"><img class="avatar" src="${escAttr(av)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="bubble">${escHtml(m.c)}</div></div>`;}).join('');box.scrollTop=box.scrollHeight;}
+
+async function sendChat(){if(!curChatId)return;const input=document.getElementById('chat-in');const text=input.value.trim();if(text){input.value='';(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'user',c:text,t:Date.now()});savePhone();renderChat();}await callAI();}
+
+async function callAI(){const api=parentApi();if(!api.endpoint||!api.key){(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（尚未配置 API）',t:Date.now()});savePhone();renderChat();return;}const c=parentChars().find(x=>String(x.id)===String(curChatId))||{};const me=parentPlayer();const hist=(P.chats[curChatId]||[]).slice(-20).filter(m=>m.r!=='sys').map(m=>({role:m.r==='user'?'user':'assistant',content:m.c}));const relLines=[];if(P.relations[curChatId]){for(const oid in P.relations[curChatId]){const r=P.relations[curChatId][oid];if(!r.known)continue;const o=parentChars().find(x=>String(x.id)===String(oid));if(o)relLines.push(`你认识的 ${o.name}：${r.relation||'认识'}`);}}const sys=`你正在扮演${c.name||'角色'}，通过手机微信和用户聊天。用户名字是"${me.name||'你'}"。\n性格设定：${(c.personality||c.description||'').slice(0,600)}\n${relLines.length?'【你认识的人】\n'+relLines.join('\n'):''}\n${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location}（${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}）\n`:''}\n要求：\n- 只发纯文字消息，不用括号描述动作，每次 1~3 条短消息，每条不超过 30 字。\n- 如果想约玩家见面，请输出 [约见邀请:${c.name||'角色'}|地点|天数(0=现在,1=1天后)]，然后不要重复描述此事。`;(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（对方正在输入…）',t:Date.now()});savePhone();renderChat();try{const base=api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');const res=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},body:JSON.stringify({model:api.model||'gpt-4o-mini',messages:[{role:'system',content:sys},...hist]})});const data=await res.json();const reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');if(idx>=0)P.chats[curChatId].splice(idx,1);const{cleanText,invites}=extractInvites(reply,c);const lines=cleanText.split(/\n+/).map(s=>s.trim()).filter(Boolean);for(const ln of lines)P.chats[curChatId].push({r:'ai',c:ln,t:Date.now()});for(const inv of invites)P.pendingInvites.push(inv);savePhone();renderChat();}catch(e){const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');if(idx>=0)P.chats[curChatId].splice(idx,1);P.chats[curChatId].push({r:'sys',c:'（回复失败：'+e.message+'）',t:Date.now()});savePhone();renderChat();}}
+
+function extractInvites(text,char){const invites=[];const re=/\[约见邀请[:：]([^\]]+)\]/g;const cleanText=text.replace(re,(all,body)=>{const parts=body.split('|').map(s=>s.trim());if(parts.length>=2){const location=parts[1];const days=Number(parts[2])||0;invites.push({id:'inv_'+Date.now()+Math.random().toString(36).slice(2,6),charId:char.id,charName:char.name||parts[0],location,daysFromNow:days,from:'char',createdAt:Date.now()});}return '';}).trim();return{cleanText,invites};}
+
+function respondInvite(invId,agree){const idx=(P.pendingInvites||[]).findIndex(x=>x.id===invId);if(idx<0)return;const inv=P.pendingInvites[idx];P.pendingInvites.splice(idx,1);if(agree){P.activeMeetup={id:'meet_'+Date.now(),charId:inv.charId,charName:inv.charName,location:inv.location,daysFromNow:inv.daysFromNow,targetDay:mvuCurrentDay()+inv.daysFromNow,status:'accepted',createdAt:Date.now()};(P.chats[inv.charId]=P.chats[inv.charId]||[]).push({r:'sys',c:`（已接受约见：${inv.location}，${inv.daysFromNow===0?'现在':inv.daysFromNow+'天后'}）`,t:Date.now()});savePhone();renderChat();try{PW.onMeetupAccepted&&PW.onMeetupAccepted(P.activeMeetup);}catch(e){}toast('已接受约见，请打开地图前往约定地点');}else{(P.chats[inv.charId]=P.chats[inv.charId]||[]).push({r:'sys',c:'（你拒绝了这次约见）',t:Date.now()});savePhone();renderChat();}}
+
+function openInviteDialog(){if(!curChatId)return;const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char)return;const locs=BUILTIN_MATS.filter(m=>m.key.startsWith('场景-')).map(m=>m.key.replace('场景-',''));const locOpts=locs.map(l=>`<option value="${escAttr(l)}">${escHtml(l)}</option>`).join('');openModal('约见角色',`<div class="field"><label>地点</label><select id="inv-loc">${locOpts||'<option value="">（仓库中暂无地点）</option>'}</select></div><div class="field"><label>时间</label><select id="inv-when"><option value="0">现在</option><option value="1">1天后</option><option value="3">3天后</option><option value="7">7天后</option></select></div>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitInvite()">发送邀请</button>`);}
+
+function submitInvite(){const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char){closeModal();return;}const loc=document.getElementById('inv-loc').value;const days=Number(document.getElementById('inv-when').value)||0;if(!loc){toast('请选择地点');return;}closeModal();const enableMvu=parentEnableMvu();let agree=true,reason='';if(enableMvu){const fav=mvuCharFav(char.name);const personality=(char.personality||char.description||'');const cold=/冷漠|疏离|内向|冷淡|不近人情|孤僻|高傲/.test(personality);const warm=/热情|开朗|活泼|主动|温柔|友善|大方/.test(personality);let threshold=20;if(cold)threshold=60;else if(warm)threshold=10;if(days===0)threshold+=20;agree=fav>=threshold;reason=`（好感${fav}，阈值${threshold}，${cold?'冷淡':warm?'热情':'普通'}人设）`;}(P.chats[char.id]=P.chats[char.id]||[]).push({r:'user',c:`（邀请你去 ${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});if(agree){P.activeMeetup={id:'meet_'+Date.now(),charId:char.id,charName:char.name,location:loc,daysFromNow:days,targetDay:mvuCurrentDay()+days,status:'accepted',createdAt:Date.now()};P.chats[char.id].push({r:'sys',c:`（对方同意了约见，${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});savePhone();renderChat();try{PW.onMeetupAccepted&&PW.onMeetupAccepted(P.activeMeetup);}catch(e){}toast('约见成功，请打开地图前往约定地点');}else{P.chats[char.id].push({r:'sys',c:`（对方婉拒了这次约见）${reason}`,t:Date.now()});savePhone();renderChat();}}
+
+function renderMoments(){const box=document.getElementById('p-moments');const prof=P.userProfile;const displayName=parentPlayer().name||'我';const cover=prof.momentsCover?`style="background-image:url('${escAttr(prof.momentsCover)}')"`:'';const postsHtml=P.moments.map(m=>{const comments=(m.comments||[]).map(c=>`<div class="cm"><b>${escHtml(c.n)}：</b>${escHtml(c.t)}</div>`).join('');const timeStr=new Date(m.t||Date.now()).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});return `<div class="post"><img class="avatar" src="${escAttr(m.authorAvatar||'')}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="post-body"><div class="post-author">${escHtml(m.authorName||'')}</div><div class="post-text">${escHtml(m.text||'')}</div><div class="post-time">${timeStr}</div>${comments?`<div class="post-comments">${comments}</div>`:''}<div class="post-actions"><button onclick="momentReply('${m.id}')">💬 回复</button><button onclick="momentDelete('${m.id}')">🗑 删除</button></div></div></div>`;}).join('')||'<div class="empty">还没有动态，点右上角「发布」发一条吧</div>';box.innerHTML=`<div class="mo-cover" ${cover}><div class="mo-user"><span>${escHtml(displayName)}</span><img src="${escAttr(prof.avatar)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"></div></div><div style="padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface);"><button class="btn" style="width:100%;" onclick="postMoment()">＋ 发布动态</button></div>${postsHtml}`;}
+
+function postMoment(){openModal('发布动态',`<textarea id="mo-text" placeholder="说点什么..."></textarea>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitMoment()">发布</button>`);}
+function submitMoment(){const text=document.getElementById('mo-text').value.trim();if(!text){toast('内容不能为空');return;}closeModal();P.moments.unshift({id:'m_'+Date.now(),authorName:parentPlayer().name||'我',authorAvatar:P.userProfile.avatar||'',text,t:Date.now(),comments:[]});savePhone();renderMoments();}
+function momentDelete(id){openModal('删除动态',`<p>确定要删除这条动态吗？</p>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="doDeleteMoment('${id}')">删除</button>`);}
+function doDeleteMoment(id){P.moments=P.moments.filter(m=>m.id!==id);savePhone();closeModal();renderMoments();}
+function momentReply(id){const m=P.moments.find(x=>x.id===id);if(!m)return;openModal('回复动态',`<div style="padding:10px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:12px;font-size:13px;color:var(--muted);">${escHtml(m.text||'')}</div><textarea id="cm-text" placeholder="说点什么..."></textarea>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitComment('${id}')">发送</button>`);}
+function submitComment(id){const m=P.moments.find(x=>x.id===id);if(!m)return;const text=document.getElementById('cm-text').value.trim();if(!text){toast('内容不能为空');return;}m.comments=m.comments||[];m.comments.push({n:parentPlayer().name||'我',t:text});savePhone();closeModal();renderMoments();}
+
+function renderMode(){const box=document.getElementById('p-mode');const modeAi=P.mode==='ai';const modeStory=P.mode==='story';const prof=P.userProfile;const storyListHtml=MANIFEST.length?MANIFEST.map(s=>`<div class="story-item ${P.activeStoryId===s.id?'on':''}" onclick="pickStory('${s.id}')"><div class="meta"><div class="title">${escHtml(s.title||s.id)}</div><div class="sub">点击选择并载入</div></div>${P.activeStoryId===s.id?'<div class="badge">已选用</div>':''}</div>`).join(''):'<div class="loading">仓库中未找到剧本</div>';const groups={};BUILTIN_MATS.forEach(m=>{const prefix=(m.key||'').split('-')[0]||'其他';(groups[prefix]=groups[prefix]||[]).push(m);});const matHtml=Object.keys(groups).length?Object.keys(groups).map(g=>`<div class="mat-group"><div class="mat-group-title">${escHtml(g)}</div>${groups[g].map(m=>{const isCustom=!!P.materialOverrides[m.key];const val=P.materialOverrides[m.key]||'';return `<div class="mat-item"><div class="mat-head"><div class="mat-name">${escHtml(m.key)}</div><div class="mat-toggle"><button class="${!isCustom?'on':''}" onclick="setMatMode('${escAttr(m.key)}','builtin')">内置</button><button class="${isCustom?'on':''}" onclick="setMatMode('${escAttr(m.key)}','custom')">自定义</button></div></div>${isCustom?`<input class="mat-custom-input" placeholder="输入自定义图片链接" value="${escAttr(val)}" oninput="onMatInput('${escAttr(m.key)}',this.value)">`:''}</div>`;}).join('')}</div>`).join(''):'<div class="loading">仓库中未找到内置素材</div>';const relHtml=renderRelationsHtml();const meetupHtml=P.activeMeetup?`<div class="meetup-card"><div class="mc-title">📅 进行中的约见</div><div class="mc-info">角色：${escHtml(P.activeMeetup.charName)}<br>地点：${escHtml(P.activeMeetup.location)}<br>时间：${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}<br><button class="btn danger" style="margin-top:8px;padding:6px 12px;font-size:12px;" onclick="cancelMeetup()">取消约见</button></div></div>`:'<div class="loading">当前没有约见</div>';box.innerHTML=`<div class="sec"><div class="sec-title">模式</div><div class="row"><button class="mode-btn ${modeAi?'on':''}" onclick="setMode('ai')">AI 自由模式</button><button class="mode-btn ${modeStory?'on':''}" onclick="setMode('story')">剧情模式</button></div><div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7;">${modeAi?'AI 会根据人设与世界书自动续写剧情。':'按所选剧本演绎，支持分支、立绘、场景切换。'}</div></div><div class="sec"><div class="sec-title">我的资料</div><div class="field"><label>头像链接</label><input value="${escAttr(prof.avatar)}" placeholder="https://..." oninput="setProfile('avatar',this.value)"></div><div class="field"><label>聊天背景图链接</label><input value="${escAttr(prof.chatBg)}" placeholder="https://...（留空为纯色）" oninput="setProfile('chatBg',this.value)"></div><div class="field"><label>朋友圈背景图链接</label><input value="${escAttr(prof.momentsCover)}" placeholder="https://..." oninput="setProfile('momentsCover',this.value)"></div></div><div class="sec"><div class="sec-title">剧本</div>${storyListHtml}</div><div class="sec"><div class="sec-title">素材库</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">每个素材可选择「内置」（仓库提供）或「自定义」（填写自己的链接）。</div>${matHtml}</div><div class="sec"><div class="sec-title">角色关系</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">设置角色之间是否认识、什么关系。角色认识后会在朋友圈中互动。</div>${relHtml}<button class="btn" style="width:100%;margin-top:8px;" onclick="addRelationDialog()">＋ 添加关系</button></div><div class="sec"><div class="sec-title">约见</div>${meetupHtml}</div>`;}
+
+function renderRelationsHtml(){const chars=parentChars();const lines=[];for(const idA in (P.relations||{})){const cA=chars.find(x=>String(x.id)===String(idA));if(!cA)continue;for(const idB in P.relations[idA]){const r=P.relations[idA][idB];if(!r.known)continue;const cB=chars.find(x=>String(x.id)===String(idB));if(!cB)continue;lines.push(`<div class="rel-item"><div class="rel-head"><div class="rel-names">${escHtml(cA.name)} ↔ ${escHtml(cB.name)}</div><button class="rel-del" onclick="deleteRelation('${idA}','${idB}')">✕</button></div><div class="rel-relation">关系：${escHtml(r.relation||'认识')}</div></div>`);}}return lines.length?lines.join(''):'<div class="loading">还没有设置关系</div>';}
+
+function setProfile(key,val){P.userProfile[key]=val;savePhone();}
+function setMode(m){P.mode=m;savePhone();if(m==='ai'){try{PW.closePhoneOverlay&&PW.closePhoneOverlay();PW.renderMainScene&&PW.renderMainScene();}catch(e){}}renderMode();}
+async function pickStory(id){const story=MANIFEST.find(s=>s.id===id);if(!story){toast('剧本未找到');return;}const cache=localStorage.getItem(STORY_KEY(id));if(!cache){try{const r=await fetch(story.file||('./stories/'+id+'.txt'),{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const txt=await r.text();localStorage.setItem(STORY_KEY(id),txt);}catch(e){toast('剧本加载失败：'+e.message);return;}}P.activeStoryId=id;P.mode='story';savePhone();try{PW.startStoryById&&PW.startStoryById(id);PW.closePhoneOverlay&&PW.closePhoneOverlay();}catch(e){console.warn('[phone] 启动剧情失败：',e);}renderMode();}
+function setMatMode(key,mode){if(mode==='builtin')delete P.materialOverrides[key];else if(!P.materialOverrides[key])P.materialOverrides[key]='';savePhone();renderMode();}
+function onMatInput(key,val){P.materialOverrides[key]=val;savePhone();}
+
+function addRelationDialog(){const chars=parentChars();if(chars.length<2){toast('至少需要 2 个角色');return;}const opts=chars.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');openModal('添加角色关系',`<div class="field"><label>角色 A</label><select id="rel-a">${opts}</select></div><div class="field"><label>角色 B</label><select id="rel-b">${opts}</select></div><div class="field"><label>关系描述</label><input id="rel-desc" placeholder="如同班同学、青梅竹马、兄弟..."></div>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitRelation()">保存</button>`);}
+function submitRelation(){const a=document.getElementById('rel-a').value;const b=document.getElementById('rel-b').value;const desc=document.getElementById('rel-desc').value.trim();if(a===b){toast('角色不能相同');return;}if(!desc){toast('请填写关系');return;}P.relations[a]=P.relations[a]||{};P.relations[b]=P.relations[b]||{};P.relations[a][b]={known:true,relation:desc};P.relations[b][a]={known:true,relation:desc};savePhone();closeModal();renderMode();}
+function deleteRelation(a,b){if(P.relations[a])delete P.relations[a][b];if(P.relations[b])delete P.relations[b][a];savePhone();renderMode();}
+function cancelMeetup(){P.activeMeetup=null;savePhone();renderMode();try{PW.onMeetupCancelled&&PW.onMeetupCancelled();}catch(e){}toast('已取消约见');}
+
+window.pushMomentFromMain=function({authorName,authorId,authorAvatar,text}){P.moments.unshift({id:'m_'+Date.now()+Math.random().toString(36).slice(2,6),authorId,authorName,authorAvatar,text,t:Date.now(),comments:[]});savePhone();if(curTab==='moments')renderMoments();};
+window.pushMessageFromMain=function({charId,charName,text}){(P.chats[charId]=P.chats[charId]||[]).push({r:'ai',c:text,t:Date.now()});savePhone();if(curTab==='msg')renderMsgList();};
+
+(async function init(){applyTheme();await loadManifest();await loadBuiltinMaterials();renderMsgList();})();
+</script>
+</body>
+</html>

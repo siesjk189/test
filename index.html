@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1118">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>那什么dk萌</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0d1118;}
+#legacy{display:block;width:100%;height:100dvh;border:0;background:#0d1118;}
+#boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#8b94a8;font:14px/1.6 -apple-system,"PingFang SC",sans-serif;background:#0d1118;z-index:10;transition:opacity .4s;}
+#boot.hide{opacity:0;pointer-events:none;}
+</style>
+</head>
+<body>
+<iframe id="legacy" src="./legacy.html" allow="autoplay; fullscreen"></iframe>
+<div id="boot">正在加载…</div>
+<script>
+'use strict';
+const frame=document.getElementById('legacy');
+frame.addEventListener('load',()=>{
+  try{boot(frame.contentWindow,frame.contentDocument);document.getElementById('boot').classList.add('hide');}
+  catch(e){console.error('[启动器] 注入失败：',e);document.getElementById('boot').textContent='注入失败：'+e.message;}
+});
+
+function boot(win,doc){
+  const ready=()=>win.state&&win.renderScene;
+  const whenReady=(fn)=>{if(ready())return fn();let n=0;const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);};
+
+  function installPhoneUI(){
+    const nav=doc.querySelector('.diamond-nav');
+    if(nav&&!nav.querySelector('[data-action="open-phone"]')){
+      const wrap=doc.createElement('div');wrap.className='diamond-wrap';
+      wrap.innerHTML='<button class="diamond" data-action="open-phone" aria-label="打开手机"><span>手机</span></button>';
+      nav.insertBefore(wrap,nav.firstChild);
+    }
+    if(!doc.getElementById('phoneOverlay')){
+      const ov=doc.createElement('div');ov.id='phoneOverlay';ov.hidden=true;
+      ov.style.cssText='position:fixed;inset:0;z-index:9997;background:#111;display:flex;align-items:center;justify-content:center;';
+      ov.innerHTML='<iframe id="phoneFrame" src="./phone.html" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
+      doc.body.appendChild(ov);
+    }
+  }
+
+  function syncStateToParent(){
+    try{
+      if(!win.state)return;
+      const imgs=win.state.images||[];
+      (win.state.characters||[]).forEach(c=>{
+        if(!c)return;
+        if(c.portraitUrl)return;
+        let url='';
+        if(c.portraitId){const img=imgs.find(i=>i.id===c.portraitId);if(img)url=img.url;}
+        if(!url){const list=imgs.filter(i=>i.character===c.name&&(i.builtIn||i.enabled!==false));if(list.length)url=list[0].url;}
+        c.portraitUrl=url;
+      });
+      win.parent.state=win.state;
+    }catch(e){}
+  }
+
+  function isStoryMode(){
+    try{const raw=localStorage.getItem('sft_phone_v1');if(!raw)return false;return (JSON.parse(raw).mode||'ai')==='story';}
+    catch(e){return false;}
+  }
+  win.isStoryMode=isStoryMode;window.isStoryMode=isStoryMode;
+
+  function getPhoneData(){try{return JSON.parse(localStorage.getItem('sft_phone_v1'))||{};}catch(e){return{};}}
+
+  function injectScript(src,cb){
+    const s=doc.createElement('script');
+    s.src=src;s.onload=()=>cb&&cb();s.onerror=()=>console.warn('[启动器] 脚本加载失败：',src);
+    doc.body.appendChild(s);
+  }
+
+  /* ===== 地图锁定 ===== */
+  function installMapLock(){
+    if(win._mapLockInstalled)return;
+    const orig=win.handleMapSpotClick;
+    if(typeof orig!=='function')return;
+    win.handleMapSpotClick=function(spot){
+      const p=getPhoneData();
+      const meetup=p.activeMeetup;
+      if(meetup&&meetup.status==='accepted'){
+        const enableMvu=win.state&&win.state.settings&&win.state.settings.enableMVU;
+        let locked=true;
+        if(enableMvu&&meetup.targetDay){
+          const m=win.state.mvu||{};
+          const d=(m['基础信息']&&m['基础信息']['日期'])||{};
+          const curDay=(Number(d['年'])||3000)*360+(Number(d['月'])||1)*30+(Number(d['日'])||1);
+          locked=curDay>=meetup.targetDay;
+        }
+        if(locked&&spot.name!==meetup.location){
+          if(typeof win.toast==='function')win.toast(`请前往约定的地点「${meetup.location}」`);
+          return;
+        }
+        if(locked&&spot.name===meetup.location){
+          p.activeMeetup=null;
+          localStorage.setItem('sft_phone_v1',JSON.stringify(p));
+          try{const f=doc.getElementById('phoneFrame');if(f&&f.contentWindow&&f.contentWindow.phoneRefresh)f.contentWindow.phoneRefresh();}catch(e){}
+          if(typeof win.toast==='function')win.toast('已到达约定地点');
+        }
+      }
+      // 剧情模式剧本锁
+      if(isStoryMode()&&win.state.storyPlayback&&win.state.storyPlayback.pendingMap){
+        const allow=win.state.storyPlayback.pendingMap;
+        if(spot.name!==allow){if(typeof win.toast==='function')win.toast(`请先点击「${allow}」`);return;}
+        win.state.storyPlayback.pendingMap=null;
+        if(typeof win.closeMap==='function')win.closeMap();
+        win.state.storyPlayback.lineIndex++;
+        if(typeof win.persist==='function')win.persist();
+        if(typeof win.renderStoryScene==='function')win.renderStoryScene();
+        return;
+      }
+      return orig.call(this,spot);
+    };
+    win._mapLockInstalled=true;
+  }
+
+  /* ===== 手机数据注入 system ===== */
+  function buildPhoneContext(){
+    try{
+      const p=getPhoneData();
+      const chars=win.state.characters||[];
+      const lines=[];
+      lines.push('【手机私聊最近消息】');
+      const chatLines=[];
+      for(const cid in (p.chats||{})){
+        const c=chars.find(x=>String(x.id)===String(cid));
+        if(!c)continue;
+        const list=(p.chats[cid]||[]).filter(m=>m.r!=='sys').slice(-5);
+        if(!list.length)continue;
+        chatLines.push(`--- ${c.name} ---`);
+        list.forEach(m=>chatLines.push(`${m.r==='user'?'玩家':c.name}：${m.c}`));
+      }
+      lines.push(chatLines.join('\n')||'（暂无）');
+      lines.push('\n【朋友圈最近动态】');
+      const moLines=(p.moments||[]).slice(0,5).map(m=>`${m.authorName}：${m.text}`);
+      lines.push(moLines.join('\n')||'（暂无）');
+      lines.push('\n【角色关系】');
+      const relLines=[];
+      for(const idA in (p.relations||{})){
+        const cA=chars.find(x=>String(x.id)===String(idA));
+        if(!cA)continue;
+        for(const idB in p.relations[idA]){
+          const r=p.relations[idA][idB];if(!r.known)continue;
+          const cB=chars.find(x=>String(x.id)===String(idB));if(!cB)continue;
+          relLines.push(`${cA.name} 与 ${cB.name}：${r.relation||'认识'}`);
+        }
+      }
+      lines.push(relLines.join('\n')||'（暂无）');
+      if(p.activeMeetup){
+        lines.push(`\n【当前约见】${p.activeMeetup.charName} 约在 ${p.activeMeetup.location}（${p.activeMeetup.daysFromNow===0?'今天':p.activeMeetup.daysFromNow+'天后'}）`);
+      }
+      return lines.join('\n');
+    }catch(e){return '';}
+  }
+
+  /* ===== 解析 AI 输出的特殊标记 ===== */
+  function parseSpecialMarkers(text){
+    const RE=/\[(朋友圈|消息)[:：]([^\]]+)\]/g;
+    const actions=[];
+    const clean=text.replace(RE,(all,type,body)=>{
+      const parts=body.split('|').map(s=>s.trim());
+      if(parts.length>=2)actions.push({type,parts});
+      return '';
+    }).trim();
+    return {clean,actions};
+  }
+
+  function executeMarkerActions(actions){
+    const p=getPhoneData();
+    const chars=win.state.characters||[];
+    for(const act of actions){
+      const [charName,content]=act.parts;
+      const c=chars.find(x=>x.name===charName);
+      if(!c)continue;
+      if(act.type==='朋友圈'){
+        p.moments=p.moments||[];
+        p.moments.unshift({
+          id:'m_'+Date.now()+Math.random().toString(36).slice(2,6),
+          authorId:c.id,authorName:charName,
+          authorAvatar:c.portraitUrl||c.a||'',
+          text:content,t:Date.now(),comments:[]
+        });
+        if(typeof win.toast==='function')win.toast(`（你注意到手机震了一下，${charName} 发了条朋友圈）`);
+      }else if(act.type==='消息'){
+        p.chats=p.chats||{};
+        (p.chats[c.id]=p.chats[c.id]||[]).push({r:'ai',c:content,t:Date.now()});
+        if(typeof win.toast==='function')win.toast(`（${charName} 给你发了条消息）`);
+      }
+    }
+    localStorage.setItem('sft_phone_v1',JSON.stringify(p));
+    try{const f=doc.getElementById('phoneFrame');if(f&&f.contentWindow&&f.contentWindow.phoneRefresh)f.contentWindow.phoneRefresh();}catch(e){}
+  }
+
+  /* ===== 核心 hook ===== */
+  function hookCore(){
+    const origHandleAction=win.handleAction;
+    win.handleAction=function(action,el){
+      if(action==='open-phone'){
+        doc.getElementById('phoneOverlay').hidden=false;
+        const f=doc.getElementById('phoneFrame');
+        if(f&&f.contentWindow&&f.contentWindow.phoneRefresh)f.contentWindow.phoneRefresh();
+        return;
+      }
+      if(action==='close-phone'){doc.getElementById('phoneOverlay').hidden=true;return;}
+      return origHandleAction.call(this,action,el);
+    };
+
+    const origRenderScene=win.renderScene;
+    win.renderScene=function(){
+      const mapBtn=doc.querySelector('[data-action="open-map"]');
+      if(mapBtn)mapBtn.parentElement.style.display=isStoryMode()?'none':'';
+      if(isStoryMode()&&typeof win.renderStoryScene==='function'){
+        win.renderStoryScene();syncStateToParent();return;
+      }
+      return origRenderScene.call(this);
+    };
+
+    const origRenderPanel=win.renderPanel;
+    win.renderPanel=function(){
+      if(isStoryMode()&&!['home','notice','replay'].includes(win.panel))win.panel='notice';
+      origRenderPanel.call(this);
+      setTimeout(injectMVUToggle,20);
+    };
+
+    const origRenderHome=win.renderHome;
+    win.renderHome=function(){
+      if(!isStoryMode())return origRenderHome.call(this);
+      const menuList=[['notice','公告'],['replay','剧情回放']];
+      return `<p class="section-intro">当前处于剧情模式，剧情由所选剧本演绎。</p>
+        <div class="menu-grid">${menuList.map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div>
+        <div class="actions"><button class="primary-btn" data-action="close-panel">继续剧情</button></div>`;
+    };
+
+    const origPersist=win.persist;
+    win.persist=function(immediate){syncStateToParent();return origPersist.call(this,immediate);};
+
+    if(typeof win.buildSystem==='function'){
+      const origBuild=win.buildSystem;
+      win.buildSystem=function(){
+        const base=origBuild.call(this);
+        const phoneCtx=buildPhoneContext();
+        let prefix='';
+        if(phoneCtx)prefix+=`\n【手机端上下文】\n${phoneCtx}\n`;
+        prefix+='\n【剧情中如果需要角色自发行动，请使用以下标记（不显示给玩家）】\n[朋友圈:角色名|内容]  表示该角色发了一条朋友圈\n[消息:角色名|内容]    表示该角色私聊玩家发了消息\n';
+        if(win.state.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
+        return prefix+base;
+      };
+    }
+
+    if(typeof win.callChat==='function'){
+      const origChat=win.callChat;
+      win.callChat=async function(messages){
+        const reply=await origChat.call(this,messages);
+        let out=reply;
+        if(win.state.settings.enableMVU&&typeof win.mvuParseFromReply==='function'&&typeof win.mvuApplyPatch==='function'){
+          try{
+            const patches=win.mvuParseFromReply(out);
+            if(patches&&patches.length)win.mvuApplyPatch(patches);
+            if(typeof win.mvuStripVariableBlocks==='function')out=win.mvuStripVariableBlocks(out);
+          }catch(e){console.warn('[MVU] 解析失败',e);}
+        }
+        const {clean,actions}=parseSpecialMarkers(out);
+        if(actions.length)executeMarkerActions(actions);
+        return clean;
+      };
+    }
+
+    if(win.state&&win.state.settings&&win.state.settings.enableMVU===undefined){
+      win.state.settings.enableMVU=false;
+    }
+
+    if(typeof win.handleMapSpotClick==='function')installMapLock();
+  }
+
+  function injectMVUToggle(){
+    const status=doc.getElementById('apiStatus');
+    if(!status)return;
+    if(doc.getElementById('mvuToggleRow'))return;
+    const actionsDiv=status.parentElement;
+    if(!actionsDiv||!actionsDiv.parentNode)return;
+    const checked=win.state.settings.enableMVU?'checked':'';
+    const row=doc.createElement('div');
+    row.id='mvuToggleRow';row.className='switch-row';row.style.marginTop='8px';
+    row.innerHTML='<div class="switch-copy"><strong>启用 MVU 变量同步</strong><small>开启后生成剧情会附带当前世界变量，并解析 AI 输出的 UpdateVariable 来推进数值</small></div><label class="switch"><input type="checkbox" id="mvuCheckbox" '+checked+'><span class="switch-ui"></span></label>';
+    actionsDiv.parentNode.insertBefore(row,actionsDiv);
+    doc.getElementById('mvuCheckbox').addEventListener('change',function(e){
+      win.state.settings.enableMVU=e.target.checked;
+      win.persist();
+    });
+  }
+
+  win.parent.startStoryById=function(storyId){
+    if(typeof win.startStoryById==='function')win.startStoryById(storyId);
+  };
+  win.parent.closePhoneOverlay=function(){const ov=doc.getElementById('phoneOverlay');if(ov)ov.hidden=true;};
+  win.parent.renderMainScene=function(){if(typeof win.renderScene==='function')win.renderScene();};
+  win.parent.onMeetupAccepted=function(meetup){
+    if(typeof win.toast==='function')win.toast(`约见已确认：${meetup.location}`);
+    if(isStoryMode())return;
+    installMapLock();
+  };
+  win.parent.onMeetupCancelled=function(){
+    if(typeof win.toast==='function')win.toast('约见已取消');
+  };
+
+  whenReady(()=>{
+    installPhoneUI();
+    hookCore();
+    injectScript('./story-engine.js',()=>console.log('[启动器] story-engine.js 已加载'));
+    injectScript('./js/mvu.js',()=>console.log('[启动器] mvu.js 已加载'));
+    syncStateToParent();
+    setInterval(syncStateToParent,3000);
+    if(typeof win.renderScene==='function')win.renderScene();
+  });
+}
+</script>
+</body>
+</html>

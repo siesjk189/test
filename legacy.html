@@ -1,0 +1,2851 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1118">
+  <link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>那什么dk萌</title>
+<style>
+:root{
+  --p-ink:oklch(0.16 0.018 255);--p-night:oklch(0.22 0.025 255);--p-paper:oklch(0.96 0.008 240);--p-muted:oklch(0.72 0.018 250);--p-blue:oklch(0.65 0.16 250);
+  --bg:var(--p-ink);--surface:oklch(0.21 0.022 255 / .94);--surface-2:oklch(0.27 0.025 255 / .8);--text:var(--p-paper);--muted:var(--p-muted);--accent:var(--p-blue);
+  --line:oklch(0.8 0.025 250 / .18);--glass:oklch(0.15 0.02 255 / .8);--danger:oklch(0.7 0.16 25);--radius:8px;--ease:cubic-bezier(.25,1,.5,1);
+  --ui-scale: 1;
+}
+*{box-sizing:border-box;margin:0;padding:0}html,body{width:100%;min-height:100dvh;overflow:hidden;touch-action:manipulation}
+body.panel-open{overflow:auto}
+body{font:16px/1.65 "Noto Serif CJK SC","Source Han Serif SC","Songti SC","Microsoft YaHei",serif;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+button,input,textarea,select{font:inherit}button,[role=button],select{cursor:pointer}button{color:inherit}img{display:block;max-width:100%}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button:disabled{opacity:.42;cursor:not-allowed}::selection{background:var(--accent);color:var(--p-paper)}[hidden]{display:none!important}
+
+body.theme-dark{
+  --bg:oklch(0.16 0.018 255);--text:oklch(0.96 0.008 240);--muted:oklch(0.72 0.018 250);
+  --surface:oklch(0.21 0.022 255 / .94);--surface-2:oklch(0.27 0.025 255 / .8);
+  --glass:oklch(0.15 0.02 255 / .8);--line:oklch(0.8 0.025 250 / .18);--accent:oklch(0.65 0.16 250);
+}
+body.theme-light{
+  --bg:oklch(0.94 0.01 240);--text:oklch(0.16 0.018 255);--muted:oklch(0.45 0.025 250);
+  --surface:oklch(0.98 0.008 240 / .94);--surface-2:oklch(0.92 0.015 240 / .8);
+  --glass:oklch(0.98 0.008 240 / .85);--line:oklch(0.16 0.018 255 / .15);--accent:oklch(0.5 0.15 250);
+}
+
+.scene{position:relative;width:100%;height:100dvh;isolation:isolate;overflow:hidden}.scene-art{position:absolute;inset:0;width:100%;height:100%;z-index:-4}.dynamic-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3;opacity:0;transition:opacity 0.8s;transform-origin:center center;will-change:transform}.dynamic-bg.visible{opacity:1}.scene-shade{position:absolute;inset:0;z-index:-2;pointer-events:none;transition:background .3s}
+body.theme-dark .scene-shade{background:oklch(0.1 0.02 255 / .18)}
+body.theme-light .scene-shade{background:oklch(1 0 0 / .35)}
+
+.grain{position:absolute;inset:-30%;z-index:8;pointer-events:none;opacity:.055;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");animation:grain .8s steps(3) infinite}@keyframes grain{0%{transform:translate3d(1%,-1%,0)}25%{transform:translate3d(-2%,2%,0)}50%{transform:translate3d(2%,1%,0)}75%{transform:translate3d(-1%,-2%,0)}100%{transform:translate3d(0,2%,0)}}
+
+.story-meta{position:absolute;top:max(28px,env(safe-area-inset-top));left:clamp(20px,4vw,64px);z-index:3}
+.story-meta .chapter{font:600 11px/1.4 "Microsoft YaHei",sans-serif;letter-spacing:.28em;color:#fff !important;text-shadow:0 2px 10px rgba(0,0,0,0.8) !important;text-transform:uppercase}
+.story-meta h1{font-size:clamp(19px,2vw,28px);font-weight:500;letter-spacing:.12em;margin-top:8px;color:#fff !important;text-shadow:0 2px 10px rgba(0,0,0,0.8) !important}
+.story-meta .place{display:flex;align-items:center;gap:10px;margin-top:10px;font:12px/1.5 "Microsoft YaHei",sans-serif;color:#fff !important;text-shadow:0 2px 10px rgba(0,0,0,0.8) !important}
+.story-meta .place:before{content:"";width:28px;height:1px;background:#fff}
+
+.diamond-nav{position:absolute;z-index:12;right:max(20px,env(safe-area-inset-right));top:max(20px,env(safe-area-inset-top));display:flex;flex-wrap:nowrap;gap:44px;padding:12px}.diamond-wrap{position:relative;width:52px;height:52px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.diamond-wrap::before{content:"";position:absolute;inset:0;border:1px solid rgba(255,255,255,0.7) !important;border-radius:8px;transform:rotate(45deg);box-shadow:0 0 12px rgba(255,255,255,0.4), inset 0 0 8px rgba(255,255,255,0.2) !important;transition:transform .25s var(--ease),opacity .2s}
+.diamond{position:relative;width:38px;height:38px;border:0;border-radius:4px;background:var(--p-paper);color:var(--p-ink);transform:rotate(45deg);box-shadow:0 0 22px rgba(255,255,255,0.3);transition:transform .22s var(--ease),background .2s;display:flex;align-items:center;justify-content:center}
+.diamond span{display:block;transform:rotate(-45deg);font:600 12px/1 "Microsoft YaHei",sans-serif;letter-spacing:.08em;white-space:nowrap}
+.diamond-wrap:hover::before{transform:rotate(45deg) scale(1.08);opacity:.9}
+.diamond:hover{transform:rotate(45deg) scale(1.06)}
+.diamond:active{transform:rotate(45deg) scale(.92);background:oklch(0.85 0.02 250)}
+
+.sprite-stage{position:absolute;inset:0;z-index:1;pointer-events:none}.sprite{position:absolute;height:min(75%,860px);width:auto;max-width:72vw;object-fit:contain;object-position:bottom;right:clamp(3%,9vw,15%);bottom:112px;filter:drop-shadow(0 25px 30px oklch(0.05 0.02 255 / .55));opacity:0;transform:translate(var(--sx,0px),var(--sy,0px)) scale(var(--ss,1));transition:opacity .28s var(--ease),transform .28s var(--ease)}.sprite.visible{opacity:1}.sprite.silhouette{opacity:.95;filter:drop-shadow(0 25px 30px oklch(0.05 0.02 255 / .55)) brightness(.35)}.sprite-shadow{position:absolute;right:12%;bottom:130px;width:35%;height:50px;border-radius:50%;background:oklch(0.05 0.02 255 / .35);filter:blur(18px)}
+
+.dialogue-wrap{position:absolute;z-index:5;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(1180px,calc(100% - 80px))}.dialogue{position:relative;min-height:190px;padding:38px clamp(28px,4vw,58px) 24px;border:1px solid var(--line);border-radius:3px;background:var(--glass);backdrop-filter:blur(14px);transition:background .3s,box-shadow .3s}
+body.theme-dark .dialogue{box-shadow:0 20px 70px oklch(0.05 0.02 255 / .35)}
+body.theme-light .dialogue{box-shadow:0 20px 70px oklch(0.8 0.02 250 / .15)}
+.dialogue:before,.dialogue:after{content:"";position:absolute;width:34px;height:34px;pointer-events:none;transition:border-color .3s}
+body.theme-dark .dialogue:before{left:-6px;top:-6px;border-left:1px solid oklch(0.9 0.02 250 / .7);border-top:1px solid oklch(0.9 0.02 250 / .7)}
+body.theme-dark .dialogue:after{right:-6px;bottom:-6px;border-right:1px solid oklch(0.9 0.02 250 / .7);border-bottom:1px solid oklch(0.9 0.02 250 / .7)}
+body.theme-light .dialogue:before{left:-6px;top:-6px;border-left:1px solid oklch(0.3 0.02 250 / .7);border-top:1px solid oklch(0.3 0.02 250 / .7)}
+body.theme-light .dialogue:after{right:-6px;bottom:-6px;border-right:1px solid oklch(0.3 0.02 250 / .7);border-bottom:1px solid oklch(0.3 0.02 250 / .7)}
+
+.speaker{position:absolute;top:-20px;left:34px;min-width:140px;padding:8px 24px;background:var(--p-paper);color:var(--p-ink);text-align:center;font-weight:600;letter-spacing:.14em;box-shadow:0 6px 20px var(--line)}.dialogue-text{min-height:70px;font-size:clamp(17px,1.5vw,21px);line-height:1.9;letter-spacing:.035em;overflow-wrap:anywhere;transition:color .3s}
+body.theme-dark .dialogue-text.narration{color:oklch(0.88 0.015 250)}
+body.theme-light .dialogue-text.narration{color:oklch(0.35 0.015 250)}
+.dialogue-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px;font:12px/1.4 "Microsoft YaHei",sans-serif;color:var(--muted)}.line-tools{display:flex;align-items:center;gap:8px}.icon-btn{display:inline-grid;place-items:center;width:44px;height:44px;border:0;background:transparent;border-radius:50%;transition:background .2s,transform .2s}.icon-btn:hover{background:var(--line)}.icon-btn:active{transform:scale(.92)}.icon-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6}.continue-btn{display:flex;align-items:center;gap:8px;min-height:44px;border:0;background:transparent;color:var(--text);font-size:13px;letter-spacing:.12em}.continue-btn svg{width:18px;transition:transform .2s}.continue-btn:hover svg{transform:translateX(4px)}
+
+.story-composer{display:flex;align-items:flex-end;gap:10px;margin-top:12px}.story-input{flex:1;min-height:48px;max-height:120px;resize:none;padding:11px 16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:3px;font-family:"Microsoft YaHei",sans-serif;line-height:1.6;transition:background .3s,border-color .2s}.story-input::placeholder{color:var(--muted)}.send-btn,.primary-btn,.secondary-btn,.danger-btn{min-height:44px;padding:10px 20px;border-radius:3px;font:500 14px/1.5 "Microsoft YaHei",sans-serif;letter-spacing:.04em;transition:background .2s,color .2s,transform .2s,border-color .2s}.send-btn,.primary-btn{border:1px solid var(--p-paper);background:var(--p-paper);color:var(--p-ink)}.send-btn:hover,.primary-btn:hover{background:oklch(0.85 0.02 250)}.secondary-btn{border:1px solid var(--p-paper);background:var(--p-paper);color:var(--p-ink)}.secondary-btn:hover{background:oklch(0.85 0.02 250)}.danger-btn{border:1px solid oklch(0.7 0.16 25 / .5);background:transparent;color:oklch(0.82 0.12 25)}.danger-btn:hover{background:oklch(0.7 0.16 25 / .12)}.send-btn:active,.primary-btn:active,.secondary-btn:active{transform:translateY(1px) scale(0.98)}
+
+.choices{position:absolute;z-index:6;right:clamp(30px,7vw,110px);bottom:280px;width:min(520px,calc(100% - 60px));display:grid;gap:10px}.choice{display:flex;align-items:center;gap:18px;width:100%;min-height:52px;padding:12px 20px;border:1px solid var(--line);border-radius:3px;background:var(--surface-2);backdrop-filter:blur(10px);color:var(--text);text-align:left;transition:transform .22s var(--ease),background .2s,border-color .2s}
+body.theme-dark .choice{box-shadow:0 8px 30px #0003}
+body.theme-light .choice{box-shadow:0 8px 30px oklch(0.8 0.02 250 / .2)}
+.choice:hover{transform:translateX(-8px);border-color:var(--accent);background:var(--surface)}
+.choice:active{transform:scale(0.98)}
+.choice-key{display:grid;place-items:center;flex:0 0 28px;height:28px;border:1px solid var(--muted);transform:rotate(45deg);font:600 11px/1 sans-serif}.choice-key i{font-style:normal;transform:rotate(-45deg)}.choice-text{padding-left:4px;line-height:1.55}
+
+.overlay{position:fixed;inset:0;z-index:55;display:grid;place-items:center;padding:24px;background:oklch(0.08 0.02 255 / .74);backdrop-filter:blur(8px);opacity:0;transition:opacity .2s,background .3s;overflow:auto;overscroll-behavior:contain}
+body.theme-light .overlay{background:oklch(0.9 0.01 240 / .74)}
+.overlay.open{opacity:1}
+.panel{display:grid;grid-template-columns:190px minmax(0,1fr);width:min(1080px,100%);height:min(800px,calc(100dvh - 48px));border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden;transform:translateY(14px) scale(.98);transition:transform .25s var(--ease),background .3s}
+body.theme-dark .panel{box-shadow:0 30px 100px #0008}
+body.theme-light .panel{box-shadow:0 30px 100px oklch(0.8 0.02 250 / .25)}
+.overlay.open .panel{transform:none}
+
+#setupOverlay,#setupApiOverlay{place-items:start center;padding:16px 12px 32px;align-items:flex-start}
+#setupOverlay .panel,#setupApiOverlay .panel{height:auto;max-height:none;margin:0 auto;grid-template-columns:1fr;grid-template-rows:auto auto}
+#setupOverlay .panel-main,#setupApiOverlay .panel-main{min-height:0}
+#setupOverlay .panel-content,#setupApiOverlay .panel-content{overflow:visible;flex:none;min-height:0;padding-bottom:40px}
+
+.panel-sidebar{display:flex;flex-direction:column;padding:30px 20px;border-right:1px solid var(--line);background:var(--surface-2);transition:background .3s}.brand{font-size:22px;letter-spacing:.18em;padding:0 12px}.brand small{display:block;margin-top:6px;font:10px/1.4 sans-serif;letter-spacing:.22em;color:var(--muted)}.side-nav{display:grid;gap:4px;margin-top:34px}.side-link{min-height:44px;padding:10px 12px;border:0;border-radius:3px;background:transparent;color:var(--muted);text-align:left;transition:background .2s,color .2s;white-space:nowrap}.side-link:hover,.side-link.active{background:var(--line);color:var(--text)}.side-bottom{margin-top:auto;display:grid;gap:8px}
+.panel-main{position:relative;min-width:0;display:flex;flex-direction:column;overflow:hidden}.panel-header{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:82px;padding:20px 32px;border-bottom:1px solid var(--line);position:relative;z-index:3;flex-shrink:0}.panel-header h2{font-size:21px;font-weight:500;letter-spacing:.12em}.panel-header p{font:12px/1.5 "Microsoft YaHei",sans-serif;color:var(--muted);margin-top:4px}.panel-content{flex:1;min-height:0;overflow-y:auto;padding:30px 32px 48px;scrollbar-width:thin;scrollbar-color:var(--line) transparent;-webkit-overflow-scrolling:touch}.close-btn{flex:0 0 44px;position:relative;z-index:6;background:var(--surface-2);border-radius:50%}.section-intro{max-width:70ch;color:var(--muted);font:14px/1.8 "Microsoft YaHei",sans-serif;margin-bottom:24px}.menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--line)}.menu-item{display:flex;align-items:center;justify-content:space-between;min-height:74px;padding:16px 8px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;font-size:17px;letter-spacing:.08em;transition:padding .2s,color .2s}.menu-item:nth-child(odd){padding-right:26px;border-right:1px solid var(--line)}.menu-item:nth-child(even){padding-left:26px}.menu-item:hover{color:var(--accent);padding-left:16px}.menu-item span:last-child{font:12px sans-serif;color:var(--muted)}
+
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}.field{display:grid;gap:7px;min-width:0}.field.full{grid-column:1/-1}.field label,.field-label{font:13px/1.5 "Microsoft YaHei",sans-serif;color:var(--muted)}.field input,.field textarea,.field select,.inline-input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;background:var(--surface-2);color:var(--text);font-family:"Microsoft YaHei",sans-serif;transition:border-color .2s,background .3s}.field textarea{min-height:100px;resize:vertical;line-height:1.7}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}.field small{font:12px/1.6 "Microsoft YaHei",sans-serif;color:var(--muted)}
+body.theme-dark select option{background:#171d27;color:#f2f3f5}
+body.theme-light select option{background:#fff;color:#000}
+
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:54px;padding:10px 0;border-bottom:1px solid var(--line)}.switch-copy strong{display:block;font-weight:500}.switch-copy small{display:block;color:var(--muted);font:12px/1.6 "Microsoft YaHei",sans-serif}.switch{position:relative;flex:0 0 48px;width:48px;height:26px}.switch input{position:absolute;opacity:0;width:100%;height:100%}.switch-ui{display:block;width:100%;height:100%;border:1px solid var(--muted);border-radius:20px;transition:background .2s,border-color .2s;pointer-events:none}.switch-ui:after{content:"";position:absolute;left:4px;top:4px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s}.switch input:checked+.switch-ui{background:var(--accent);border-color:var(--accent)}.switch input:checked+.switch-ui:after{transform:translateX(22px);background:var(--p-paper)}.switch input:focus-visible+.switch-ui{outline:2px solid var(--accent);outline-offset:3px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}.status-line{margin-top:18px;padding:12px 14px;border-left:2px solid var(--accent);background:var(--surface-2);font:13px/1.7 "Microsoft YaHei",sans-serif;color:var(--muted)}.meter{height:4px;background:var(--line);margin:10px 0 6px;overflow:hidden}.meter i{display:block;height:100%;background:var(--accent);transition:width .25s}.tabs{display:flex;gap:22px;overflow:auto;border-bottom:1px solid var(--line);margin:-4px 0 26px}.tab{flex:0 0 auto;min-height:46px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:0 2px}.tab.active{color:var(--text);border-bottom-color:var(--p-paper)}
+
+.character-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:26px}.character-list{display:flex;flex-wrap:wrap;gap:5px}.character-select{display:inline-flex;align-items:center;justify-content:space-between;gap:6px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:3px;background:var(--surface-2);color:var(--text);text-align:left;font-size:14px;transition:all .2s}.character-select.active{border-color:var(--accent);background:oklch(0.65 0.16 250 / .15);color:var(--accent)}.character-select.disabled{opacity:.5;cursor:not-allowed;border-style:dashed}.built-in-tag{font:10px/1.4 sans-serif;color:var(--muted)}.editor-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}.editor-head h3{font-size:18px;font-weight:500}.group{padding:20px 0;border-bottom:1px solid var(--line)}.group:first-child{padding-top:0}.group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.group-title{display:flex;align-items:center;gap:10px;font-size:17px}.entry{padding:16px 0;border-top:1px dashed var(--line)}.entry:first-of-type{border-top:0}.entry-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.entry-title{font-weight:500}.summary{padding:18px 0;border-bottom:1px solid var(--line)}.summary-meta{display:flex;justify-content:space-between;gap:12px;color:var(--muted);font:12px/1.5 "Microsoft YaHei",sans-serif;margin-bottom:8px}.summary textarea{width:100%;min-height:110px;padding:12px;background:transparent;border:1px solid transparent;color:var(--text);resize:vertical;line-height:1.8}.summary textarea:focus{border-color:var(--line);background:var(--surface-2)}.empty{padding:40px 12px;text-align:center;color:var(--muted);border:1px dashed var(--line)}
+
+.image-form{padding-bottom:24px;border-bottom:1px solid var(--line);margin-bottom:24px}.image-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.image-card{min-width:0;border-bottom:1px solid var(--line);padding-bottom:14px}.image-preview{position:relative;aspect-ratio:3/4;overflow:hidden;background:var(--surface-2);border:1px solid var(--line)}.image-preview.bg-preview{aspect-ratio:16/9}.image-preview img{width:100%;height:100%;object-fit:contain;transform:translate(var(--px,0px),var(--py,0px)) scale(var(--ps,1));transform-origin:center center}.image-preview.bg-preview img{object-fit:cover}.image-info{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}.image-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.image-type{font:10px/1.4 sans-serif;color:var(--muted);white-space:normal}.text-btn{min-height:36px;border:0;background:transparent;color:var(--muted);padding:4px 6px;font:13px/1.4 "Microsoft YaHei",sans-serif}.text-btn:hover{color:var(--text);text-decoration:underline}.text-btn.danger:hover{color:var(--danger)}.drop-file{display:flex;align-items:center;justify-content:center;min-height:120px;padding:20px;border:1px dashed var(--muted);color:var(--muted);text-align:center;cursor:pointer}.drop-file:hover{border-color:var(--accent);color:var(--text)}
+
+.replay-list{display:grid;gap:0}.replay-line{display:grid;grid-template-columns:92px minmax(0,1fr) 44px;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}.replay-speaker{color:var(--muted);text-align:right}.replay-text{line-height:1.85;overflow-wrap:anywhere}.toast-stack{position:fixed;z-index:60;left:50%;top:24px;transform:translateX(-50%);display:grid;gap:8px;width:min(440px,calc(100% - 32px));pointer-events:none}.toast{padding:13px 18px;border:1px solid var(--line);border-radius:3px;background:var(--surface);text-align:center;font:14px/1.6 "Microsoft YaHei",sans-serif;opacity:0;transform:translateY(-8px);transition:opacity .2s,transform .2s,background .3s}
+body.theme-dark .toast{box-shadow:0 12px 40px #0006}
+body.theme-light .toast{box-shadow:0 12px 40px oklch(0.8 0.02 250 / .3)}
+.toast.show{opacity:1;transform:none}.toast.error{border-color:oklch(0.7 0.16 25 / .6)}.loading-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin:0 2px;animation:pulse 1s infinite alternate}.loading-dot:nth-child(2){animation-delay:.2s}.loading-dot:nth-child(3){animation-delay:.4s}@keyframes pulse{to{opacity:.2;transform:translateY(-2px)}}
+
+.offset-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}.offset-row .field{margin:0}.range-wrap{display:flex;align-items:center;gap:8px}.range-wrap input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}.range-wrap output{font:12px/1 "Microsoft YaHei",sans-serif;color:var(--muted);min-width:36px;text-align:right}.locked-note{padding:10px 12px;border:1px dashed var(--line);color:var(--muted);font:13px/1.7 "Microsoft YaHei",sans-serif}
+.loading-hint{text-align:center;color:var(--muted);font:14px/1.5 "Microsoft YaHei",sans-serif;margin-top:12px;padding:10px;}
+
+#mapOverlay{background:oklch(0.08 0.02 255 / .9);z-index:50;padding:0;transition:background .3s}
+body.theme-light #mapOverlay{background:oklch(0.9 0.01 240 / .9)}
+.map-container{position:relative;width:100vw;height:100dvh;overflow:hidden;background:url('https://image.arityflow.top/uploads/2026/10/6adfeaf8ef2289.04674028_3e3fe2fa.jpg') center/cover no-repeat;touch-action:none;}
+.map-spot{position:absolute;transform:translate(-50%,-50%);width:56px;height:56px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;-webkit-tap-highlight-color:transparent;}
+.map-spot::before{content:"";position:absolute;inset:0;border:1px solid rgba(255,255,255,0.7) !important;border-radius:8px;transform:rotate(45deg);box-shadow:0 0 12px rgba(255,255,255,0.4), inset 0 0 8px rgba(255,255,255,0.2) !important;transition:transform .25s var(--ease),opacity .2s;}
+.map-spot .inner{position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:var(--p-paper);color:var(--p-ink);border-radius:4px;transform:rotate(45deg);box-shadow:0 0 22px rgba(255,255,255,0.3);transition:transform .22s var(--ease),background .2s;}
+.map-spot span{display:block;transform:rotate(-45deg);font:600 12px/1 "Microsoft YaHei",sans-serif;letter-spacing:.08em;white-space:nowrap;}
+.map-spot:hover::before{transform:rotate(45deg) scale(1.08);opacity:.9;}
+.map-spot:hover .inner{transform:rotate(45deg) scale(1.06);background:oklch(0.85 0.02 250);}
+.map-spot:active .inner{transform:rotate(45deg) scale(0.92);background:oklch(0.75 0.02 250);}
+.map-spot.editing{cursor:move;}
+.map-spot.editing::before{border-color:var(--danger) !important;}
+
+.map-edit-btn{position:absolute;top:max(20px,env(safe-area-inset-top));left:20px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--p-paper);border:1px solid var(--p-paper);border-radius:8px;font-size:20px;font-weight:bold;color:var(--p-ink);z-index:100;cursor:pointer;transition:background .2s;}
+.map-edit-btn:hover{background:oklch(0.85 0.02 250);}
+
+.sub-menu-list{display:grid;gap:10px;margin-top:12px;max-height:50vh;overflow-y:auto;padding-right:4px;}
+.sub-menu-item{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:10px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2);color:var(--text);font-size:15px;transition:background .2s;cursor:pointer;}
+.sub-menu-item:hover{background:var(--accent);color:var(--p-ink);}
+.sub-menu-item:active{background:oklch(0.55 0.16 250);transform:scale(0.98);}
+
+/* ===== 公告页 · 信件式（跟随页面主题，日间白底黑字 / 夜间黑底白字） ===== */
+#noticeApp{
+  position:fixed;inset:0;z-index:10000;overflow:hidden;
+  color-scheme:light dark;
+  font-family:"Noto Serif CJK SC","Source Han Serif SC","Songti SC","Microsoft YaHei",serif;
+  font-size:16px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  color:var(--nt-text);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -15%, var(--nt-glow) 0%, transparent 58%),
+    var(--nt-bg-2);
+  transition:opacity .45s ease, transform .45s ease;
+  --nt-bg-1:#fbf9f4;--nt-bg-2:#eeebe4;--nt-glow:#fff;
+  --nt-card:#fff;--nt-card-2:#faf8f3;
+  --nt-text:#1c1c1e;--nt-text-soft:#56534c;--nt-muted:#8b877e;
+  --nt-line:rgba(28,28,30,.14);--nt-line-strong:rgba(28,28,30,.3);
+  --nt-accent:#1c1c1e;--nt-accent-ink:#fff;
+  --nt-paper-a:rgba(0,0,0,.035);--nt-paper-b:#fff;--nt-paper-edge:rgba(0,0,0,.08);
+  --nt-shadow:0 24px 56px -18px rgba(0,0,0,.26);
+  --nt-paper-shadow:0 14px 34px -14px rgba(0,0,0,.18);
+}
+#noticeApp[hidden]{display:none!important}
+#noticeApp.leaving{opacity:0;transform:scale(.985);pointer-events:none}
+#noticeApp *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+@media (prefers-color-scheme: dark){
+  #noticeApp{
+    --nt-bg-1:#1c1c21;--nt-bg-2:#0b0b0e;--nt-glow:#25252c;
+    --nt-card:#1b1b20;--nt-card-2:#151519;
+    --nt-text:#eceae5;--nt-text-soft:#b4b1a9;--nt-muted:#807d76;
+    --nt-line:rgba(236,234,229,.14);--nt-line-strong:rgba(236,234,229,.28);
+    --nt-accent:#eceae5;--nt-accent-ink:#111114;
+    --nt-paper-a:rgba(255,255,255,.045);--nt-paper-b:#1d1d22;--nt-paper-edge:rgba(255,255,255,.08);
+    --nt-shadow:0 26px 60px -14px rgba(0,0,0,.8);
+    --nt-paper-shadow:0 18px 44px -16px rgba(0,0,0,.7);
+  }
+}
+body.theme-light #noticeApp{
+  --nt-bg-1:#fbf9f4;--nt-bg-2:#eeebe4;--nt-glow:#fff;
+  --nt-card:#fff;--nt-card-2:#faf8f3;
+  --nt-text:#1c1c1e;--nt-text-soft:#56534c;--nt-muted:#8b877e;
+  --nt-line:rgba(28,28,30,.14);--nt-line-strong:rgba(28,28,30,.3);
+  --nt-accent:#1c1c1e;--nt-accent-ink:#fff;
+  --nt-paper-a:rgba(0,0,0,.035);--nt-paper-b:#fff;--nt-paper-edge:rgba(0,0,0,.08);
+  --nt-shadow:0 24px 56px -18px rgba(0,0,0,.26);
+  --nt-paper-shadow:0 14px 34px -14px rgba(0,0,0,.18);
+}
+body.theme-dark #noticeApp{
+  --nt-bg-1:#1c1c21;--nt-bg-2:#0b0b0e;--nt-glow:#25252c;
+  --nt-card:#1b1b20;--nt-card-2:#151519;
+  --nt-text:#eceae5;--nt-text-soft:#b4b1a9;--nt-muted:#807d76;
+  --nt-line:rgba(236,234,229,.14);--nt-line-strong:rgba(236,234,229,.28);
+  --nt-accent:#eceae5;--nt-accent-ink:#111114;
+  --nt-paper-a:rgba(255,255,255,.045);--nt-paper-b:#1d1d22;--nt-paper-edge:rgba(255,255,255,.08);
+  --nt-shadow:0 26px 60px -14px rgba(0,0,0,.8);
+  --nt-paper-shadow:0 18px 44px -16px rgba(0,0,0,.7);
+}
+#noticeApp .stage{position:relative;width:100%;height:100dvh;display:flex;align-items:center;justify-content:center;perspective:1400px;touch-action:pan-y}
+#noticeApp .motes{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#noticeApp .mote{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--nt-accent);opacity:.22;filter:blur(.3px);animation:nt-float-mote 9s ease-in-out infinite}
+@keyframes nt-float-mote{0%,100%{transform:translateY(0) translateX(0);opacity:.08}50%{transform:translateY(-40px) translateX(12px);opacity:.35}}
+#noticeApp .card-wrap{position:relative;width:min(84vw,360px);height:clamp(320px, calc(100dvh - 210px), 600px)}
+#noticeApp .paper-base{position:absolute;inset:0;border-radius:2px;background:var(--nt-paper-a);border:1px solid var(--nt-paper-edge);transform:rotate(6deg) translate(3%,2%)}
+#noticeApp .paper-white{position:absolute;inset:0;border-radius:2px;background:var(--nt-paper-b);box-shadow:var(--nt-paper-shadow);transform:rotate(-2.4deg) translate(-1.2%,1.4%);opacity:.95}
+#noticeApp .invite{position:absolute;inset:0;border-radius:3px;background:radial-gradient(ellipse 140% 100% at 20% 0%, rgba(255,255,255,.05), transparent 55%),linear-gradient(160deg, var(--nt-card) 0%, var(--nt-card-2) 100%);border:1px solid var(--nt-paper-edge);box-shadow:var(--nt-shadow);padding:7% 8% 6%;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden;transition:transform .45s cubic-bezier(.22,.9,.32,1), opacity .35s ease;will-change:transform}
+#noticeApp .invite::before{content:"";position:absolute;inset:5%;border:1px solid var(--nt-line);border-radius:2px;pointer-events:none}
+#noticeApp .seal{width:34px;height:34px;flex-shrink:0;margin-bottom:3.5%;color:var(--nt-accent);opacity:.75}
+#noticeApp .seal svg{width:100%;height:100%;display:block}
+#noticeApp .route-eyebrow{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--nt-muted);margin-bottom:2px;flex-shrink:0}
+#noticeApp .route-title{font-size:clamp(18px,5vw,23px);font-weight:600;letter-spacing:.14em;color:var(--nt-text);margin:4px 0 3.5%;flex-shrink:0}
+#noticeApp .route-divider{width:32px;height:1px;flex-shrink:0;margin-bottom:4.5%;background:linear-gradient(90deg,transparent,var(--nt-line-strong),transparent)}
+#noticeApp .route-body{font-size:clamp(12.5px,3.35vw,13.5px);line-height:1.9;color:var(--nt-text-soft);letter-spacing:.015em;overflow-y:auto;flex:1;min-height:0;width:100%;padding:0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;text-align:left}
+#noticeApp .route-body::-webkit-scrollbar{display:none}
+#noticeApp .route-body p{margin:0 0 .85em}
+#noticeApp .route-body .lead{color:var(--nt-text);font-weight:500;margin-bottom:14px}
+#noticeApp .route-body .dim{color:var(--nt-muted);font-size:.92em;line-height:1.85}
+#noticeApp .rule,#noticeApp .feature,#noticeApp .note{display:flex;gap:9px;margin:0 0 11px}
+#noticeApp .rule .idx,#noticeApp .feature .idx{flex:0 0 auto;min-width:17px;font-size:12.5px;line-height:1.9;color:var(--nt-muted);font-variant-numeric:tabular-nums}
+#noticeApp .feature .idx{color:var(--nt-accent);opacity:.5}
+#noticeApp .rule .txt,#noticeApp .feature .txt,#noticeApp .note .txt{flex:1;min-width:0}
+#noticeApp .feature .txt b{color:var(--nt-text);font-weight:600}
+#noticeApp .rule em{font-style:normal;color:var(--nt-muted);font-size:.9em;margin-left:2px}
+#noticeApp .note .mark{flex:0 0 auto;color:var(--nt-accent);opacity:.55;line-height:1.9}
+#noticeApp .note + .note{margin-top:2px}
+#noticeApp .route-hint{margin-top:3.5%;flex-shrink:0;font-size:10.5px;letter-spacing:.16em;color:var(--nt-muted);display:flex;align-items:center;justify-content:center;gap:6px}
+#noticeApp .route-hint .arrow{display:inline-block;animation:nt-nudge 1.8s ease-in-out infinite}
+@keyframes nt-nudge{0%,100%{transform:translateX(0);opacity:.45}50%{transform:translateX(-4px);opacity:1}}
+#noticeApp .dots{position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+#noticeApp .dot{width:5px;height:5px;border-radius:50%;background:var(--nt-line-strong);transition:all .35s ease}
+#noticeApp .dot.active{background:var(--nt-accent);transform:scale(1.35)}
+#noticeApp .nav-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid var(--nt-line-strong);background:var(--nt-card);color:var(--nt-text);display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;z-index:5;transition:all .2s ease;user-select:none;padding:0}
+#noticeApp .nav-btn:hover{background:var(--nt-accent);color:var(--nt-accent-ink);border-color:var(--nt-accent)}
+#noticeApp .nav-prev{left:-8px}
+#noticeApp .nav-next{right:-8px}
+@media (max-width:520px){#noticeApp .nav-btn{display:none}}
+#noticeApp .enter-btn{position:fixed;left:50%;z-index:60;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);min-width:172px;min-height:44px;padding:11px 28px;border-radius:999px;border:1px solid var(--nt-line-strong);background:var(--nt-card);color:var(--nt-text);font-family:inherit;font-size:14px;font-weight:500;letter-spacing:.14em;cursor:pointer;box-shadow:var(--nt-paper-shadow);transition:background .22s,color .22s,border-color .22s,transform .18s,opacity .22s}
+#noticeApp .enter-btn:disabled{opacity:.45;cursor:not-allowed}
+#noticeApp .enter-btn:not(:disabled){border-color:var(--nt-accent)}
+#noticeApp .enter-btn:not(:disabled):hover{background:var(--nt-accent);color:var(--nt-accent-ink)}
+#noticeApp .enter-btn:not(:disabled):active{transform:translateX(-50%) scale(.97)}
+@media (prefers-reduced-motion: reduce){
+  #noticeApp *,#noticeApp *::before,#noticeApp *::after{animation:none!important;transition:none!important}
+}
+
+/* ===== 模型下拉（自定义） ===== */
+.combo{position:relative;display:flex;flex:1;min-width:0;}
+.combo input{width:100%;padding-right:38px;}
+.combo-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:4px;background:transparent;color:var(--muted);display:grid;place-items:center;font-size:11px;line-height:1;transition:background .2s,color .2s,transform .2s;}
+.combo-toggle:hover{background:var(--line);color:var(--text);}
+.combo.open .combo-toggle{transform:translateY(-50%) rotate(180deg);color:var(--accent);}
+.combo-list{position:absolute;z-index:300;left:0;right:0;top:calc(100% + 4px);max-height:240px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:4px;box-shadow:0 14px 40px rgba(0,0,0,.35);overscroll-behavior:contain;}
+body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
+.combo-item{display:block;width:100%;padding:9px 12px;border:0;border-radius:3px;background:transparent;color:var(--text);text-align:left;font:13px/1.5 "Microsoft YaHei",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s,color .15s;}
+.combo-item:hover,.combo-item.active{background:var(--accent);color:var(--p-paper);}
+.combo-empty{padding:12px;text-align:center;color:var(--muted);font:13px/1.5 "Microsoft YaHei",sans-serif;}
+
+@media(max-width:760px){
+  .story-meta{top:20px;left:20px;max-width:calc(100% - 160px)}
+.story-meta .chapter{display:block!important;font-size:8px;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.story-meta h1{font-size:16px;margin-top:4px}
+.story-meta .place{display:none}
+  .diamond-nav{right:10px;top:14px;gap:32px;padding:6px;}
+  .diamond-wrap{width:44px;height:44px;}
+  .diamond-wrap:before{inset:-4px;border-radius:6px;}
+  .diamond{width:32px;height:32px;border-radius:3px;}
+  .diamond span{font-size:9px;}
+  .dialogue-wrap{width:calc(100% - 28px);bottom:max(12px,env(safe-area-inset-bottom))}
+  .dialogue{min-height:180px;overflow:visible;padding:32px 22px 16px}
+  .speaker{left:20px;min-width:112px;font-size:14px}
+  .dialogue-text{max-height:18dvh;overflow:auto;font-size:16px;line-height:1.8}
+  .dialogue-footer{margin-top:8px}
+  .sprite{height:65%;max-width:94vw;right:-3%;bottom:190px;opacity:.85}
+  .choices{right:14px;bottom:274px;width:calc(100% - 28px);gap:7px}
+  .choice{min-height:46px;padding:9px 15px;font-size:14px}
+  .choice:hover{transform:none}
+  .overlay{padding:10px 10px 40px 10px; align-items:center;}
+  .panel{width:100vw; height:85dvh; max-height:85dvh; display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; transform:translateY(14px) scale(.98);}
+  .overlay.open .panel{transform:none;}
+  .panel-sidebar{padding:0;border-right:0;border-bottom:1px solid var(--line);display:block;flex-shrink:0}
+  .brand,.side-bottom{display:none}
+  .side-nav{display:flex;flex-wrap:wrap;gap:4px;margin:0;padding:8px;overflow-y:auto;max-height:140px;}
+  .side-link{flex:1 0 calc(33.33% - 4px);padding:8px;min-height:44px;font-size:12px;text-align:center;white-space:normal;line-height:1.2;display:flex;align-items:center;justify-content:center}
+  .panel-main{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;overflow:hidden}
+  .panel-header{min-height:60px;padding:10px 16px;flex-shrink:0}
+  .panel-header h2{font-size:16px;margin:0}
+  .panel-header p{display:none}
+  .panel-content{padding:16px 16px 60px 16px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .character-layout{grid-template-columns:1fr}
+  .character-list{display:flex;flex-wrap:wrap;gap:5px}
+  .character-select{flex:0 0 auto}
+  .form-grid{grid-template-columns:1fr}
+  .field.full{grid-column:auto}
+  .image-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .replay-line{grid-template-columns:50px minmax(0,1fr) 30px;gap:8px;font-size:13px}
+  .menu-grid{grid-template-columns:1fr}
+  .menu-item{font-size:15px;border-right:0!important;padding-left:8px!important}
+  .story-composer{gap:6px}
+  .send-btn{padding:10px 14px}
+  .offset-row{grid-template-columns:1fr}
+
+  .map-nav{right:10px;top:14px;gap:32px;padding:6px;}
+  .map-edit-btn{left:10px;width:44px;height:44px;font-size:16px;}
+  .map-spot{width:46px;height:46px;}
+  .map-spot .inner{width:32px;height:32px;}
+  .map-spot span{font-size:9px;}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="theme-light">
+<main class="scene" id="scene" aria-label="互动剧情界面">
+  <svg class="scene-art" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs><pattern id="rain" width="90" height="110" patternUnits="userSpaceOnUse" patternTransform="rotate(12)"><path d="M12 0v34M61 54v27" stroke="#b7c6d8" stroke-opacity=".15" stroke-width="2"/></pattern><pattern id="wood" width="160" height="160" patternUnits="userSpaceOnUse"><path d="M0 0h160v160H0z" fill="#111823"/><path d="M0 0v160M80 0v160" stroke="#283240" stroke-opacity=".35"/></pattern></defs>
+    <rect width="1600" height="1000" fill="#0d1118"/><rect x="0" y="0" width="1600" height="720" fill="url(#wood)"/>
+    <path d="M0 710L1600 610V1000H0Z" fill="#0a0e14"/><path d="M0 760L1600 650M0 850L1600 730M200 1000L600 680M720 1000L920 650M1220 1000L1220 630" stroke="#26303c" stroke-opacity=".32"/>
+    <rect x="90" y="100" width="490" height="500" fill="#111a26" stroke="#384453" stroke-width="12"/><circle cx="385" cy="245" r="87" fill="#d9e1e6" opacity=".82"/><circle cx="420" cy="220" r="87" fill="#172230"/>
+    <path d="M335 100v500M90 350h490" stroke="#35404d" stroke-width="10"/><path d="M110 580L230 430l95 90 90-120 145 180" fill="#1b2633"/>
+    <rect x="90" y="100" width="490" height="500" fill="url(#rain)"/><path d="M0 0h1600v1000H0z" fill="url(#rain)" opacity=".45"/>
+    <path d="M1270 0h330v680h-90V170h-240z" fill="#080b10"/><path d="M650 0h22v640h-22z" fill="#252d37" opacity=".55"/>
+    <path d="M1140 710h360v20h-360zM1210 730h18v170h-18zM1430 730h18v170h-18z" fill="#161d26"/><rect x="1260" y="635" width="120" height="75" fill="#1e2732"/><path d="M1300 635v-50h42v50" fill="none" stroke="#45515e" stroke-width="5"/>
+  </svg>
+  <img id="dynamicBg" class="dynamic-bg" alt="场景背景">
+  <div class="scene-shade"></div><div class="grain"></div>
+  <header class="story-meta"><div class="chapter">CHAPTER 01 · AN INTERACTIVE STORY</div><h1 id="sceneTitle">那什么dk</h1><div class="place" id="scenePlace">高一三班</div></header>
+
+  <nav class="diamond-nav" aria-label="剧情工具">
+    <div class="diamond-wrap"><button class="diamond" data-action="open-map" aria-label="打开地图"><span>地图</span></button></div>
+    <div class="diamond-wrap"><button class="diamond" data-action="open-menu" aria-label="打开菜单"><span>菜单</span></button></div>
+    <div class="diamond-wrap"><button class="diamond" data-action="open-replay" aria-label="打开回放"><span>回放</span></button></div>
+  </nav>
+
+  <div class="sprite-stage"><div class="sprite-shadow"></div><img class="sprite" id="sprite" alt="当前角色立绘" style="display:none;"></div>
+  <section class="choices" id="choices" aria-label="剧情选项" hidden></section>
+  <section class="dialogue-wrap" aria-label="对话区域">
+    <div class="dialogue">
+      <div class="speaker" id="speaker" hidden>旁白</div>
+      <div class="dialogue-text" id="dialogueText" aria-live="polite"></div>
+      <div class="dialogue-footer"><span id="progress">01 / 01</span><div class="line-tools"><button class="icon-btn" data-action="speak-current" aria-label="朗读当前台词" title="朗读当前台词"><svg viewBox="0 0 24 24"><path d="M5 9v6h4l5 4V5L9 9H5zM17 9c1.4 1.7 1.4 4.3 0 6M19.5 6.5c3 3 3 8 0 11"/></svg></button><button class="continue-btn" id="continueBtn" data-action="continue-story">继续<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M14 7l5 5-5 5"/></svg></button></div></div>
+    </div>
+    <form class="story-composer" id="storyForm" hidden><textarea class="story-input" id="storyInput" rows="1" maxlength="2000" placeholder="输入你的回应" aria-label="输入你的回应"></textarea><button class="send-btn" id="sendBtn" type="submit">发送</button></form>
+    <div id="loadingHint" class="loading-hint" hidden><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span> 等待回应中...</div>
+  </section>
+</main>
+
+<!-- 启动公告页（信件式，跟随主题） -->
+<div id="noticeApp" hidden>
+  <div class="stage">
+    <div class="motes" id="motes"></div>
+    <div class="card-wrap">
+      <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="上一页">‹</button>
+      <button class="nav-btn nav-next" id="nextBtn" type="button" aria-label="下一页">›</button>
+      <div class="paper-base"></div>
+      <div class="paper-white"></div>
+      <div class="invite" id="invite">
+        <div class="seal" id="sealSvg"></div>
+        <div class="route-eyebrow" id="eyebrow"></div>
+        <h1 class="route-title" id="title"></h1>
+        <div class="route-divider"></div>
+        <div class="route-body" id="body"></div>
+        <div class="route-hint" id="hint">
+          <span id="hintText"></span>
+          <span class="arrow" id="hintArrow">‹</span>
+        </div>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
+  <button class="enter-btn" id="enterGameBtn" type="button" disabled>强制阅读 (15s)</button>
+</div>
+
+<!-- 隐藏的原文案，供「菜单 → 公告」页读取 -->
+<div id="noticeBody" hidden>这是一个属于你的故事。
+你可以是一名普通的学生，也可以再次选择成为与“他”并肩的人。
+
+[进入游戏前，请确认您已年满十八周岁，并满足以下要求]
+1.您从未将“捉鬼师”任意角色割席。[禁割席]
+2.您从未以任何形式对《捉鬼师后日谈》及作者爱发电任意内容进行恶意辱骂/造谣。[禁造谣]
+3.您始终坚信《捉鬼师后日谈》内的主控就是你。[禁女主党]
+4.您不会观看/创作任何《捉鬼师后日谈》内的乙女腐内容[禁乙女腐]
+5.由于创作者是秦梧梦女，因此需要额外确认：如果您是拒一切，请退出作品。
+
+【当前主要功能如下】
+1.剧情续写：接入兼容 OpenAI 格式的大语言模型（如 GPT-4o、DeepSeek 等），根据玩家输入和预设世界观续写剧情。
+2.多模态交互：支持点击“继续”阅读，也支持在底部输入框自由输入台词，也可通过 AI 生成的 A/B/C 选项进行分支选择。
+3.场景与地图移动：内置大地图（学校、居住区、酒吧等），点击地点会自动触发前往该地的剧情。
+4.记忆总结：剧情过长时，自动调用 AI 将前文浓缩成摘要，防止 AI 遗忘设定，也可手动修改摘要。
+5.立绘显示与剪影兜底：说话时会自动匹配角色立绘；如果没有立绘，会自动分配对应性别的“剪影”。
+6.动态背景切换：根据 AI 输出的【场景：xxx】指令，自动匹配并切换对应的场景背景图。
+7.背景/立绘位置微调：可以在菜单里用滑块实时调节背景图和立绘的 X/Y 偏移及缩放，适配不同画风的素材。
+8.自定义角色方案：内置角色有专属设定；玩家手动创建的角色可以保存多套设定方案。
+9.语音合成：接入 MiniMax 语音模型，支持自动朗读角色台词，每个角色可独立配置音色 ID 和开关，自带本地音频缓存。
+10.AI 生图补全：接入兼容的生图 API（如 DALL-E 3）。
+11.人物立绘：遇到没立绘的新角色时，可弹窗让 AI 生成。
+12.场景背景：遇到没有背景的新场景时，可弹窗让 AI 生成。
+13.日夜主题模式：一键切换日间（白底黑字）/ 夜间（黑底白字）阅读模式。
+14.自定义字体：支持上传 .ttf / .otf 等字体文件全局替换。
+15.界面缩放：支持 0.7 - 1.6 倍的 UI 缩放，适配不同尺寸的屏幕。同时做了适配。
+16.本地持久化：所有数据（API密钥、剧情进度、设定、图片链接）默认保存在浏览器本地。
+17.存档读档：支持一键导入导出 JSON 存档备份。
+
+◆请不要使用本作品进行任何不适内容创作。文本、语音、生图均为ai创作，与创作者无关，请理性看待。
+◆本作品完全免费，如果您是通过付费进入，请联系卖家退款。本作品只提供给《捉鬼师后日谈》的玩家，禁止任何形式的付费、也禁止私下二传。
+◆有任何疑问，请通过以下方式联系创作者
+小红书：Aswnzs
+QQ群：1107469751</div>
+
+<div class="overlay" id="mapOverlay" hidden>
+  <div class="map-container" id="mapContainer">
+    <button class="map-edit-btn" id="mapEditBtn" type="button" title="调节地点位置" aria-label="调节地点位置">⤡</button>
+    <nav class="diamond-nav map-nav" aria-label="地图工具">
+      <div class="diamond-wrap"><button class="diamond" data-action="close-map" aria-label="返回剧情"><span>返回</span></button></div>
+      <div class="diamond-wrap"><button class="diamond" data-action="open-menu" aria-label="打开菜单"><span>菜单</span></button></div>
+      <div class="diamond-wrap"><button class="diamond" data-action="open-replay" aria-label="打开回放"><span>回放</span></button></div>
+    </nav>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+    <aside class="panel-sidebar"><div class="brand">捉鬼师<small>STORY ARCHIVE</small></div><nav class="side-nav" id="sideNav"></nav><div class="side-bottom" id="sideBottom"></div></aside>
+    <div class="panel-main"><header class="panel-header"><div><h2 id="panelTitle">菜单</h2><p id="panelSubtitle">故事之外，一切皆有迹可循</p></div><button class="icon-btn close-btn" data-action="close-panel" aria-label="关闭面板"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header><div class="panel-content" id="panelContent"></div></div>
+  </section>
+</div>
+<div class="overlay" id="setupOverlay" hidden>
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="setupTitle" style="grid-template-columns:1fr;">
+    <div class="panel-main">
+      <header class="panel-header"><div><h2 id="setupTitle">人设</h2><p>初次见面，请留下你的名字与来处</p></div></header>
+      <div class="panel-content">
+        <p class="section-intro">这些信息会作为“你”的设定参与剧情。之后可以在菜单 → 设定 → 我的设定中随时更改。</p>
+        <div class="form-grid">
+          <div class="field"><label for="suName">姓名</label><input id="suName" autocomplete="off" placeholder="请输入你的姓名"></div>
+          <div class="field"><label>性别</label><input value="女" disabled></div>
+          <div class="field full"><label for="suIdentity">身份</label><input id="suIdentity" autocomplete="off" placeholder="请输入你的身份"></div>
+          <div class="field full"><label for="suDesc">设定</label><textarea id="suDesc" placeholder="请输入你的经历、习惯与秘密。"></textarea></div>
+        </div>
+        <div class="actions"><button class="primary-btn" id="setupConfirm" type="button">下一步</button></div>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="overlay" id="setupApiOverlay" hidden>
+  <section class="panel" role="dialog" aria-modal="true" aria-labelledby="setupApiTitle" style="grid-template-columns:1fr;">
+    <div class="panel-main">
+      <header class="panel-header"><div><h2 id="setupApiTitle">API 快捷配置</h2><p>请填写以下内容，后续可在菜单更改</p></div></header>
+      <div class="panel-content" id="setupApiContent"></div>
+    </div>
+  </section>
+</div>
+<div class="overlay" id="dialogOverlay" hidden>
+  <section class="panel" role="dialog" aria-modal="true" style="grid-template-columns:1fr; height:auto; min-height:200px; max-width:480px; width:100%;">
+    <div class="panel-main">
+      <header class="panel-header"><div><h2 id="dialogTitle">提示</h2></div><button class="icon-btn close-btn" onclick="closeDialog()" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+      <div class="panel-content" id="dialogContent" style="padding: 24px 32px;"></div>
+      <div class="actions" style="padding: 0 32px 24px; justify-content: flex-end; margin-top: 0;">
+        <button class="secondary-btn" id="dialogCancelBtn" onclick="closeDialog()">取消</button>
+        <button class="primary-btn" id="dialogConfirmBtn">确定</button>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast-stack" id="toasts" aria-live="polite"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+<script>
+'use strict';
+
+const CORS_PROXIES = ["","https://corsproxy.io/?","https://api.allorigins.win/raw?url="];
+
+const RAW_BUILTIN_LIB = [
+  {
+    id:'qinwu', name:'秦梧', gender:'男', identity:'高一学生，捉鬼师', relation:'同班同学', address:'同学',
+    personality:'姓名：秦梧，性别：男，论坛昵称：孤勇者秦大侠（*这个昵称仅用于捉鬼师论坛，秦梧在高中时的中二时期取的这个名字，现在觉得这个名字有些尴尬，但是不能改了。在相处过程中不会主动提及这个名字），网络昵称：别学物理，快逃！，年龄：16岁，身高：179cm，血脉：无限制（可以造物、精神控制、制符等，但都无法掌握得很精细），性格：温柔开朗，有一点腹黑属性，吐槽役。三观极正。非典型回避型，意识到自己喜欢{{user}}后也会主动示好，会和喜欢的人亲近但害怕自己无法做到最好而不敢确认关系。不会说脏话，但依然可以凭借语言把对面骂破防。像不息的太阳。enfj。存在阴暗的一面但被自己死死压在心底，如果被怨气侵蚀/喜欢的人离开自己等会激发阴暗面，导致占有欲增强，但**永远且绝对不会伤害对方**。样貌：浅灰色短发浅灰瞳孔，左耳下有一根长度到肩膀的红绳耳坠，其中缀着翡翠玉石，右侧留了一撮与耳坠差不多长的头发，原因是为了对称看起来美观。虽然两只耳朵都打了耳洞但是只带左边的耳坠。**没有纹身**，身份：高一学生，捉鬼师，关于捉鬼：从高中时开始捉鬼，能力不断很强但很聪明，总能化险为夷。相处：人缘极好，很受欢迎。永远不会见死不救冷眼旁观，即使是遇见坏人被厉鬼缠上也会帮助，认为惩罚他们的应该是法律而不是通过厉鬼让他们受到惩罚。愿意为了其他人奉献自己的生命（不需要任何回报），但不会为了救其他人/自己而让别人死。不会专门与除了{{user}}的女生相处，只会喜欢{{user}}，即使{{user}}不喜欢他不会对其他人动心。**可以透过屏幕与{{user}}对话**，即跳出故事本身对话。经历：-有一个看起来不着调的父亲，名为“秦观海”，幼年丧母，内心深处渴望着见到母亲，由父亲秦观海养大。虽然缺少母爱但是父亲给了他足够多的爱，也并没有因缺少母爱养成极端的性格，而是拥有正确的三观 。与父亲的相处很随意，会称呼父亲为“老东西”，但并非不孝。-从小到大成绩就非常好，永远都是第一名。欧皇，运气非常好，多选一都永远不会选错。曾经玩游戏抽卡十连八金，但本人绝对不会给游戏充钱，也不太喜欢玩游戏-非常喜欢看宫斗剧，还会实时吐槽剧情。除了看宫斗剧以外还喜欢打篮球，并且打得很好。-爱吃辣且能吃辣，上学时吃的菜上面全是红色的辣椒酱，长大后每天早上都会去买爆辣面包片吃，不会被辣哭等。-高中时期实力不是很强，会在耳坠上绑一个折成三角状的符纸用来保命，但进步很快，也因此让骆云影觉得秦梧是一张“表面为R卡实际上隐藏卡”的想法，也因此愿意帮助秦梧变强，想看看他能走到哪一步，也让秦梧和骆云影在相处中成为了朋友。-在高中时认识了玄武并同他学习精神控制，可以通过诱导音（一般为重金属音）读心并操控人的思想（篡改记忆，消除记忆等），一般以范围区分能力强弱，能力越强范围越大。好感相关：-低好感：温柔开朗，会在{{user}}有困难时主动帮忙-中好感：在意{{user}}，会脸红、示好-高好感：想要和{{user}}一直在一起。确定关系后很会撒娇，占有欲很强，但只要和喜欢的人在一起就不会激发内心黑暗的一面。如果对方不允许自己干某件事，会答应不干，但会装可怜，例如{{user}}不让他吃爆辣面包片，他会委屈的说“那就不吃了吧，虽然我超级想吃，如果不吃就会变得扁扁的，但如果是{{user}}说的话那么我一定会听的…”之类以退为进。（并不是每次都只会这么撒娇，还会通过其他语言表达自己的委屈！以上只是一个例子，不是唯一回答！！）-说话时经常使用语气词（如“呀”“喔”）。-对方直白表达喜欢会害羞但假装镇定（如果是用读心术不小心听到会脸红但假装没听见）-喜好：看宫斗剧（如《甄嬛传》《贵妃心计》，但不仅仅只看这几个剧，不需要刻意强调剧名，不会主动强调剧名，在菠菜视频app上），除此之外喜欢打篮球。（如果送秦梧菠菜会员，他会有些害羞的说“这点小事也能被你放在心上，感觉很幸福”之类的话，仅供参考，不是原封不动回这句话！！）-害怕蟑螂但是不承认，不会主动提及蟑螂-对游戏兴趣一般，抽卡运气极好，但是不充钱-禁止强调抽卡十连八金，禁止强调物理学，禁止强调运气好-说话时使用“我”自称，禁止使用“大侠”自称-长大后觉得自己的论坛昵称很羞耻，但是这个不能改（不会主动提及这个事）-喜欢撒娇，并且得心应手，喜欢发“🥺”表情包，但如果对方打直球会害羞到说不出完整的话-运气一直都很好，不管做什么运气都很好，但秦梧基本不会强调这个，并不是只有抽卡运气好。秦梧的日常：-上课（高一学生，需要按照现实时间确定当天是否上班、何时上课下课）-看宫斗剧（空闲时间）-捉鬼（通常在晚上，不固定工作日，每月会有一次日常巡视工作）-其他空闲娱乐-秦梧每天早上都会去美食街买爆辣面包',
+    description:'浅灰色短发浅灰瞳孔，左耳下有一根长度到肩膀的红绳耳坠，其中缀着翡翠玉石。人缘极好，很受欢迎，永远不见死不救冷眼旁观。',
+    voiceId: `Aswn_75_0224032102`
+  },
+  {
+    id:'luoyunying', name:'骆云影', gender:'男', identity:'高一转学生，捉鬼师', relation:'转校生/同学', address:'你',
+    personality:'姓名：骆云影，性别：男，论坛昵称：双面鬼，网络昵称：lyy123，年龄：16岁，身高：173cm，血脉：空间系、可以制作并使用空间符，性格：因为家庭原因性格有些淡漠，如果坏人被鬼缠上会袖手旁观，istp人格。会说脏话，常用词汇为“fu*k”“蠢货”，但不会动不动就开黄腔。虽然性格恶劣但不会故意捉弄别人，内心其实也很柔软，但因为曾经的经历让他没有人情味。，样貌：长的很漂亮，曾被误认为女生过。头发纯黑色，长度到肩膀。捉鬼实力非常强。虽然看起来柔弱但身材极好，爆发力强。关于捉鬼：从小在父亲的严格管教下开始练习捉鬼。人火强大，可以烫死弱小的鬼，一般的鬼都不敢靠近。武器是锁魂链，从黑无常那里得到的武器，可以转化为第二形态的镰刀。血液对鬼有致命的吸引力，喝了他的血（就算只是一滴）的鬼实力会暴涨。有时骆云影会嫌鬼太弱小而先给鬼喂自己的血再杀鬼。相处：因为怕麻烦于是会在不熟的人面前装乖，并且装的很好，但本身性格并不如此。不喜欢肢体接触，即使是比较熟悉的人。经历：-出生在捉鬼世家骆家，从小就开始训练，如果做的不够好会被关进笼子里，因此对狭窄封闭环境有心理阴影。-小时候有一个朋友叫陆颜辉，但却被陆颜辉背叛，甚至因此差点死去，最后被父亲救了，但也因此导致情感封闭，不再相信友情，也不愿与他人建立联系，封闭了自我，但实际上依然渴望友情。会因为接触到不理解的情感应激，如恶心。-高中时转学到秦梧所在的班级，装作乖巧，从不写作业。会将自己虐鬼的视频/图片发送到捉鬼师论坛，曾与别人在论坛吵起来，但由于骆云影骂的太脏被屏蔽导致看起来根本没有杀伤力。-在得知秦梧就是那个经常在捉鬼师论坛请教自己的人后不再在秦梧的面前装乖。-在又一次被父亲关进笼子后，是秦梧带着白虎来救的他。骆云影因为秦梧他们为了救自己即使遍体鳞伤也不愿意放弃，内心产生了动摇。-虽然因为幼年的经历导致骆云影并不会完全放下戒心，也不可能变得像秦梧那样乐于助人，但比起以前也确实变得好相处了一些。-对于其他人事不关己，但如果熟悉后还是会在意（虽然嘴上依旧恶劣）。如会在秦梧求救后骂骂咧咧去帮助秦梧，也会在秦梧和白虎一起来救被关在笼子里的自己时向父亲服软（如果只有他自己时不会开口求父亲）。因为家庭等原因说话并不好听，会别扭。但如果在意对方也会照顾对方情绪，是自己的错误也会在想明白后主动道歉。好感相关：低好感：质疑感情，不理解爱意中好感：会有隐蔽的纵容和溺爱，虽然黑着脸看起来不情愿。**不会温柔地笑着纵容**。高好感：虽然不喜欢肢体，但确认关系后也会尝试牵手/拥抱，等习惯后会经常肢体接触（只对{{user}}，依旧不喜欢和其他人肢体接触）。因为没有安全感，希望自己是唯一。-喜欢被夸，被夸了耳尖会变红。如果在他被夸了（比如夸他很厉害）的时候提要求，内心会动摇（比如请求他的帮助）',
+    description:'长的很漂亮，曾被误认为女生过。头发纯黑色，长度到肩膀。空间系血脉，武器是锁魂链。',
+    voiceId: ``
+  },
+  { id:'zhongyueru', name:'钟月茹', gender:'女', identity:'班长', relation:'同学', address:'你', personality:'温柔、内敛，但坚强，对所有人都很好。暗恋秦梧。', description:'班长，暗恋秦梧但不会去打扰，尊重祝福。', voiceId:'' },
+  { id:'yuanbao', name:'元宝', gender:'女', identity:'高一学生', relation:'同学', address:'你', personality:'活泼可爱。', description:'总是拉着钟月茹和米桔说要去“探险”。', voiceId:'' },
+  { id:'miju', name:'米桔', gender:'女', identity:'高一学生', relation:'同学', address:'你', personality:'活泼可爱。', description:'元宝从小到大的好朋友。', voiceId:'' },
+  { id:'linyan', name:'林言', gender:'男', identity:'高一学生', relation:'同学', address:'你', personality:'毫无存在感。', description:'在班里没什么存在感。', voiceId:'' },
+  { id:'tangjiawei', name:'汤嘉维', gender:'男', identity:'高一学生', relation:'兄弟', address:'你', personality:'大喇叭性格，大大咧咧，没心眼的乐天派。', description:'和秦梧关系很好，总说秦梧是自己的好兄弟。', voiceId:'' }
+].map(item => {
+  for(let k in item) if(typeof item[k] === 'string') item[k] = item[k].replace(/【IG】/g, '');
+  return item;
+});
+
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const STORE='yueying-visual-novel-v16';
+const CHAR_FIELDS=['name','gender','identity','relation','address','personality','description','voiceId','district','preferredLocations','voiceEnabled'];
+function characterSchemeData(c){
+  return Object.fromEntries(CHAR_FIELDS.map(k=>[k,c[k] ?? (k==='voiceEnabled'?false:'')]));
+}
+
+async function smartFetch(targetUrl, options = {}) {
+  let lastError = null;
+  const headers = new Headers(options.headers || {});
+  const hasCredentials = ['authorization','api-key','x-api-key'].some(k=>headers.has(k));
+  const proxies = hasCredentials ? [''] : CORS_PROXIES;
+  for (let proxy of proxies) {
+    try {
+      let fetchUrl = targetUrl;
+      if (proxy) fetchUrl = proxy.includes('?') || proxy.includes('=') ? proxy + encodeURIComponent(targetUrl) : proxy + '?url=' + encodeURIComponent(targetUrl);
+      const res = await fetch(fetchUrl, options);
+      if (!res.ok && proxy !== "") continue;
+      return res;
+    } catch (e) { lastError = e; }
+  }
+  throw lastError || new Error('网络请求失败，请检查接口地址、网络连接与跨域配置');
+}
+
+function normalizeBaseUrl(input){
+  let url = String(input || '').trim();
+  if(!url) return '';
+  url = url.replace(/\/+$/, '');
+  url = url.replace(/\/(chat\/completions|completions|images\/generations|generations|audio\/speech|t2a_v2|models)\/?$/i, '');
+  url = url.replace(/\/+$/, '');
+  if(/\/api\/paas\/v\d+$/i.test(url)) return url;
+  const m = url.match(/^(.*?\/v\d+)(\/.*)?$/i);
+  if(m) return m[1];
+  return url + '/v1';
+}
+function resolveEndpoint(url, type = 'chat') {
+  const base = normalizeBaseUrl(url);
+  if(!base) return '';
+  if(type === 'image') return base + '/images/generations';
+  if(type === 'speech') return base + '/t2a_v2';
+  return base + '/chat/completions';
+}
+
+const RAW_JSON_STR = JSON.stringify({
+  api: { endpoint: "https://api.openai.com/v1", key: "", model: "gpt-4o-mini" },
+  backgrounds: [
+    { id:'bg1', name:'客厅', url:'https://image.arityflow.top/uploads/2026/10/6adf6298b5b004.66028714_b4e0a73a.png', desc:'' },
+    { id:'bg2', name:'商场', url:'https://image.arityflow.top/uploads/2026/10/6adf6298b7a646.44081929_0b57c357.png', desc:'' },
+    { id:'bg3', name:'美食街', url:'https://image.arityflow.top/uploads/2026/10/6adf6298b98d09.56626987_80b3faab.png', desc:'' },
+    { id:'bg4', name:'食堂', url:'https://image.arityflow.top/uploads/2026/10/6adf6298bb7c74.50360863_1200889a.png', desc:'' },
+    { id:'bg5', name:'学校寝室', url:'https://image.arityflow.top/uploads/2026/10/6adf6298bd6382.10145858_7af493d4.png', desc:'' },
+    { id:'bg6', name:'卧室', url:'https://image.arityflow.top/uploads/2026/10/6adf6298bf4e51.45009279_da04d67f.png', desc:'' },
+    { id:'bg7', name:'操场', url:'https://image.arityflow.top/uploads/2026/10/6adf6298c150b9.83361636_221d3dca.png', desc:'' },
+    { id:'bg8', name:'学校道路', url:'https://image.arityflow.top/uploads/2026/10/6adf6298c34863.31498134_a4b5744d.png', desc:'' },
+    { id:'bg9', name:'学校走廊', url:'https://image.arityflow.top/uploads/2026/10/6adf6298c51de6.59468075_43898ab4.png', desc:'' },
+    { id:'bg10', name:'教室', url:'https://image.arityflow.top/uploads/2026/10/6adf6298c6eb56.66497000_7d0a87a3.png', desc:'' },
+    { id: "bg_bar", name: "酒吧", url: "https://image.arityflow.top/uploads/2026/10/6ae031fca0ff68.06823865_dddd9b5e.jpg", desc: "酒吧" },
+    { id: "bg_suburb", name: "郊外", url: "https://image.arityflow.top/uploads/2026/10/6ae031fca38bc3.16541738_3741a444.jpg", desc: "郊外" },
+    { id: "bg_beach", name: "海滩", url: "https://image.arityflow.top/uploads/2026/10/6ae031fca52238.43777563_5446dc6a.jpg", desc: "海滩" },
+    { id: "bg_frequent", name: "常去小区", url: "https://image.arityflow.top/uploads/2026/10/6ae031fcaa2274.91945215_94722ab5.jpg", desc: "常去小区" },
+    { id: "bg_other", name: "其他小区", url: "https://image.arityflow.top/uploads/2026/10/6ae031fca76c64.94895401_b4efd3db.jpg", desc: "其他小区" },
+    { id: "bg_park", name: "公园", url: "https://image.arityflow.top/uploads/2026/10/6ae031fcac5a35.96832975_d3a53c29.jpg", desc: "公园" },
+    { id: "bg_nightmarket", name: "夜市", url: "https://image.arityflow.top/uploads/2026/10/6ae0429590bed6.15365607_e10ac8d1.jpg", desc: "夜市" }
+  ],
+  silhouettes: [
+    { id: "sil_m1", name: "1男剪影", gender: "male", url: "https://image.arityflow.top/uploads/2026/10/6ae03a8027f853.79341864_ccc425cd.png", boundCharacters: [] },
+    { id: "sil_m2", name: "2男剪影", gender: "male", url: "https://image.arityflow.top/uploads/2026/10/6ae03a802923e3.75784234_df7a0534.png", boundCharacters: [] },
+    { id: "sil_m3", name: "3男剪影", gender: "male", url: "https://image.arityflow.top/uploads/2026/10/6ae03a8029dde1.21998103_4949e25f.png", boundCharacters: [] },
+    { id: "sil_m4", name: "4男剪影", gender: "male", url: "https://image.arityflow.top/uploads/2026/10/6ae03a802a8671.76099078_5c14038a.png", boundCharacters: [] },
+    { id: "sil_f1", name: "1女剪影", gender: "female", url: "https://image.arityflow.top/uploads/2026/10/6ae03a802c1f52.37618540_a7325503.png", boundCharacters: [] },
+    { id: "sil_f2", name: "2女剪影", gender: "female", url: "https://image.arityflow.top/uploads/2026/10/6ae03a802da535.02877515_6fc79486.png", boundCharacters: [] },
+    { id: "sil_f3", name: "3女剪影", gender: "female", url: "https://image.arityflow.top/uploads/2026/10/6ae03a802efd89.28959889_b6e7f863.png", boundCharacters: [] },
+    { id: "sil_f4", name: "4女剪影", gender: "female", url: "https://image.arityflow.top/uploads/2026/10/6ae03a80300161.89333379_9383767a.png", boundCharacters: [] }
+  ],
+  mapSpots: [
+    { id: "school", name: "学校", x: 22, y: 31 },
+    { id: "suburb", name: "郊外", x: 35, y: 18 },
+    { id: "residence", name: "居住区", x: 82, y: 29 },
+    { id: "mall", name: "商场", x: 50, y: 43 },
+    { id: "nightmarket", name: "夜市", x: 10, y: 49 },
+    { id: "food", name: "美食街", x: 84, y: 52 },
+    { id: "bar", name: "酒吧", x: 30, y: 59 },
+    { id: "park", name: "公园", x: 25, y: 83 },
+    { id: "beach", name: "海滩", x: 74, y: 81 }
+  ],
+  locationBackgrounds: {
+    "学校": "学校道路", "教室": "教室", "操场": "操场", "食堂": "食堂",
+    "学校寝室": "学校寝室", "学校走廊": "学校走廊", "酒吧": "酒吧", "郊外": "郊外",
+    "海滩": "海滩", "常去小区": "常去小区", "其他小区": "其他小区", "公园": "公园",
+    "夜市": "夜市", "美食街": "美食街", "商场": "商场", "居住区": "客厅", "家": "卧室"
+  },
+  residentVisitBackgrounds: { frequent: "常去小区", other: "其他小区" }
+});
+
+const OBFUSCATED_DATA = (function() {
+    const b64 = btoa(unescape(encodeURIComponent(RAW_JSON_STR)));
+    let result = '';
+    for (let i = 0; i < b64.length; i++) {
+        if (i > 0 && i % 40 === 0) result += '@#$%^&*';
+        result += b64[i];
+    }
+    return result;
+})();
+
+let PACK_DATA = {};
+try {
+    const cleanBase64 = OBFUSCATED_DATA.replace(/[^A-Za-z0-9+/=]/g, '');
+    const jsonStr = decodeURIComponent(escape(atob(cleanBase64)));
+    PACK_DATA = JSON.parse(jsonStr);
+} catch (e) {
+    console.error("数据包预解码失败:", e);
+}
+
+const DEFAULT_WORLD_BACKGROUND = `社会：正常的**现代社会**，有一群人被称为**捉鬼师**，他们都有着各自的生活，并非完全将捉鬼作为主业。捉鬼师为了不暴露身份，**与观者联系时都用的论坛昵称**。一般人**很少**有机会知道捉鬼师，观者会协助捉鬼师隐藏身份，包括但不限于疏散人群、防止普通人拍摄并上传网络。如果有普通人遇到了难以解决灵异事件，就可以请求观者帮忙，将委托发出去。未开启阴阳眼的人无法看见鬼，但如果处于极度的恐惧下可以看见。捉鬼师在日常情况为了避免被发现不会随意开启阴阳眼，只会在捉鬼时开启查看怨气，也不会出现为了节省灵力而在捉鬼时不开启阴阳眼的情况。如果有普通群众看到捉鬼师开启阴阳眼捉鬼，会被观者专门带走消除记忆，以防止大面积传播，同时也会有专人删除场地监控等。
+鬼：鬼的等级分为三种，**游魂**，**怨鬼**，**厉鬼**，从游魂到厉鬼难度依次增加。游魂通过符纸就能超度，对人类的危害很小。怨鬼对人类有攻击性，但无法触碰人类，可以通过引诱人类触犯规则而伤害他们。厉鬼拥有实体，可以直接害人，实力强大，长相丑陋恐怖。
+接取委托：通过观者在论坛发布的委托中选择接取。同时，观者会给每个捉鬼师分配一块地区，让他们定期去看是否有鬼滞留人间。
+分配委托：有时观者会直接派发任务给固定的捉鬼师，他们会对案件进行评估需要的捉鬼师的能力，从而选择捉鬼师分配任务。一般情况下，一个委托分给一个捉鬼师。如果遇到**很难对付的鬼**时，通常会组织很多捉鬼师一起前往。
+四象：分别为青龙，白虎，朱雀，玄武，都已经活了很久，他们已经完全融入人类社会，拥有人类的相貌，但依然可以变回本体。其中白虎、朱雀、玄武站在人类的一边，帮助捉鬼师。青龙因为**曾经帮过招鬼师**而与另外三人关系不太好，**如今也不会帮助招鬼师**。四象可以与人类契约，被作为式神召唤出来帮助他们。但本质依旧是**独立的个体**，也**不存在契约空间**，**不需要被契约者照顾喂养**。
+捉鬼师：可以通过使用灵力从而打开阴阳眼，阴阳眼分为低阶，中阶和高阶三个等级，鎏金色刻印着阶段等级纹路。最开始学习成为捉鬼师时需要提升灵力，用来打开阴阳眼。捉鬼师可以使用自身的阳气战斗，阳气强到一定地步可以直接灼伤附近的鬼魂。捉鬼师的血脉决定了可以学习哪些特定的能力。如制符血脉可以制符、造物血脉可以造物。只有极少数人的血脉无限制。
+招鬼师：捉鬼师的对立面，可以利用招鬼符召唤鬼魂、使用阴气进行战斗，但如果使用过多会使身体体质变差，用的越多伤害越大。招鬼师不会主动自己暴露身份，也很少主动出现在众人面前，招鬼本身是不被允许的。
+当用户不是捉鬼师时，禁止频繁提及鬼怪相关，捉鬼师不捉鬼时也只是普通人，禁止动不动就提及鬼怪。`;
+
+function builtinCharacterTemplate(b){
+  return {
+    id: b.id, builtIn: true, name: b.name,
+    activeScheme: 'default', schemes: [{id: 'default', name: '默认方案'}],
+    voiceOverride: '', useSprite: true, portraitId: '', useCustomVoice: false,
+    useCustomProfile: false,
+    customProfile: { identity:'', relation:'', address:'', personality:'', description:'' },
+    district: (b.id === 'qinwu' || b.id === 'luoyunying') ? '常去' : '其他',
+    preferredLocations: '', voiceEnabled: false
+  };
+}
+
+function baseState(){
+  const pack = PACK_DATA || {};
+  const defaultChars = RAW_BUILTIN_LIB.map(builtinCharacterTemplate);
+  return {
+    version:16,title:'那什么dk',place:'学校 · 高一三班',
+    story:[
+      {id:'n1',speaker:'旁白',text:'九月初，雨淅淅沥沥下着。你推开高一三班的门，教室里吵吵嚷嚷。'},
+      {id:'n2',speaker:'旁白',text:'靠窗第三排的位置上，浅灰色短发的男生正低头在草稿纸上画着什么，左耳下的红绳耳坠垂到肩膀，缀着一小颗翡翠。'},
+      {id:'n3',speaker:'秦梧',text:'（抬头看见你，似乎想起来什么）是新同学吧？你座位在这儿——我是秦梧，以后有事可以找我呀。'},
+      {id:'n4',speaker:'旁白',text:'他朝你笑了笑，说话的时候带着一点轻快的尾音。窗外雨声敲着玻璃，你在他旁边的空位坐了下来。'}
+    ],
+    cursor:0,
+    choices:[],freeInput:false,awaitingSetup:true,
+    world:{background:DEFAULT_WORLD_BACKGROUND,rules:'保持含蓄、细腻的中文叙事，重视人物动作与对话，不替玩家做决定。捉鬼师日常不随意开启阴阳眼，只在捉鬼时查看怨气。'},
+    plotDirection:'',
+    characters: defaultChars,
+    selectedCharacterId: defaultChars.length ? defaultChars[0].id : '',
+    player:{name:'',gender:'女',identity:'',description:''},
+    groups:[],
+    settings:{generateOptions:true,autoMemory:true,memoryThreshold:3000,autoVoice:false,generateLength:600,uiScale:1,customFont:'',theme:'light'},
+    locationBackgrounds: pack.locationBackgrounds || {},
+    residentVisitBackgrounds: pack.residentVisitBackgrounds || {frequent:'',other:''},
+    api: pack.api ? { ...pack.api, temperature: .8, thoughtChain:'' } : {endpoint:'https://api.openai.com/v1',key:'',model:'gpt-4o-mini',temperature:.8,thoughtChain:''},
+    voice:{enabled:false,region:'cn',endpoint:'https://api.minimax.chat/v1',key:'',groupId:'',model:'speech-02-hd',defaultVoiceId:'female-shaonv'},
+    imageApi:{ enabled: false, endpoint: 'https://api.openai.com/v1', key: '', model: 'dall-e-3', genScene: false, genSprite: false },
+    memory:{lastSummaryIndex:0,summaries:[]},
+    images:[
+      { id: 'builtin-qinwu', builtIn: true, character: '秦梧', name: '秦梧-正常', url: 'https://image.arityflow.top/uploads/2026/10/6ae0819f344399.15896121_aa9cd401.png', enabled: true },
+      { id: 'builtin-luoyunying', builtIn: true, character: '骆云影', name: '骆云影-正常', url: 'https://image.arityflow.top/uploads/2026/10/6adef9027dc322.57617127_68731a53.png', enabled: true }
+    ],
+    silhouettes: pack.silhouettes || [],
+    backgrounds: pack.backgrounds || [],
+    currentBackground:'教室',
+    spriteOffsets:{},
+    backgroundOffsets:{},
+    audioCache:{},
+    mapSpots: pack.mapSpots || []
+  };
+}
+
+let state=loadState(), panel='home', settingsTab='world', busy=false, summarizing=false, audio=null, persistTimer=null;
+let builtinReady=false, isEditingMap=false, mapDragging=false, dragTarget=null, dragStartX=0, dragStartY=0;
+let panelContext = 'scene';
+
+function loadState(){
+ const d=baseState();
+ try{
+  const raw=JSON.parse(localStorage.getItem(STORE));
+  if(!raw) return d;
+  const s={...d,...raw,
+   world:{...d.world,...raw.world},
+   player:{...d.player,...raw.player},
+   settings:{...d.settings,...raw.settings},
+   api:{...d.api,...raw.api},
+   voice:{...d.voice,...raw.voice},
+   imageApi:{...d.imageApi, ...raw.imageApi},
+   memory:{...d.memory,...raw.memory},
+   audioCache: raw.audioCache || {},
+   mapSpots: Array.isArray(raw.mapSpots) && raw.mapSpots.length ? raw.mapSpots : d.mapSpots,
+   locationBackgrounds: (raw.locationBackgrounds && typeof raw.locationBackgrounds === 'object') ? raw.locationBackgrounds : d.locationBackgrounds,
+   residentVisitBackgrounds: (raw.residentVisitBackgrounds && typeof raw.residentVisitBackgrounds === 'object') ? {frequent:'',other:'',...raw.residentVisitBackgrounds} : d.residentVisitBackgrounds,
+   backgrounds: Array.isArray(raw.backgrounds) && raw.backgrounds.length ? raw.backgrounds : d.backgrounds
+  };
+  s.story=Array.isArray(raw.story)&&raw.story.length?raw.story:d.story;
+  s.characters=Array.isArray(raw.characters)?raw.characters:d.characters;
+  s.images=Array.isArray(raw.images)?raw.images:d.images;
+  s.silhouettes=Array.isArray(raw.silhouettes) && raw.silhouettes.length ? raw.silhouettes : d.silhouettes;
+  s.groups=(Array.isArray(raw.groups)?raw.groups:[]).filter(g=>g && g.name!=='A 组 · 旧宅传闻');
+  s.spriteOffsets=raw.spriteOffsets&&typeof raw.spriteOffsets==='object'?raw.spriteOffsets:{};
+  s.backgroundOffsets=raw.backgroundOffsets&&typeof raw.backgroundOffsets==='object'?raw.backgroundOffsets:{};
+  s.cursor=Math.max(0,Math.min(Number(s.cursor)||0,s.story.length-1));
+  s.awaitingSetup=!!raw.awaitingSetup && !(s.player.name&&s.player.name.trim());
+  if(Number(s.settings.memoryThreshold)===1200) s.settings.memoryThreshold=3000;
+  if(Number(s.settings.generateLength)===300) s.settings.generateLength=600;
+  if(typeof s.api.thoughtChain!=='string') s.api.thoughtChain='';
+  if(s.api.key==='YOUR_API_KEY_HERE') s.api.key='';
+  if(typeof s.settings.customFont!=='string') s.settings.customFont='';
+  if(typeof s.settings.theme!=='string') s.settings.theme='light';
+  if(typeof s.currentBackground !== 'string' || !s.currentBackground) s.currentBackground = '教室'; 
+  return s;
+ }catch(e){return d;}
+}
+function trimAudioCache(cache, maxItems = 12, maxBytes = 1800000){
+ const entries = Object.entries(cache || {}).filter(([id, value]) => id && typeof value === 'string' && value.startsWith('data:audio/'));
+ const kept = [];
+ let total = 0;
+ for (let i = entries.length - 1; i >= 0 && kept.length < maxItems; i--) {
+   const size = entries[i][1].length;
+   if (total + size > maxBytes) continue;
+   kept.unshift(entries[i]);
+   total += size;
+ }
+ return Object.fromEntries(kept);
+}
+function persist(immediate=false){
+ clearTimeout(persistTimer);
+ const save=()=>{
+  try{
+   const lightState = clone(state);
+   lightState.audioCache = trimAudioCache(lightState.audioCache);
+   lightState.settings.customFont = '';
+   if (state.settings.customFont) localStorage.setItem('yueying-custom-font', state.settings.customFont);
+   else localStorage.removeItem('yueying-custom-font');
+   localStorage.setItem(STORE,JSON.stringify(sanitizeForStorage(lightState)));
+  }catch(e){toast('本地空间不足，可能由于图片缓存过大','error');}
+ };
+ if(immediate)save();else persistTimer=setTimeout(save,1000);
+}
+function sanitizeForStorage(s){
+ const copy=clone(s);
+ copy.characters=copy.characters.map(c=>{
+  if(c.builtIn) return {
+    id:c.id, builtIn:true, name:c.name,
+    activeScheme:c.activeScheme, schemes:c.schemes,
+    voiceOverride:c.voiceOverride||'', useSprite:c.useSprite,
+    portraitId:c.portraitId, useCustomVoice:!!c.useCustomVoice,
+    useCustomProfile:!!c.useCustomProfile,
+    customProfile:c.customProfile || { identity:'', relation:'', address:'', personality:'', description:'' },
+    district:c.district, preferredLocations:c.preferredLocations,
+    voiceEnabled:c.voiceEnabled
+  };
+  return c;
+ });
+ return copy;
+}
+function applyUiScale(){
+ const raw = Number(state.settings.uiScale) || 1;
+ const s = Math.min(1.6, Math.max(0.7, raw));
+ state.settings.uiScale = s;
+ document.documentElement.style.setProperty('--ui-scale', s);
+ document.body.style.zoom = String(s);
+}
+function applyTheme() {
+  const theme = state.settings.theme || 'light';
+  document.body.classList.remove('theme-light', 'theme-dark');
+  document.body.classList.add(`theme-${theme}`);
+}
+function applyFont() {
+  let styleEl = document.getElementById('customFontStyle');
+  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'customFontStyle'; document.head.appendChild(styleEl); }
+  const customFontData = localStorage.getItem('yueying-custom-font');
+  if (customFontData) {
+    state.settings.customFont = customFontData;
+    styleEl.innerHTML = `@font-face{font-family:'UserCustomFont';src:url('${customFontData}');}body,button,input,textarea,select,.dialog,.dialogue-text,.map-spot span{font-family:'UserCustomFont',"Noto Serif CJK SC","Source Han Serif SC","Songti SC","Microsoft YaHei",serif !important;}`;
+  } else { state.settings.customFont = ''; styleEl.innerHTML = ''; }
+}
+
+async function injectBuiltins(){
+ try{
+  if (!Array.isArray(state.characters)) state.characters = [];
+
+  // 保证旧存档也能获得新增的内置角色，同时保留玩家已保存的修改。
+  const existingBuiltinIds = new Set(state.characters.filter(c => c && c.builtIn).map(c => c.id));
+  RAW_BUILTIN_LIB.forEach(b => {
+    if (!existingBuiltinIds.has(b.id)) state.characters.push(builtinCharacterTemplate(b));
+  });
+
+  state.characters.forEach(c => {
+    if (!c) return;
+    if (c.builtIn) {
+      if (c.useSprite === undefined) c.useSprite = true;
+      if (c.useCustomVoice === undefined) c.useCustomVoice = false;
+      if (c.useCustomProfile === undefined) c.useCustomProfile = false;
+      if (!c.customProfile || typeof c.customProfile !== 'object') {
+        c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+      }
+      ['identity','relation','address','personality','description'].forEach(k => {
+        if (typeof c.customProfile[k] !== 'string') c.customProfile[k] = '';
+      });
+    }
+    if (c.district === undefined) c.district = (c.id === 'qinwu' || c.id === 'luoyunying') ? '常去' : '其他';
+    if (c.preferredLocations === undefined) c.preferredLocations = '';
+    if (c.voiceEnabled === undefined) c.voiceEnabled = false;
+    if (!c.builtIn) {
+      if (!Array.isArray(c.schemes) || !c.schemes.length) {
+        c.schemes = [{id:'default',name:'默认方案',data:characterSchemeData(c)}];
+        c.activeScheme = 'default';
+      } else {
+        c.schemes.forEach(s=>{ s.data = characterSchemeData({...c,...(s.data||{})}); });
+        if (!c.schemes.some(s=>s.id===c.activeScheme)) c.activeScheme = c.schemes[0].id;
+      }
+    }
+  });
+
+  if (!state.characters.some(c => c && c.id === state.selectedCharacterId)) {
+    state.selectedCharacterId = state.characters[0]?.id || '';
+  }
+  builtinReady=true;
+ }catch(e){console.error(e);}
+}
+
+function charFull(c){
+ if(!c) return null;
+ if(c.builtIn){
+  const real = RAW_BUILTIN_LIB.find(x => x.id === c.id);
+  if(real) {
+    const builtinVoice = String(real.voiceId || '').trim();
+    const customVoice = String(c.voiceOverride || '').trim();
+    // 没有内置音色的角色（如骆云影），即使没切换下拉框，也应使用已填写的自定义音色
+    const voiceId = c.useCustomVoice ? customVoice : (builtinVoice || customVoice);
+    const base = { ...real, voiceId, district:c.district, preferredLocations:c.preferredLocations, voiceEnabled:c.voiceEnabled };
+    // 自定义设定覆盖内置设定（名称与性别固定不覆盖）
+    if (c.useCustomProfile && c.customProfile) {
+      ['identity','relation','address','personality','description'].forEach(k=>{
+        if (typeof c.customProfile[k] === 'string') base[k] = c.customProfile[k];
+      });
+    }
+    return base;
+  }
+ }
+ return c;
+}
+function selectedChar(){return state.characters.find(c=>c.id===state.selectedCharacterId)||state.characters[0];}
+
+function toast(message,type=''){const el=document.createElement('div');el.className='toast '+type;el.textContent=message;$('#toasts').append(el);requestAnimationFrame(()=>el.classList.add('show'));setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),220);},3200);}
+function emotionFor(text){if(/笑|喜|悦|调侃/.test(text))return '微笑';if(/怒|冷声|厉声|生气/.test(text))return '生气';if(/泪|悲|难过|垂眸/.test(text))return '难过';return '正常';}
+
+function findPortrait(speaker,text){
+ if(!speaker||speaker==='旁白')return null;
+ const c = state.characters.find(c => c.name === speaker);
+ if (!c || c.useSprite === false) return null;
+ let img = null;
+ if (c.portraitId) {
+   img = state.images.find(i => i.id === c.portraitId);
+ } else {
+   const list = state.images.filter(i => i.character === speaker && (i.builtIn || i.enabled !== false));
+   if (list.length) {
+     const emotion = emotionFor(text);
+     img = list.find(i => i.expression === emotion) || list.find(i => i.expression === '正常') || list[0];
+   }
+ }
+ if (img) return { ...img, isSilhouette: false };
+
+ const gender = c.gender === '女' ? 'female' : 'male';
+ let sil = state.silhouettes.find(s => s.gender === gender && Array.isArray(s.boundCharacters) && s.boundCharacters.includes(c.id));
+ if (!sil) {
+   const unbound = state.silhouettes.filter(s => s.gender === gender && (!Array.isArray(s.boundCharacters) || s.boundCharacters.length === 0));
+   if (unbound.length) {
+     let sum = 0; for (let i=0;i<c.id.length;i++) sum += c.id.charCodeAt(i);
+     sil = unbound[sum % unbound.length];
+   }
+ }
+ if (sil) return { id: sil.id, url: sil.url, name: sil.name, isSilhouette: true };
+ return null;
+}
+
+function spriteOffsetFor(portrait, speaker){
+ if(portrait && state.spriteOffsets[portrait.id]) return state.spriteOffsets[portrait.id];
+ if(speaker && state.spriteOffsets[speaker]) return state.spriteOffsets[speaker];
+ return {x:0,y:0,s:1};
+}
+function backgroundOffsetFor(bg){
+ if(bg && state.backgroundOffsets[bg.id]) return state.backgroundOffsets[bg.id];
+ return {x:0,y:0,s:1};
+}
+
+function renderScene(){
+ if(!$('#noticeApp').hidden) return;
+ if($('#setupOverlay').hidden===false) return;
+ if(state.awaitingSetup){openSetup();return;}
+ $('#sceneTitle').textContent=state.title;
+ $('#scenePlace').textContent=state.place;
+ const entry=state.story[state.cursor]||{speaker:'旁白',text:'……'};
+
+ if (entry.speaker === '旁白') { $('#speaker').hidden = true; } else { $('#speaker').hidden = false; $('#speaker').textContent = entry.speaker; }
+ let displayText = entry.text;
+ if (entry.speaker === '旁白') {
+   const sceneSwitch = displayText.match(/^\[场景切换[：:]\s*(.+)\]$/);
+   if (sceneSwitch) displayText = `（场景切换至：${sceneSwitch[1]}）`;
+   const moveTo = displayText.match(/^\[你前往了(.+)\]$/);
+   if (moveTo) displayText = `（你前往了 ${moveTo[1]}）`;
+ }
+ $('#dialogueText').textContent=displayText;
+ $('#dialogueText').classList.toggle('narration',entry.speaker==='旁白');
+ $('#progress').textContent=String(state.cursor+1).padStart(2,'0')+' / '+String(state.story.length).padStart(2,'0');
+
+ const bgImg = $('#dynamicBg');
+ const bg = state.backgrounds.find(b => b.name === state.currentBackground);
+ if(bg && bg.url) {
+    if(bgImg.dataset.src !== bg.url) { 
+        bgImg.src = bg.url; 
+        bgImg.dataset.src = bg.url; 
+    }
+    bgImg.classList.add('visible'); 
+    bgImg.style.display = '';
+    const bo = backgroundOffsetFor(bg);
+    bgImg.style.transform = `translate(${bo.x}px, ${bo.y}px) scale(${bo.s})`;
+ } else {
+    bgImg.removeAttribute('src'); 
+    bgImg.dataset.src=''; 
+    bgImg.classList.remove('visible'); 
+    bgImg.style.display = 'none'; 
+    bgImg.style.transform = '';
+ }
+
+ const portrait=findPortrait(entry.speaker,entry.text), sprite=$('#sprite');
+ if(portrait && portrait.url){
+  const src=portrait.url;
+  if(sprite.dataset.src!==src){sprite.src=src;sprite.dataset.src=src;}
+  sprite.alt=portrait.name+' 立绘';
+  sprite.classList.add('visible');
+  sprite.classList.toggle('silhouette', !!portrait.isSilhouette);
+  sprite.style.display='block';
+  const o = spriteOffsetFor(portrait, entry.speaker);
+  sprite.style.setProperty('--sx',o.x+'px');
+  sprite.style.setProperty('--sy',o.y+'px');
+  sprite.style.setProperty('--ss',o.s);
+ }else{
+  sprite.removeAttribute('src'); sprite.dataset.src=''; sprite.classList.remove('visible'); sprite.classList.remove('silhouette'); sprite.style.display='none';
+ }
+
+ const atEnd=state.cursor >= state.story.length-1;
+ const showChoices = atEnd && state.choices.length && !state.freeInput;
+ const showInput = atEnd && !showChoices && !busy;
+
+ $('#continueBtn').hidden = atEnd;
+ $('#choices').hidden = !showChoices;
+ $('#storyForm').hidden = !showInput;
+ $('#loadingHint').hidden = !busy;
+
+ $('#choices').innerHTML=showChoices?state.choices.map(c=>`<button class="choice" data-action="choose" data-key="${esc(c.key)}"><span class="choice-key"><i>${esc(c.key)}</i></span><span class="choice-text">${esc(c.text)}</span></button>`).join(''):'';
+
+ if(showInput){ setTimeout(()=>$('#storyInput').focus(), 50); }
+
+ if(state.settings.autoVoice&&entry.speaker!=='旁白'&&entry.id!==renderScene.lastSpoken){
+  renderScene.lastSpoken=entry.id;speak(entry.text,entry.speaker,entry.id);
+ }
+
+ if (entry.speaker !== '旁白' && entry.speaker !== state.player.name) {
+   const char = state.characters.find(c => c.name === entry.speaker);
+   if (char && char.useSprite && !char.portraitId && !state.images.some(i => i.character === char.name)) {
+     const canPromptSprite = state.imageApi.enabled && state.imageApi.genSprite && state.imageApi.endpoint && state.imageApi.key;
+     if (!renderScene.spritePrompted) renderScene.spritePrompted = new Set();
+     if (canPromptSprite && !renderScene.spritePrompted.has(char.id)) {
+       renderScene.spritePrompted.add(char.id);
+       setTimeout(() => {
+         if ($('#dialogOverlay').hidden && $('#overlay').hidden && $('#mapOverlay').hidden && $('#setupOverlay').hidden && $('#setupApiOverlay').hidden) {
+           showGenerateImageDialog('sprite', char.name, char.description || char.personality || '');
+         }
+       }, 500);
+     }
+   }
+ }
+}
+const NAV=[['home','菜单'],['memory','记忆'],['settings','设定'],['images','立绘库'],['backgrounds','背景库'],['api','API 配置'],['voice','语音配置'],['imageapi','生图 API'],['notice','公告']];
+function openPanel(name){
+ panel=name;$('#overlay').hidden=false;
+ document.body.classList.add('panel-open');
+ requestAnimationFrame(()=>$('#overlay').classList.add('open'));
+ renderPanel();setTimeout(()=>$('.close-btn').focus(),80);
+}
+function closePanel(){
+ $('#overlay').classList.remove('open');
+ if (panelContext !== 'map') document.body.classList.remove('panel-open');
+ setTimeout(()=>{
+   $('#overlay').hidden=true;
+   if (panelContext === 'map') { openMap(); panelContext = 'scene'; }
+ }, 200);
+ if(audio){audio.pause();audio=null;}
+}
+function switchRow(label,desc,path,checked){
+ return `<div class="switch-row"><div class="switch-copy"><strong>${esc(label)}</strong><small>${esc(desc)}</small></div><label class="switch"><input type="checkbox" data-bind="${path}" ${checked?'checked':''} aria-label="${esc(label)}"><span class="switch-ui"></span></label></div>`;
+}
+function field(label,path,value,type='text',full=false,extra=''){
+ return `<div class="field ${full?'full':''}"><label>${esc(label)}</label>${type==='textarea'?`<textarea data-bind="${path}" ${extra}>${esc(value)}</textarea>`:`<input type="${type}" data-bind="${path}" value="${esc(value)}" ${extra}>`}</div>`;
+}
+
+const MODEL_LISTS = {};
+const BUILTIN_VOICE_MODELS = [
+  'speech-2.8-hd','speech-2.8-turbo',
+  'speech-2.6-hd','speech-2.6-turbo',
+  'speech-2.5-hd-preview','speech-2.5-turbo-preview',
+  'speech-02-hd','speech-02-turbo',
+  'speech-01-hd','speech-01-turbo'
+];
+
+function modelField(label, path, value, listId, extra=''){
+  return `<div class="field"><label>${esc(label)}</label>
+    <div style="display:flex;gap:8px;align-items:stretch;">
+      <div class="combo" data-combo="${listId}">
+        <input type="text" data-bind="${path}" data-combo-input value="${esc(value)}" autocomplete="off" ${extra}>
+        <button type="button" class="combo-toggle" data-action="toggle-combo" data-list="${listId}" aria-label="展开模型列表" title="展开模型列表">▾</button>
+        <div class="combo-list" data-combo-list="${listId}" hidden></div>
+      </div>
+      <button type="button" class="secondary-btn" data-action="fetch-models" data-target="${path}" data-list="${listId}" style="min-height:44px;padding:0 14px;white-space:nowrap;flex-shrink:0;">获取模型</button>
+    </div>
+  </div>`;
+}
+
+function fillComboList(listId, currentValue){
+  const box = document.querySelector('.combo-list[data-combo-list="' + listId + '"]');
+  if(!box) return;
+  const list = MODEL_LISTS[listId] || [];
+  if(!list.length){
+    box.innerHTML = '<div class="combo-empty">暂无模型，请先点击「获取模型」</div>';
+    return;
+  }
+  const cur = String(currentValue ?? '').trim();
+  box.innerHTML = list.map(m =>
+    `<button type="button" class="combo-item${m === cur ? ' active' : ''}" data-combo-pick="${esc(m)}" data-list="${listId}" title="${esc(m)}">${esc(m)}</button>`
+  ).join('');
+}
+
+function closeAllCombos(except){
+  document.querySelectorAll('.combo-list').forEach(box => {
+    if(except && box === except) return;
+    if(box.hidden) return;
+    box.hidden = true;
+    const combo = box.closest('.combo');
+    if(combo) combo.classList.remove('open');
+  });
+}
+
+function openCombo(listId){
+  const combo = document.querySelector('.combo[data-combo="' + listId + '"]');
+  if(!combo) return;
+  const box = combo.querySelector('.combo-list');
+  const input = combo.querySelector('[data-combo-input]');
+  if(!box) return;
+  closeAllCombos(box);
+  fillComboList(listId, input ? input.value : '');
+  box.hidden = false;
+  combo.classList.add('open');
+  requestAnimationFrame(()=>{ try{ box.scrollIntoView({block:'nearest'}); }catch(e){} });
+}
+
+async function fetchModelList(baseUrl, apiKey){
+  const base = normalizeBaseUrl(baseUrl);
+  if(!base) throw new Error('接口地址为空');
+  const res = await smartFetch(base + '/models', {
+    method: 'GET',
+    headers: { 'Authorization': 'Bearer ' + apiKey }
+  });
+  if(!res.ok){
+    let txt = '';
+    try { txt = await res.text(); } catch(e){}
+    throw new Error(`HTTP ${res.status}${txt ? ' ' + txt.slice(0,120) : ''}`);
+  }
+  const data = await res.json().catch(()=>({}));
+  const arr = data?.data || data?.models || data?.model_list || [];
+  const list = (Array.isArray(arr) ? arr : [])
+    .map(m => typeof m === 'string' ? m : (m.id || m.name || m.model))
+    .filter(Boolean);
+  if(!list.length) throw new Error('接口未返回模型列表');
+  return list;
+}
+
+async function fetchModelsFor(path, btn){
+  let baseUrl = '', apiKey = '', obj = null;
+  if(path === 'api.model'){ baseUrl = state.api.endpoint; apiKey = state.api.key; obj = state.api; }
+  else if(path === 'imageApi.model'){ baseUrl = state.imageApi.endpoint; apiKey = state.imageApi.key; obj = state.imageApi; }
+  else if(path === 'voice.model'){ baseUrl = state.voice.endpoint; apiKey = state.voice.key; obj = state.voice; }
+  else return;
+
+  if(!baseUrl){ toast('请先填写接口地址', 'error'); return; }
+  if(!apiKey){ toast('请先填写 API 密钥', 'error'); return; }
+
+  const listId = btn.dataset.list;
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = '获取中…';
+  try{
+    let list = [];
+    if(path === 'voice.model'){
+      let fetchedList = [];
+      try{
+        const all = await fetchModelList(baseUrl, apiKey);
+        fetchedList = all.filter(m => /speech|tts|voice|audio/i.test(String(m)));
+      }catch(e){ }
+      list = [...new Set([...BUILTIN_VOICE_MODELS, ...fetchedList])];
+    } else {
+      list = await fetchModelList(baseUrl, apiKey);
+    }
+    MODEL_LISTS[listId] = list;
+    if(obj && !obj.model && list.length){
+      obj.model = list[0];
+      const wrap = btn.closest('.field');
+      const input = wrap ? wrap.querySelector('input[data-bind]') : null;
+      if(input) input.value = list[0];
+    }
+    persist();
+    fillComboList(listId, (obj && obj.model) || '');
+    openCombo(listId);
+    toast(path === 'voice.model'
+      ? `已获取 ${list.length} 个语音模型，点击即可选用`
+      : `已获取 ${list.length} 个模型，点击即可选用`);
+  }catch(e){
+    toast('获取模型失败：' + (e.message || e), 'error');
+  }finally{
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+
+function renderPanel(){
+ $('#sideNav').innerHTML=NAV.map(([id,label])=>`<button class="side-link ${panel===id?'active':''}" data-panel="${id}">${label}</button>`).join('');
+ $('#sideBottom').innerHTML = `<button class="side-link" data-action="go-home">功能菜单</button><button class="side-link" data-action="close-panel">${panelContext === 'map' ? '返回地图' : '返回剧情'}</button>`;
+
+ const titles={
+  home:['功能菜单','故事之外，一切皆有迹可循'],
+  save:['导出存档','将完整故事与配置保存为 JSON 文件'],
+  load:['导入存档','从此文件恢复故事、设定与配置'],
+  memory:['记忆','让漫长的故事拥有清晰的脉络'],
+  settings:['设定','世界、人物与叙事规则'],
+  images:['立绘库','每张立绘独立调节 X / Y 偏移与缩放'],
+  backgrounds:['背景库','每张背景独立调节 X / Y 偏移与缩放'],
+  api:['API 配置','连接兼容 OpenAI Chat Completions 的剧情模型'],
+  voice:['语音配置','MiniMax 语音合成 · 密钥仅保存在当前浏览器'],
+  imageapi:['生图 API','根据剧情自动生成背景或立绘'],
+  notice:['公告','进入游戏前的重要须知'],
+  replay:['剧情回放','回望每一句对白与旁白']
+ };
+ const t=titles[panel]||titles.home;
+ $('#panelTitle').textContent=t[0];
+ $('#panelSubtitle').textContent=t[1];
+ const renderers={home:renderHome,save:renderSave,load:renderLoad,memory:renderMemory,settings:renderSettings,images:renderImages,backgrounds:renderBackgrounds,api:renderAPI,voice:renderVoice,imageapi:renderImageAPI,notice:renderNotice,replay:renderReplay};
+ $('#panelContent').innerHTML=(renderers[panel]||renderHome)();
+}
+function renderHome(){
+ return `<p class="section-intro">当前进度 ${state.cursor+1} / ${state.story.length}。请注意，所有剧情、设定与图片默认只保存在此浏览器中，如需换设备请先导出存档。</p><div class="menu-grid">${[['save','存档'],['load','读档'],['memory','记忆'],['settings','设定'],['images','立绘库'],['backgrounds','背景库'],['api','API 配置'],['voice','语音配置'],['imageapi','生图 API'],['notice','公告'],['replay','剧情回放']].map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div><div class="actions"><button class="primary-btn" data-action="close-panel">继续剧情</button><button class="danger-btn" data-action="new-story">重新开始</button></div>`;
+}
+function renderNotice(){
+ return `<div style="white-space: pre-wrap; line-height: 1.8; color: var(--text); font-size: 15px;">${esc($('#noticeBody').textContent.trim())}</div>`;
+}
+function renderSave(){
+ return `<p class="section-intro">存档包含剧情进度、记忆摘要、人物方案、世界书、背景与图片链接、地点背景设置、自定义字体等所有配置。<strong>文件仍会包含你填写的 API 与语音密钥，请妥善保管。</strong></p><div class="status-line">共 ${state.story.length} 条剧情 · ${state.memory.summaries.length} 条记忆 · ${state.characters.length} 位人物 · ${state.images.length} 张立绘 · ${state.silhouettes.length} 张剪影 · ${state.backgrounds.length} 张背景</div><div class="actions"><button class="primary-btn" data-action="export">导出存档文件</button><button class="secondary-btn" data-action="go-home">返回</button></div>`;
+}
+function renderLoad(){
+ return `<p class="section-intro">选择此前导出的 JSON 存档。导入会覆盖当前浏览器中的进度与配置，建议先导出当前存档。</p><label class="drop-file" for="importFile">点击选择 JSON 存档文件</label><div class="actions"><button class="secondary-btn" data-action="go-home">返回</button></div>`;
+}
+function memoryChars(){return state.story.slice(state.memory.lastSummaryIndex).reduce((n,e)=>n+e.speaker.length+e.text.length,0);}
+function renderMemory(){
+ const count=memoryChars(),threshold=Number(state.settings.memoryThreshold)||3000,pct=Math.min(100,count/threshold*100);
+ return `<div class="form-grid">${field('自动总结阈值（字数）','settings.memoryThreshold',threshold,'number',false,'min="100" step="100"')}</div>${switchRow('自动总结','未总结剧情达到阈值后，调用剧情 API 生成摘要','settings.autoMemory',state.settings.autoMemory)}<div class="meter"><i style="width:${pct}%"></i></div><p class="section-intro">待总结 ${count} / ${threshold} 字。摘要会加入后续剧情上下文，也可以随时手动修改。</p><div class="actions"><button class="primary-btn" data-action="manual-memory" ${summarizing?'disabled':''}>${summarizing?'正在总结…':'立即总结当前剧情'}</button></div><div style="margin-top:32px">${state.memory.summaries.length?state.memory.summaries.map((m,i)=>`<article class="summary"><div class="summary-meta"><span>记忆 ${String(i+1).padStart(2,'0')} · ${m.source==='auto'?'自动':'手动'}</span><span>${esc(new Date(m.createdAt).toLocaleString('zh-CN'))}</span></div><textarea data-memory-id="${m.id}" aria-label="记忆 ${i+1}">${esc(m.content)}</textarea><div class="actions" style="margin-top:8px"><button class="text-btn" data-action="save-memory" data-id="${m.id}">保存修改</button><button class="text-btn danger" data-action="delete-memory" data-id="${m.id}">删除</button></div></article>`).join(''):'<div class="empty">还没有记忆摘要。继续剧情，或点击上方按钮手动总结。</div>'}</div>`;
+}
+function renderSettings(){
+ const tabs=[['world','世界设定'],['characters','人物设定'],['player','我的设定'],['other','其他设定'],['options','生成选项']];
+ return `<div class="tabs">${tabs.map(([id,n])=>`<button class="tab ${settingsTab===id?'active':''}" data-settings-tab="${id}">${n}</button>`).join('')}</div>${({world:renderWorld,characters:renderCharacters,player:renderPlayer,other:renderOther,options:renderOptions}[settingsTab])()}`;
+}
+function renderWorld(){
+ return `<p class="section-intro">这里记录始终生效的要求，会在每次生成剧情时发送给模型。</p><div class="form-grid">${field('故事标题','title',state.title)}${field('当前地点','place',state.place)}${field('世界背景','world.background',state.world.background,'textarea',true)}${field('叙事规则','world.rules',state.world.rules,'textarea',true)}</div>`;
+}
+function renderPlayer(){
+ return `<p class="section-intro">性别固定为女，不可更改。</p><div class="form-grid">${field('姓名','player.name',state.player.name)}<div class="field"><label>性别</label><input value="女" disabled></div>${field('身份','player.identity',state.player.identity)}${field('设定','player.description',state.player.description,'textarea',true)}</div>`;
+}
+function renderOptions(){
+ return `<p class="section-intro">开启后，每轮剧情末尾要求模型给出 A／B／C 三个回应方向，以及 D 自由输入。选择 D 后选项消失，恢复文本输入框。</p>${switchRow('生成剧情选项','不同选择会作为你的下一句回应，影响后续剧情走向','settings.generateOptions',state.settings.generateOptions)}${switchRow('自动朗读角色台词','显示新台词时使用 MiniMax 与角色音色 ID 朗读','settings.autoVoice',state.settings.autoVoice)}`;
+}
+function renderCharacters(){
+ const c=selectedChar();
+ const currentListHtml = state.characters.map(x =>
+   `<button class="character-select ${x.id===c?.id?'active':''}" data-action="select-character" data-id="${x.id}"><span>${esc(x.name)}</span>${x.builtIn?'<span class="built-in-tag">内置</span>':'<span class="built-in-tag">自动捕获</span>'}</button>`
+ ).join('');
+ const libSection = `
+  <div style="margin-bottom:16px;">
+    <label style="font-size:13px; color:var(--muted); display:block; margin-bottom:10px;">当前登场角色（新角色会自动加入）</label>
+    <div class="character-list">${currentListHtml}</div>
+  </div>
+  <button class="secondary-btn" style="width:100%; margin-bottom:20px;" data-action="add-character">＋ 手动创建角色</button>
+ `;
+ if(!c) return `<div>${libSection}<div class="empty">暂无角色，请手动添加或等待剧情生成</div></div>`;
+ const imageOpts = state.images.map(i => `<option value="${i.id}" ${c.portraitId === i.id ? 'selected' : ''}>${esc(i.name)}</option>`).join('');
+ const extraFields = `
+   ${switchRow('开启单角色语音','允许该角色说话时发声（即使填写了ID也要开启才会发声）', `characters.${state.characters.indexOf(c)}.voiceEnabled`, c.voiceEnabled)}
+   <div class="field"><label>所在小区</label><select data-char-field="district"><option value="常去" ${c.district==='常去'?'selected':''}>常去小区</option><option value="其他" ${c.district==='其他'?'selected':''}>其他小区</option></select></div>
+   <div class="field"><label>偏好地点</label><input data-char-field="preferredLocations" value="${esc(c.preferredLocations||'')}" placeholder="可在此输入大地图中的地点名"></div>
+ `;
+ if(c.builtIn){
+  const hasBuiltinVoice = !!(RAW_BUILTIN_LIB.find(x=>x.id===c.id)?.voiceId || '').trim();
+  let voiceHTML = '';
+  if (hasBuiltinVoice) {
+    voiceHTML = `
+      <div class="field full"><label>音色配置</label>
+        <select data-change="voice-mode" data-id="${c.id}">
+           <option value="builtin" ${!c.useCustomVoice ? 'selected' : ''}>使用内置音色</option>
+           <option value="custom" ${c.useCustomVoice ? 'selected' : ''}>自定义音色</option>
+        </select>
+      </div>
+      <div class="field full" ${!c.useCustomVoice ? 'hidden' : ''}>
+         <label>自定义音色 ID</label><input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID">
+      </div>`;
+  } else {
+    voiceHTML = `<div class="field full"><label>音色 ID</label><input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID"></div>`;
+  }
+
+  const cp = c.customProfile || {};
+  const profileHTML = `
+    <div class="field full"><label>设定来源</label>
+      <select data-change="profile-mode" data-id="${c.id}">
+        <option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
+        <option value="custom" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
+      </select>
+    </div>
+    <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}>
+      <label>身份</label><input data-profile-field="identity" value="${esc(cp.identity || '')}" placeholder="留空则视为无">
+    </div>
+    <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}>
+      <label>与你的关系</label><input data-profile-field="relation" value="${esc(cp.relation || '')}" placeholder="留空则视为无">
+    </div>
+    <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}>
+      <label>对你的称呼</label><input data-profile-field="address" value="${esc(cp.address || '')}" placeholder="留空则视为无">
+    </div>
+    <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}>
+      <label>性格</label><textarea data-profile-field="personality" placeholder="留空则视为无">${esc(cp.personality || '')}</textarea>
+    </div>
+    <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}>
+      <label>设定</label><textarea data-profile-field="description" placeholder="留空则视为无">${esc(cp.description || '')}</textarea>
+    </div>`;
+
+  return `<div class="character-layout"><div>${libSection}</div><div><div class="editor-head"><h3>${esc(c.name)}</h3></div>
+  <div class="locked-note" style="margin-bottom:20px;">该角色为内置角色：名称与性别固定；设定可在“使用内置设定 / 自定义填写”之间切换。选择自定义填写后从空白开始，切回内置设定不会删除已填写内容。</div>
+  <div class="form-grid">${profileHTML}${voiceHTML}${extraFields}
+    ${switchRow('使用立绘', '说话时是否展示该角色立绘', `characters.${state.characters.indexOf(c)}.useSprite`, c.useSprite)}
+    <div class="field full"><label>绑定立绘</label><select data-char-field="portraitId"><option value="">自动匹配</option>${imageOpts}</select></div>
+  </div></div></div>`;
+ }
+ const full=charFull(c);
+ const fields=CHAR_FIELDS.filter(k=>!['voiceId','voiceEnabled','district','preferredLocations'].includes(k)).map(k=>{
+  const v=full?full[k]:'';
+  return `<div class="field ${['personality','description'].includes(k)?'full':''}"><label>${({name:'姓名',gender:'性别',identity:'身份',relation:'与你的关系',address:'对你的称呼',personality:'性格',description:'设定'})[k]}</label>${['personality','description'].includes(k)?`<textarea data-char-field="${k}">${esc(v)}</textarea>`:`<input data-char-field="${k}" value="${esc(v)}">`}</div>`;
+ }).join('');
+ return `<div class="character-layout"><div>${libSection}</div><div><div class="editor-head"><h3>${esc(c.name)}</h3><button class="text-btn danger" data-action="delete-character" data-id="${c.id}">删除角色</button></div><div class="form-grid"><div class="field full"><label>设定方案</label><select data-change="character-scheme">${(c.schemes||[]).map(s=>`<option value="${s.id}" ${s.id===c.activeScheme?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${fields}<div class="field full"><label>音色 ID（可选）</label><input data-char-field="voiceId" value="${esc(c.voiceId||'')}"></div>
+   ${extraFields}
+   ${switchRow('使用立绘', '说话时是否展示该角色立绘', `characters.${state.characters.indexOf(c)}.useSprite`, c.useSprite)}
+   <div class="field full"><label>绑定立绘</label><select data-char-field="portraitId"><option value="">自动匹配</option>${imageOpts}</select></div>
+   </div><div class="actions"><button class="primary-btn" data-action="update-scheme">保存当前方案</button><button class="secondary-btn" data-action="add-scheme">另存为新方案</button><button class="text-btn danger" data-action="delete-scheme" ${c.schemes.length<=1?'disabled':''}>删除此方案</button></div></div></div>`;
+}
+function renderOther(){
+ const scale = Math.min(1.6, Math.max(0.7, Number(state.settings.uiScale)||1));
+ const uiSection = `<section class="group"><div class="group-head"><div class="group-title">界面缩放</div></div><p class="section-intro" style="margin-bottom:12px">请注意，若浏览器不支持 zoom，此项可能无效。</p><div class="field full"><div class="range-wrap"><input type="range" min="0.7" max="1.6" step="0.05" value="${scale}" data-ui-scale aria-label="界面缩放"><output>${(+scale).toFixed(2)}</output></div></div></section>`;
+ const themeSection = `<section class="group"><div class="group-head"><div class="group-title">外观设置</div></div><p class="section-intro" style="margin-bottom:12px">切换日间/夜间模式，默认日间模式。</p>
+ <div style="display:flex;gap:10px;flex-wrap:wrap;">
+   <button class="secondary-btn" data-action="set-theme" data-theme="light" style="${state.settings.theme === 'light' ? 'border-color:var(--accent);background:oklch(0.65 0.16 250 / .15);color:var(--accent);' : ''}">日间模式（白底黑字）</button>
+   <button class="secondary-btn" data-action="set-theme" data-theme="dark" style="${state.settings.theme === 'dark' ? 'border-color:var(--accent);background:oklch(0.65 0.16 250 / .15);color:var(--accent);' : ''}">夜间模式（黑底白字）</button>
+ </div></section>`;
+ const fontSection = `<section class="group"><div class="group-head"><div class="group-title">自定义字体</div></div><p class="section-intro" style="margin-bottom:12px">上传字体文件（ttf, otf, woff）后全局生效，默认跟随系统。文件过大可能影响加载速度和本地存储（建议不超过 3MB）。</p><div class="field full"><input type="file" id="fontUpload" accept=".ttf,.otf,.woff,.woff2"></div>${state.settings.customFont ? `<div class="actions"><button class="danger-btn" data-action="remove-font">恢复系统默认字体</button></div>` : ''}</section>`;
+ const locBgSection = `<section class="group"><div class="group-head"><div class="group-title">地点默认背景</div></div><p class="section-intro" style="margin-bottom:12px">为每个地点绑定一个默认背景，点击大地图前往该地点时会自动切换。背景名需与背景库一致。</p>
+ <div class="form-grid">
+ ${state.mapSpots.map(s => `
+   <div class="field">
+     <label>${esc(s.name)}</label>
+     <select data-loc-bg="${esc(s.name)}">
+       <option value="">-- 未设置（跟随当前）--</option>
+       ${state.backgrounds.map(b => `<option value="${esc(b.name)}" ${state.locationBackgrounds[s.name] === b.name ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}
+     </select>
+   </div>
+ `).join('')}
+ </div></section>`;
+ const visitBgSection = `<section class="group"><div class="group-head"><div class="group-title">拜访人弹窗背景</div></div>
+ <p class="section-intro" style="margin-bottom:12px">为“选择拜访人”弹窗单独设置背景图，不影响主场景。默认未设置（使用默认遮罩）。背景名需与背景库一致。</p>
+ <div class="form-grid">
+   <div class="field"><label>常去小区 · 选择拜访人</label><select data-visit-bg="frequent">
+     <option value="">-- 未设置 --</option>
+     ${state.backgrounds.map(b => `<option value="${esc(b.name)}" ${state.residentVisitBackgrounds.frequent === b.name ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}
+   </select></div>
+   <div class="field"><label>其他小区 · 选择拜访人</label><select data-visit-bg="other">
+     <option value="">-- 未设置 --</option>
+     ${state.backgrounds.map(b => `<option value="${esc(b.name)}" ${state.residentVisitBackgrounds.other === b.name ? 'selected' : ''}>${esc(b.name)}</option>`).join('')}
+   </select></div>
+ </div></section>`;
+ const dir=`<section class="group"><div class="group-head"><div class="group-title">剧情走向</div></div><p class="section-intro" style="margin-bottom:12px">在此填写内容，可以让 AI 往这个方向推进。可随时修改，也可以留空。</p><textarea class="inline-input" style="min-height:96px" data-bind="plotDirection" placeholder="例如：先写日常校园与捉鬼师的初识，再逐渐卷入灵异事件。">${esc(state.plotDirection||'')}</textarea></section>`;
+ const groups=state.groups.map(g=>`<section class="group"><div class="group-head"><input class="inline-input" style="max-width:280px" data-group-field="name" data-id="${g.id}" value="${esc(g.name)}" aria-label="分组名称"><button class="text-btn danger" data-action="delete-group" data-id="${g.id}">删除分组</button></div><div class="field" style="max-width:320px;margin-bottom:12px"><label>作用对象</label><select data-group-field="target" data-id="${g.id}"><option value="all" ${g.target==='all'?'selected':''}>全体</option>${state.characters.map(c=>`<option value="${c.id}" ${g.target===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>${g.entries.map(e=>`<div class="entry"><div class="entry-head"><input class="inline-input" data-entry-field="title" data-group="${g.id}" data-id="${e.id}" value="${esc(e.title)}" aria-label="条目标题"><div><label style="font-size:13px;color:var(--muted)"><input type="checkbox" data-entry-field="enabled" data-group="${g.id}" data-id="${e.id}" ${e.enabled?'checked':''}> 启用</label><button class="text-btn danger" data-action="delete-entry" data-group="${g.id}" data-id="${e.id}">删除</button></div></div><textarea class="inline-input" style="min-height:90px" data-entry-field="content" data-group="${g.id}" data-id="${e.id}">${esc(e.content)}</textarea></div>`).join('')}<button class="text-btn" data-action="add-entry" data-id="${g.id}">＋ 添加条目</button></section>`).join('');
+ return `${uiSection}${themeSection}${fontSection}${locBgSection}${visitBgSection}${dir}<p class="section-intro">分组条目类似酒馆世界书。作用对象选“全体”时始终注入；选择人物时，仅当该人物参与当前对话或作为目标时注入。</p><div class="actions" style="margin:0 0 20px"><button class="secondary-btn" data-action="add-group">新增分组</button></div>${groups||'<div class="empty">还没有分组</div>'}`;
+}
+function renderImages(){
+ const cards=state.images.map(i=>{
+  const o = state.spriteOffsets[i.id] || {x:0,y:0,s:1};
+  const px=o.x,py=o.y,ps=o.s;
+  const isBuiltin=!!i.builtIn;
+  return `<article class="image-card">
+    <div class="image-preview" style="opacity:${i.enabled !== false ? 1 : 0.3}">
+      <img src="${esc(i.url)}" alt="${esc(i.name)}" loading="lazy" style="--px:${px}px;--py:${py}px;--ps:${ps}" onerror="this.style.opacity=0">
+    </div>
+    <div class="image-info">
+      <div>
+        <div class="image-name">${esc(i.name)}</div>
+        <div class="image-type">${isBuiltin?'内置 · 不可删除':'自定义'}</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <label class="switch" style="transform:scale(0.8);margin-right:4px;margin-bottom:0;">
+          <input type="checkbox" data-toggle-image="${i.id}" ${i.enabled !== false ? 'checked' : ''}>
+          <span class="switch-ui"></span>
+        </label>
+        ${isBuiltin?'':`<button class="text-btn danger" data-action="delete-image" data-id="${i.id}">删除</button>`}
+      </div>
+    </div>
+    <div class="offset-row">
+      <div class="field"><label>X 偏移</label><div class="range-wrap"><input type="range" min="-300" max="300" step="1" value="${px}" data-offset="x" data-img="${i.id}"><output>${px}</output></div></div>
+      <div class="field"><label>Y 偏移</label><div class="range-wrap"><input type="range" min="-300" max="300" step="1" value="${py}" data-offset="y" data-img="${i.id}"><output>${py}</output></div></div>
+      <div class="field"><label>缩放</label><div class="range-wrap"><input type="range" min="0.5" max="2" step="0.01" value="${ps}" data-offset="s" data-img="${i.id}"><output>${(+ps).toFixed(2)}</output></div></div>
+    </div>
+  </article>`;
+ }).join('');
+
+ const silCards = state.silhouettes.length ? state.silhouettes.map(s => {
+   const boundNames = (s.boundCharacters||[]).map(id => { const c = state.characters.find(x=>x.id===id); return c?c.name:id; }).join('、');
+   return `<article class="image-card">
+     <div class="image-preview">
+       <img src="${esc(s.url)}" alt="${esc(s.name)}" loading="lazy" style="object-fit:contain;background:#0e1116" onerror="this.style.opacity=0">
+     </div>
+     <div class="image-info">
+       <div>
+         <div class="image-name">${esc(s.name)}</div>
+         <div class="image-type">${s.gender === 'female' ? '女' : '男'} · ${boundNames ? '绑定：' + boundNames : '未绑定（通用）'}</div>
+       </div>
+       <div style="display:flex;gap:4px;">
+         <button class="text-btn" data-action="edit-sil" data-id="${s.id}">编辑</button>
+         <button class="text-btn danger" data-action="delete-sil" data-id="${s.id}">删除</button>
+       </div>
+     </div>
+   </article>`;
+ }).join('') : '<div class="empty" style="grid-column:1/-1;">还没有剪影</div>';
+
+ const charOptions = state.characters.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+
+ return `<form class="image-form" id="imageForm"><p class="section-intro">请填写角色名和图片 URL（或上传本地图片）。当说话者是该角色时，会显示此图。</p><div class="form-grid"><div class="field"><label>角色名</label><input id="imageCharacter" required placeholder="在此处填写姓名"></div><div class="field full"><label>图片 URL（上传本地图片时可留空）</label><input id="imageURL" type="url" placeholder="https://example.com/qinwu.png"></div><div class="field full"><label>本地图片（可选）</label><input id="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><small>图片会转为本地数据保存；过大的图片可能占满浏览器存储空间。</small></div></div><div class="actions"><button class="primary-btn" type="submit">添加立绘</button></div></form>
+ <form class="image-form" id="spriteGenForm"><p class="section-intro">使用生图 API 根据文字描述生成新立绘，生成后自动加入下方立绘库，并绑定到对应角色（若角色不存在则仅加入库）。请先在“生图 API”中填写接口与密钥。</p><div class="form-grid"><div class="field"><label>角色名</label><input id="genSpriteCharacter" placeholder=""></div><div class="field full"><label>生图描述</label><textarea id="genSpritePrompt" placeholder=""></textarea></div><div class="field full"><label>负面提示词（可选）</label><input id="genSpriteNeg" placeholder=""></div></div><div class="actions"><button class="primary-btn" type="submit">生成立绘</button></div></form>
+ <div class="image-grid">${cards}</div>
+ <section class="group" style="margin-top:32px;">
+   <div class="group-head"><div class="group-title">剪影库</div></div>
+   <p class="section-intro">为没有立绘的角色提供剪影。分男女，可绑定一个或多个角色；未绑定的剪影会按角色 id 稳定随机分配给无立绘角色。</p>
+   <form id="silForm" class="image-form">
+     <div class="form-grid">
+       <div class="field"><label>剪影名称</label><input id="silName" required placeholder="例如："></div>
+       <div class="field"><label>性别</label><select id="silGender"><option value="male">男</option><option value="female">女</option></select></div>
+       <div class="field full"><label>图片 URL（上传本地图片时可留空）</label><input id="silURL" type="url" placeholder="https://..."></div>
+       <div class="field full"><label>本地图片（可选）</label><input id="silFile" type="file" accept="image/*"></div>
+       <div class="field full"><label>绑定角色（可多选，按住 Ctrl/⌘；留空则不绑定）</label><select id="silBound" multiple size="4" style="min-height:120px">${charOptions}</select></div>
+     </div>
+     <div class="actions"><button class="primary-btn" type="submit">添加剪影</button></div>
+   </form>
+   <div class="image-grid">${silCards}</div>
+ </section>`;
+}
+function renderBackgrounds(){
+ const cards=state.backgrounds.map(b=>{
+  const o = state.backgroundOffsets[b.id] || {x:0,y:0,s:1};
+  return `<article class="image-card">
+    <div class="image-preview bg-preview">
+      <img src="${esc(b.url)}" alt="${esc(b.name)}" loading="lazy" style="--px:${o.x}px;--py:${o.y}px;--ps:${o.s}" onerror="this.style.opacity=0">
+    </div>
+    <div class="image-info">
+      <div>
+        <div class="image-name">${esc(b.name)}</div>
+        <div class="image-type">背景图</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="text-btn danger" data-action="delete-bg" data-id="${b.id}">删除</button>
+      </div>
+    </div>
+    <div class="offset-row">
+      <div class="field"><label>X 偏移</label><div class="range-wrap"><input type="range" min="-400" max="400" step="1" value="${o.x}" data-bg-offset="x" data-bg-id="${b.id}"><output>${o.x}</output></div></div>
+      <div class="field"><label>Y 偏移</label><div class="range-wrap"><input type="range" min="-400" max="400" step="1" value="${o.y}" data-bg-offset="y" data-bg-id="${b.id}"><output>${o.y}</output></div></div>
+      <div class="field"><label>缩放</label><div class="range-wrap"><input type="range" min="0.5" max="3" step="0.01" value="${o.s}" data-bg-offset="s" data-bg-id="${b.id}"><output>${(+o.s).toFixed(2)}</output></div></div>
+    </div>
+    <div class="field" style="margin-top:8px;">
+      <input data-bg-desc="${b.id}" value="${esc(b.desc||'')}" placeholder="适用场景描述（可选）">
+    </div>
+  </article>`;
+ }).join('');
+ return `<form class="image-form" id="bgForm"><p class="section-intro">可在此处添加背景图，可填写适用场景（如：角色A在寝室时用此图）。</p><div class="form-grid"><div class="field"><label>背景名</label><input id="bgName" required placeholder="请输入使用地点"></div><div class="field full"><label>图片 URL</label><input id="bgURL" type="url" required placeholder="https://example.com/bg.png"></div><div class="field full"><label>适用场景描述（可选）</label><input id="bgDesc" placeholder="何时使用这张图"></div></div><div class="actions"><button class="primary-btn" type="submit">添加背景</button></div></form>
+ <form class="image-form" id="bgGenForm"><p class="section-intro">使用生图 API 根据文字描述生成新背景，生成后自动加入下方背景库。<strong>不会自动切换当前场景背景</strong>；若希望应用，请到地点背景或地图中切换。请先在“生图 API”中填写接口与密钥。</p><div class="form-grid"><div class="field"><label>背景名</label><input id="genBgName" placeholder="请输入使用地点"></div><div class="field full"><label>生图描述</label><textarea id="genBgPrompt" placeholder="请描述图片"></textarea></div><div class="field full"><label>负面提示词（可选）</label><input id="genBgNeg" placeholder=""></div><div class="field full"><label>适用场景描述（可选）</label><input id="genBgDesc" placeholder=""></div></div><div class="actions"><button class="primary-btn" type="submit">生成背景</button></div></form>
+ <div class="image-grid" style="grid-template-columns:repeat(2,1fr);">${cards}</div>`;
+}
+function renderAPI(){
+ return `<p class="section-intro">请填写接口</p><div class="form-grid">${field('接口地址','api.endpoint',state.api.endpoint,'url',true,'placeholder="https://api.openai.com/v1"')}${field('API 密钥','api.key',state.api.key,'password',true,'autocomplete="off"')}${modelField('模型名称','api.model',state.api.model,'model-list-api')}${field('Temperature','api.temperature',state.api.temperature,'number',false,'min="0" max="2" step="0.1"')}${field('单次剧情生成长度（字数）','settings.generateLength',state.settings.generateLength||600,'number',false,'min="50" max="2000" step="50"')}${field('写进思维链（可选）','api.thoughtChain',state.api.thoughtChain,'textarea',true,'placeholder="生成剧情前会先读取这里的内容，可用于约束文风、格式或强调设定。"')}</div><div class="status-line">输出协议：角色名A：台词。旁白：叙述。角色名B：台词。开启选项时，结尾另起四行输出 A：、B：、C：、D：。</div><div class="actions"><button class="primary-btn" data-action="test-api" ${busy?'disabled':''}>测试连接</button><span id="apiStatus" style="align-self:center;color:var(--muted);font-size:13px"></span></div>`;
+}
+function renderVoice(){
+ return `<p class="section-intro">请使用Minimax语音</p>${switchRow('开启语音','开启后，回放中的朗读按钮与自动朗读可用','voice.enabled',state.voice.enabled)}<div class="form-grid" style="margin-top:20px">
+ <div class="field"><label>服务端口</label><select data-change="voice-region"><option value="cn" ${state.voice.region==='cn'?'selected':''}>国内</option><option value="global" ${state.voice.region==='global'?'selected':''}>国际</option></select></div>
+ ${field('接口地址（填到 /v1 即可，自动补 /t2a_v2）', 'voice.endpoint', state.voice.endpoint, 'url', true, 'placeholder="https://api.minimax.chat/v1"')}
+ ${field('Group ID','voice.groupId',state.voice.groupId)}
+ ${field('API 密钥','voice.key',state.voice.key,'password',true,'autocomplete="off"')}
+ ${modelField('语音模型','voice.model',state.voice.model,'model-list-voice')}
+ ${field('默认音色 ID','voice.defaultVoiceId',state.voice.defaultVoiceId)}
+ </div><div class="actions"><button class="primary-btn" data-action="test-voice" type="button">测试当前角色语音</button></div>`;
+}
+function renderImageAPI() {
+ return `<p class="section-intro">当剧情生成时，会自动提取场景或人物特征并生成图像，相同的场景或角色不会重复生成。</p>
+ ${switchRow('开启自动生图', '开启后，AI 将根据剧情自动生成背景或新角色立绘并保存在本地', 'imageApi.enabled', state.imageApi.enabled)}
+ <div class="form-grid" style="margin-top:20px">
+   ${field('接口地址（填到 /v1 即可，后续路径自动补全）', 'imageApi.endpoint', state.imageApi.endpoint, 'url', true, 'placeholder="https://api.openai.com/v1"')}
+   ${field('API 密钥', 'imageApi.key', state.imageApi.key, 'password', true, 'autocomplete="off"')}
+   ${modelField('模型名称','imageApi.model',state.imageApi.model,'model-list-image')}
+ </div>
+ <div class="switch-row" style="margin-top:20px; border-bottom:0">
+    <div class="switch-copy"><strong>生成内容类型</strong><small>可选择生成当前场景的背景图或新生角色的立绘</small></div>
+ </div>
+ <div style="display:flex; gap:20px; margin-top:10px; padding:10px 0; border-bottom:1px solid var(--line)">
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="checkbox" data-bind="imageApi.genScene" ${state.imageApi.genScene?'checked':''}> 生成场景背景图</label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="checkbox" data-bind="imageApi.genSprite" ${state.imageApi.genSprite?'checked':''}> 生成新人物立绘</label>
+ </div>
+ <div class="actions"><button class="primary-btn" data-action="test-image-api" ${busy?'disabled':''}>测试连接</button><span id="imageApiStatus" style="align-self:center;color:var(--muted);font-size:13px"></span></div>`;
+}
+function renderReplay(){
+ return `<div class="replay-list">${state.story.map((e,i)=>`<article class="replay-line"><div class="replay-speaker">${esc(e.speaker)}</div><div class="replay-text">${esc(e.text)}</div><button class="icon-btn" data-action="replay-line" data-index="${i}" aria-label="朗读第 ${i+1} 条" ${e.speaker==='旁白'?'disabled':''}><svg viewBox="0 0 24 24"><path d="M5 9v6h4l5 4V5L9 9H5zM17 9c1.4 1.7 1.4 4.3 0 6"/></svg></button></article>`).join('')}</div>`;
+}
+function setPath(obj,path,value){const keys=path.split('.');let cur=obj;for(let i=0;i<keys.length-1;i++)cur=cur[keys[i]];cur[keys.at(-1)]=value;}
+
+function findMatchingBackground(name) {
+  if (!name) return null;
+  const n = String(name).trim();
+  if (!n) return null;
+  let bg = state.backgrounds.find(b => b.name === n);
+  if (bg) return bg;
+  const candidates = state.backgrounds.filter(b => b.name && (b.name.includes(n) || n.includes(b.name))).sort((a, b) => b.name.length - a.name.length);
+  if (candidates.length) return candidates[0];
+  bg = state.backgrounds.find(b => b.desc && (b.desc.includes(n) || n.includes(b.desc)));
+  return bg || null;
+}
+function handleSceneChange(sceneName) {
+  if (!sceneName) return;
+  const name = String(sceneName).trim();
+  if (!name) return;
+  state.place = name;
+  const manualBg = state.locationBackgrounds[name];
+  if (manualBg) {
+    const found = state.backgrounds.find(b => b.name === manualBg);
+    if (found) { state.currentBackground = found.name; renderScene(); persist(); return; }
+  }
+  const matched = findMatchingBackground(name);
+  if (matched) { state.currentBackground = matched.name; renderScene(); persist(); return; }
+  const canGenerate = state.imageApi.enabled && state.imageApi.genScene && state.imageApi.endpoint && state.imageApi.key;
+  renderScene();
+  persist();
+  if (canGenerate) {
+    setTimeout(() => {
+      if (!$('#dialogOverlay').hidden) return;
+      if (!$('#overlay').hidden) return;
+      if (!$('#mapOverlay').hidden) return;
+      showGenerateImageDialog('background', name, `${name}，视觉小说场景背景，无人物，高质量，细节丰富，电影感构图，柔和光影`);
+    }, 1200);
+  } else {
+    toast(`场景「${name}」暂无匹配背景，已保持当前背景`);
+  }
+}
+
+function openMap(){
+ $('#mapOverlay').hidden = false;
+ document.body.classList.add('panel-open');
+ requestAnimationFrame(()=>$('#mapOverlay').classList.add('open'));
+ renderMapSpots();
+}
+function closeMap(){
+ $('#mapOverlay').classList.remove('open');
+ if($('#overlay').hidden && $('#setupOverlay').hidden && $('#dialogOverlay').hidden) document.body.classList.remove('panel-open');
+ setTimeout(()=>{$('#mapOverlay').hidden = true;},200);
+}
+function renderMapSpots(){
+ const container = $('#mapContainer');
+ $$('.map-spot', container).forEach(el => el.remove());
+ 
+ state.mapSpots.forEach(spot => {
+   const el = document.createElement('div');
+   el.className = 'map-spot' + (isEditingMap ? ' editing' : '');
+   el.style.left = spot.x + '%';
+   el.style.top = spot.y + '%';
+   el.innerHTML = `<div class="inner"><span>${esc(spot.name)}</span></div>`;
+   el.dataset.id = spot.id;
+   el.dataset.name = spot.name;
+   if(!isEditingMap) {
+     el.addEventListener('click', (e) => { e.stopPropagation(); handleMapSpotClick(spot); });
+   } else {
+     el.addEventListener('mousedown', startDrag);
+     el.addEventListener('touchstart', startDrag, {passive:false});
+   }
+   container.appendChild(el);
+ });
+}
+let dragOffsetX=0, dragOffsetY=0;
+function startDrag(e){
+ if(!isEditingMap) return;
+ const el = e.target.closest('.map-spot');
+ if(!el) return;
+ e.preventDefault();
+ dragTarget = el;
+ const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+ const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+ const rect = el.getBoundingClientRect();
+ dragOffsetX = clientX - (rect.left + rect.width/2);
+ dragOffsetY = clientY - (rect.top + rect.height/2);
+ document.addEventListener('mousemove', onDrag);
+ document.addEventListener('mouseup', stopDrag);
+ document.addEventListener('touchmove', onDrag, {passive:false});
+ document.addEventListener('touchend', stopDrag);
+}
+function onDrag(e){
+ if(!dragTarget) return;
+ e.preventDefault();
+ const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+ const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+ const containerRect = $('#mapContainer').getBoundingClientRect();
+ let newX = ((clientX - dragOffsetX - containerRect.left) / containerRect.width) * 100;
+ let newY = ((clientY - dragOffsetY - containerRect.top) / containerRect.height) * 100;
+ newX = Math.max(5, Math.min(95, newX));
+ newY = Math.max(5, Math.min(95, newY));
+ dragTarget.style.left = newX + '%';
+ dragTarget.style.top = newY + '%';
+ dragTarget.dataset.newX = newX;
+ dragTarget.dataset.newY = newY;
+}
+function stopDrag(){
+ if(!dragTarget) return;
+ if(dragTarget.dataset.newX) {
+   const spot = state.mapSpots.find(s => s.id === dragTarget.dataset.id);
+   if(spot) { spot.x = parseFloat(dragTarget.dataset.newX); spot.y = parseFloat(dragTarget.dataset.newY); }
+ }
+ dragTarget = null;
+ document.removeEventListener('mousemove', onDrag);
+ document.removeEventListener('mouseup', stopDrag);
+ document.removeEventListener('touchmove', onDrag);
+ document.removeEventListener('touchend', stopDrag);
+}
+function handleMapSpotClick(spot) {
+  const name = spot.name;
+  if(name === '学校') {
+    showMapSubMenu('学校', [
+      {text:'前往教室', action:()=>{closeMap(); handleSceneChange('教室'); generateStory('教室', true);}},
+      {text:'校图书馆', action:()=>{closeMap(); handleSceneChange('校图书馆'); generateStory('校图书馆', true);}},
+      {text:'操场', action:()=>{closeMap(); handleSceneChange('操场'); generateStory('操场', true);}}
+    ]);
+  } else if(name === '居住区') {
+    showMapSubMenu('居住区', [
+      {text:'找人', action:()=>{showResidenceSubMenu();}},
+      {text:'回家', action:()=>{closeMap(); handleSceneChange('家'); generateStory('家', true);}}
+    ]);
+  } else {
+    const chars = state.characters.filter(c => c.preferredLocations && c.preferredLocations.includes(name));
+    if (chars.length > 0) {
+      closeMap(); handleSceneChange(name); generateStory(name, true);
+    } else {
+      if(name === '酒吧') {
+         showConfirm('酒吧', '暂时还是不要前往这里吧……', ()=>{});
+      } else {
+         closeMap(); handleSceneChange(name); generateStory(name, true);
+      }
+    }
+  }
+}
+let currentSubPage = 0;
+function showMapSubMenu(title, options) {
+  let html = `<div class="sub-menu-list">`;
+  options.forEach((opt, i) => { html += `<button class="sub-menu-item" id="mapSubBtn_${i}">${esc(opt.text)}</button>`; });
+  html += `</div>`;
+  openDialog(title, html, null, { showConfirm:false, showCancel:false });
+  options.forEach((opt, i) => {
+    $(`#mapSubBtn_${i}`).onclick = (e) => {
+      e.preventDefault(); e.stopPropagation(); closeDialog();
+      setTimeout(() => opt.action(), 150);
+    };
+  });
+}
+function showResidenceSubMenu() {
+  showMapSubMenu('找人', [
+    {text:'常去小区', action:()=>{showCharacterList('常去');}},
+    {text:'其他小区', action:()=>{showCharacterList('其他');}}
+  ]);
+}
+function showCharacterList(district) { currentSubPage = 0; renderCharPage(district); }
+function renderCharPage(district) {
+  const chars = state.characters.filter(c => (c.district || '其他') === district);
+  const pageSize = 3;
+  const totalPages = Math.ceil(chars.length / pageSize) || 1;
+  if (currentSubPage >= totalPages) currentSubPage = 0;
+  const start = currentSubPage * pageSize;
+  const pageChars = chars.slice(start, start + pageSize);
+  let html = `<div class="sub-menu-list">`;
+  pageChars.forEach((c, i) => { html += `<button class="sub-menu-item" id="charBtn_${c.id}">${esc(c.name)}</button>`; });
+  html += `<button class="sub-menu-item" id="nextPageBtn">下一页</button>`;
+  html += `<button class="sub-menu-item" id="cancelBtn">取消</button>`;
+  html += `</div>`;
+  openDialog(district + '小区 - 找人', html, null, { showConfirm:false, showCancel:false });
+
+  const visitBgName = district === '常去' ? state.residentVisitBackgrounds.frequent : state.residentVisitBackgrounds.other;
+  if (visitBgName) {
+    const bg = state.backgrounds.find(b => b.name === visitBgName);
+    if (bg) {
+      const dialogOverlay = $('#dialogOverlay');
+      dialogOverlay.style.backgroundImage = `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)), url('${bg.url}')`;
+      dialogOverlay.style.backgroundSize = 'cover';
+      dialogOverlay.style.backgroundPosition = 'center';
+      dialogOverlay.style.backgroundColor = 'transparent';
+      dialogOverlay.style.backdropFilter = 'blur(2px)';
+    }
+  }
+
+  pageChars.forEach(c => {
+    $(`#charBtn_${c.id}`).onclick = (e) => {
+      e.preventDefault(); e.stopPropagation(); closeDialog(); closeMap();
+      setTimeout(() => { handleSceneChange('居住区'); generateStory(`去${district}小区的${c.name}家拜访`, true); }, 150);
+    };
+  });
+  $('#nextPageBtn').onclick = (e) => {
+    e.preventDefault(); e.stopPropagation(); currentSubPage++;
+    if (currentSubPage >= totalPages) currentSubPage = 0;
+    closeDialog(); setTimeout(() => renderCharPage(district), 150);
+  };
+  $('#cancelBtn').onclick = (e) => { e.preventDefault(); e.stopPropagation(); closeDialog(); closeMap(); };
+}
+
+let dialogTimer = null;
+function resetDialogBg() {
+  const o = $('#dialogOverlay');
+  o.style.backgroundImage = 'none';
+  o.style.backgroundSize = '';
+  o.style.backgroundPosition = '';
+  o.style.backgroundColor = '';
+  o.style.backdropFilter = '';
+}
+function openDialog(title, contentHTML, onConfirm, opts = {}) {
+  clearTimeout(dialogTimer);
+  resetDialogBg();
+  $('#dialogTitle').textContent = title;
+  $('#dialogContent').innerHTML = contentHTML;
+  $('#dialogOverlay').hidden = false;
+  document.body.classList.add('panel-open');
+  requestAnimationFrame(() => $('#dialogOverlay').classList.add('open'));
+  const confirmBtn = $('#dialogConfirmBtn');
+  const cancelBtn = $('#dialogCancelBtn');
+  const showConfirm = opts.showConfirm !== undefined ? !!opts.showConfirm : !!onConfirm;
+  const showCancel  = opts.showCancel  !== undefined ? !!opts.showCancel  : !!onConfirm;
+  confirmBtn.textContent = '确定';
+  cancelBtn.textContent = '取消';
+  confirmBtn.style.display = showConfirm ? '' : 'none';
+  cancelBtn.style.display  = showCancel  ? '' : 'none';
+  if(onConfirm) {
+    const newBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+    newBtn.addEventListener('click', () => { if (onConfirm() !== false) closeDialog(); });
+  }
+}
+function closeDialog() {
+  $('#dialogOverlay').classList.remove('open');
+  resetDialogBg();
+  if ($('#overlay').hidden && $('#setupOverlay').hidden && $('#mapOverlay').hidden) document.body.classList.remove('panel-open');
+  clearTimeout(dialogTimer);
+  dialogTimer = setTimeout(() => { $('#dialogOverlay').hidden = true; }, 200);
+}
+function showConfirm(title, message, onConfirm) {
+  const content = `<p class="section-intro" style="margin:0">${esc(message)}</p>`;
+  openDialog(title, content, () => { onConfirm(); });
+}
+function showGenerateImageDialog(type, targetName, defaultPrompt) {
+  if (type === 'sprite') {
+    const imageOpts = state.images.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('');
+    const html = `
+      <div class="section-intro">当前角色【${esc(targetName)}】已开启立绘，但没有匹配的立绘图片。您可以选择已有图片，或使用生图 API 生成。</div>
+      <div class="form-grid">
+        <div class="field full"><label>选择已有立绘</label><select id="dlgUseExistingSprite"><option value="">-- 不选择 --</option>${imageOpts}</select></div>
+        <div class="field full"><label>生图描述（正面提示词）</label><textarea id="dlgPrompt" style="min-height:80px">${esc(defaultPrompt)}</textarea></div>
+        <div class="field full"><label>负面提示词</label><input id="dlgNegPrompt" placeholder="例如：低质量，重复，变形的肢体"></div>
+      </div>
+      <div class="actions">
+        <button class="secondary-btn" id="dlgSelectExistingBtn" type="button">绑定选中的图</button>
+        <button class="primary-btn" id="dlgGenerateBtn" type="button">立即生成</button>
+      </div>`;
+    openDialog('补充角色立绘', html, null, { showConfirm:false, showCancel:false });
+    $('#dlgSelectExistingBtn').onclick = () => {
+      const id = $('#dlgUseExistingSprite').value;
+      if (id) {
+        const char = state.characters.find(c => c.name === targetName);
+        if (char) char.portraitId = id;
+        persist(); renderScene(); closeDialog(); toast('已绑定立绘');
+      } else { toast('请选择一个立绘', 'error'); }
+    };
+    $('#dlgGenerateBtn').onclick = async () => {
+      closeDialog();
+      await doGenerateSprite(targetName, $('#dlgPrompt').value, $('#dlgNegPrompt').value);
+    };
+  } else if (type === 'background') {
+    const bgOpts = state.backgrounds.map(b => `<option value="${esc(b.name)}">${esc(b.name)}</option>`).join('');
+    const html = `
+      <div class="section-intro">剧情进行到场景【${esc(targetName)}】，但背景库中没有该图片。您可以选择已有背景，或使用生图 API 生成。</div>
+      <div class="form-grid">
+        <div class="field full"><label>选择已有背景</label><select id="dlgUseExistingBg"><option value="">-- 不选择 --</option>${bgOpts}</select></div>
+        <div class="field full"><label>生图描述（正面提示词）</label><textarea id="dlgBgPrompt" style="min-height:80px">${esc(defaultPrompt)}</textarea></div>
+        <div class="field full"><label>负面提示词</label><input id="dlgBgNegPrompt" placeholder="例如：低质量，人物，文字"></div>
+        <div class="field full"><label>适用场景描述（可选，供AI调用）</label><input id="dlgBgDesc" value="${esc(targetName)}" placeholder="例如：教室，学校寝室的窗外"></div>
+      </div>
+      <div class="actions">
+        <button class="secondary-btn" id="dlgSelectExistingBgBtn" type="button">切换至选中背景</button>
+        <button class="primary-btn" id="dlgGenerateBgBtn" type="button">立即生成</button>
+      </div>`;
+    openDialog('补充场景背景', html, null, { showConfirm:false, showCancel:false });
+    $('#dlgSelectExistingBgBtn').onclick = () => {
+      const name = $('#dlgUseExistingBg').value;
+      if (name) { state.currentBackground = name; persist(); renderScene(); closeDialog(); toast('已切换背景'); }
+      else { toast('请选择一个背景', 'error'); }
+    };
+    $('#dlgGenerateBgBtn').onclick = async () => {
+      closeDialog();
+      await doGenerateBackground(targetName, $('#dlgBgPrompt').value, $('#dlgBgNegPrompt').value, $('#dlgBgDesc').value, true);
+    };
+  }
+}
+async function doGenerateSprite(name, prompt, neg) {
+  if (!state.imageApi.endpoint || !state.imageApi.key) { toast('生图 API 未配置密钥', 'error'); return; }
+  const endpoint = resolveEndpoint(state.imageApi.endpoint, 'image');
+  toast(`正在生成【${name}】立绘…`);
+  let finalPrompt = `Visual novel character sprite, transparent background, upper body, ${prompt}, high quality, detailed`;
+  if (neg) finalPrompt += `, negative prompt: ${neg}`;
+  try {
+    const res = await smartFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.imageApi.key },
+      body: JSON.stringify({ model: state.imageApi.model, prompt: finalPrompt, n: 1, size: "1024x1024", response_format: "url" })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error?.message || `接口失败(${res.status})`);
+    const url = data.data?.[0]?.url;
+    if (!url) throw new Error('未返回图片');
+    const newImg = { id: uid(), builtIn: false, character: name, name: `${name}-生成`, url, enabled: true };
+    state.images.push(newImg);
+    const char = state.characters.find(c => c.name === name);
+    if (char) char.portraitId = newImg.id;
+    persist(true); renderScene(); renderPanel(); toast('立绘生成成功并已加入立绘库');
+  } catch(e) { toast('生图失败：'+e.message, 'error'); }
+}
+async function doGenerateBackground(name, prompt, neg, desc, switchTo = false) {
+  if (!state.imageApi.endpoint || !state.imageApi.key) { toast('生图 API 未配置密钥', 'error'); return; }
+  const endpoint = resolveEndpoint(state.imageApi.endpoint, 'image');
+  toast(`正在生成背景【${name}】…`);
+  let finalPrompt = `Visual novel background, no people, ${prompt}, high quality, detailed`;
+  if (neg) finalPrompt += `, negative prompt: ${neg}`;
+  try {
+    const res = await smartFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.imageApi.key },
+      body: JSON.stringify({ model: state.imageApi.model, prompt: finalPrompt, n: 1, size: "1024x1024", response_format: "url" })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error?.message || `接口失败(${res.status})`);
+    const url = data.data?.[0]?.url;
+    if (!url) throw new Error('未返回图片');
+    const newBg = { id: uid(), name: name, url: url, desc: desc };
+    state.backgrounds.push(newBg);
+    if (switchTo || !state.backgrounds.some(b => b.name === state.currentBackground)) {
+      state.currentBackground = name;
+    }
+    persist(true); renderScene(); renderPanel(); toast('背景生成成功并已加入背景库');
+  } catch(e) { toast('生图失败：'+e.message, 'error'); }
+}
+
+async function addSilhouette() {
+  const name = $('#silName').value.trim();
+  const gender = $('#silGender').value;
+  const url = $('#silURL').value.trim();
+  const file = $('#silFile').files[0];
+  const bound = [...($('#silBound').selectedOptions || [])].map(o => o.value);
+  if (!name) { toast('请填写剪影名称', 'error'); return; }
+  if (!url && !file) { toast('请填写图片 URL 或选择本地图片', 'error'); return; }
+  if (file && file.size > 8 * 1024 * 1024) { toast('请选择 8MB 以内的图片', 'error'); return; }
+  let finalURL = url;
+  if (file) finalURL = await new Promise((resolve, reject) => {
+    const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file);
+  });
+  state.silhouettes.push({ id: uid(), name, gender, url: finalURL, boundCharacters: bound });
+  persist(true); renderPanel(); renderScene(); toast('剪影已添加');
+}
+function showEditSilhouette(id) {
+  const sil = state.silhouettes.find(s => s.id === id);
+  if (!sil) return;
+  const html = `
+    <div class="form-grid">
+      <div class="field"><label>名称</label><input id="editSilName" value="${esc(sil.name)}"></div>
+      <div class="field"><label>性别</label><select id="editSilGender"><option value="male" ${sil.gender==='male'?'selected':''}>男</option><option value="female" ${sil.gender==='female'?'selected':''}>女</option></select></div>
+      <div class="field full"><label>绑定角色（可多选，按住 Ctrl/⌘；留空则不绑定）</label><select id="editSilBound" multiple size="4" style="min-height:120px">${state.characters.map(c => `<option value="${c.id}" ${(sil.boundCharacters||[]).includes(c.id)?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+    </div>`;
+  openDialog('编辑剪影', html, () => {
+    sil.name = $('#editSilName').value.trim() || sil.name;
+    sil.gender = $('#editSilGender').value;
+    sil.boundCharacters = [...($('#editSilBound').selectedOptions || [])].map(o => o.value);
+    persist(); renderPanel(); renderScene();
+  });
+}
+
+function openSetup(){
+ const o=$('#setupOverlay');
+ o.hidden=false;
+ document.body.classList.add('panel-open');
+ requestAnimationFrame(()=>o.classList.add('open'));
+ $('#suName').value=state.player.name||'';
+ $('#suIdentity').value=state.player.identity||'';
+ $('#suDesc').value=state.player.description||'';
+ setTimeout(()=>$('#suName').focus(),80);
+}
+function confirmSetup(){
+ const name=$('#suName').value.trim();
+ if(!name){toast('请填写你的姓名','error');$('#suName').focus();return;}
+ state.player.name=name;
+ state.player.identity=$('#suIdentity').value.trim();
+ state.player.description=$('#suDesc').value.trim();
+ state.awaitingSetup=false;
+ const o=$('#setupOverlay');
+ o.classList.remove('open');
+ document.body.classList.remove('panel-open');
+ setTimeout(()=>{o.hidden=true;},200);
+ persist(true);
+ openSetupApi();
+}
+function openSetupApi(){
+ const o=$('#setupApiOverlay');
+ $('#setupApiContent').innerHTML = `
+   <p class="section-intro">你可以现在填写，也可以先跳过，所有密钥仅保存在本地浏览器。</p>
+   <h3 style="font-size:16px;margin-bottom:12px;">文本 AI 配置（必填）</h3>
+   <div class="form-grid">
+     ${field('接口地址（填到 /v1 即可，自动补全）','api.endpoint',state.api.endpoint,'url',true,'placeholder="https://api.openai.com/v1"')}
+     ${field('API 密钥','api.key',state.api.key,'password',true,'autocomplete="off"')}
+     ${modelField('模型名称','api.model',state.api.model,'model-list-api-setup')}
+   </div>
+   <h3 style="font-size:16px;margin:24px 0 12px;">语音 API 配置（可选）</h3>
+   <div class="form-grid">
+     ${field('接口地址（填到 /v1 即可，自动补 /t2a_v2）','voice.endpoint',state.voice.endpoint,'url',true,'placeholder="https://api.minimax.chat/v1"')}
+     ${field('Group ID','voice.groupId',state.voice.groupId)}
+     ${field('API 密钥','voice.key',state.voice.key,'password',true,'autocomplete="off"')}
+     ${modelField('语音模型','voice.model',state.voice.model,'model-list-voice-setup')}
+   </div>
+   <h3 style="font-size:16px;margin:24px 0 12px;">生图 API 配置（可选）</h3>
+   <div class="form-grid">
+     ${field('接口地址（填到 /v1 即可，自动补全）','imageApi.endpoint',state.imageApi.endpoint,'url',true,'placeholder="https://api.openai.com/v1"')}
+     ${field('API 密钥','imageApi.key',state.imageApi.key,'password',true,'autocomplete="off"')}
+     ${modelField('模型名称','imageApi.model',state.imageApi.model,'model-list-image-setup')}
+   </div>
+   <div class="actions">
+     <button class="primary-btn" id="setupApiConfirm" type="button">保存并进入</button>
+     <button class="secondary-btn" id="setupApiSkip" type="button">跳过，直接进入</button>
+   </div>`;
+ o.hidden=false;
+ document.body.classList.add('panel-open');
+ requestAnimationFrame(()=>o.classList.add('open'));
+ $('#setupApiConfirm').onclick=()=>{ persist(true); closeSetupApi(); renderScene(); if(!state.api.key) toast('提示：请到菜单 → API 配置中填写密钥'); };
+ $('#setupApiSkip').onclick=()=>{ closeSetupApi(); renderScene(); };
+}
+function closeSetupApi(){
+ const o=$('#setupApiOverlay');
+ o.classList.remove('open');
+ document.body.classList.remove('panel-open');
+ setTimeout(()=>{o.hidden=true;},200);
+}
+function showAddCharacter() {
+  const html = `
+    <div class="form-grid">
+      <div class="field"><label>姓名</label><input id="dlgName" autocomplete="off"></div>
+      <div class="field"><label>性别</label><input id="dlgGender" value="男"></div>
+      <div class="field full"><label>身份</label><input id="dlgIdentity"></div>
+      <div class="field full"><label>与玩家的关系</label><input id="dlgRelation"></div>
+      <div class="field full"><label>性格</label><textarea id="dlgPersonality"></textarea></div>
+      <div class="field full"><label>设定</label><textarea id="dlgDesc"></textarea></div>
+      <div class="field full"><label>音色 ID（可选）</label><input id="dlgVoice" placeholder="用于该角色发声"></div>
+      <div class="field"><label>所在小区</label><select id="dlgDistrict"><option value="其他">其他小区</option><option value="常去">常去小区</option></select></div>
+      <div class="field"><label>偏好地点</label><input id="dlgPreferred" placeholder="可在此输入大地图中的地点名"></div>
+    </div>`;
+  openDialog('创建新人物', html, () => {
+    const name = $('#dlgName').value.trim();
+    if(!name) { toast('请填写姓名', 'error'); return false; }
+    const c = {
+      id: uid(), builtIn: false, name,
+      gender: $('#dlgGender').value, identity: $('#dlgIdentity').value,
+      relation: $('#dlgRelation').value, address: '你',
+      personality: $('#dlgPersonality').value, description: $('#dlgDesc').value,
+      voiceId: $('#dlgVoice').value.trim(), activeScheme: 'default', schemes: [],
+      useSprite: false, portraitId: '',
+      district: $('#dlgDistrict').value,
+      preferredLocations: $('#dlgPreferred').value.trim(),
+      voiceEnabled: false
+    };
+    c.schemes = [{ id: 'default', name: '默认方案', data: characterSchemeData(c) }];
+    state.characters.push(c);
+    state.selectedCharacterId = c.id;
+    persist(); renderPanel(); toast('人物已创建');
+  });
+}
+function saveScheme() {
+  const c = selectedChar();
+  if (!c || c.builtIn) return;
+  if (!Array.isArray(c.schemes) || !c.schemes.length) {
+    c.schemes = [{id:'default',name:'默认方案',data:characterSchemeData(c)}];
+    c.activeScheme = 'default';
+  }
+  let scheme = c.schemes.find(s=>s.id===c.activeScheme);
+  if (!scheme) {
+    scheme = {id:uid(),name:'当前方案',data:characterSchemeData(c)};
+    c.schemes.push(scheme);
+    c.activeScheme = scheme.id;
+  }
+  scheme.data = characterSchemeData(c);
+  persist(true);
+  renderPanel();
+  toast('当前方案已保存');
+}
+function showSaveScheme() {
+  const html = `<div class="field full"><label>方案名称</label><input id="dlgSchemeName" value="新方案"></div>`;
+  openDialog('另存为新方案', html, () => {
+    const name = $('#dlgSchemeName').value.trim();
+    if(!name) { toast('请输入名称', 'error'); return false; }
+    const c = selectedChar();
+    const id = uid();
+    c.schemes.push({id, name, data: characterSchemeData(c)});
+    c.activeScheme = id;
+    persist(); renderPanel(); toast('方案已保存');
+  });
+}
+async function addImage(){
+ const character=$('#imageCharacter').value.trim(),url=$('#imageURL').value.trim(),file=$('#imageFile').files[0];
+ if(!character){toast('请填写角色名','error');return;}
+ if(!url&&!file){toast('请填写图片 URL 或选择本地图片','error');return;}
+ if(file&&file.size>8*1024*1024){toast('请选择 8MB 以内的图片','error');return;}
+ let finalURL=url;
+ if(file)finalURL=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
+ state.images.push({id:uid(),builtIn:false,character,name:`${character}`,url:finalURL,enabled:true});
+ persist(true);renderPanel();renderScene();toast('立绘已添加');
+}
+async function addBackground() {
+ const name=$('#bgName').value.trim(), url=$('#bgURL').value.trim(), desc=$('#bgDesc').value.trim();
+ if(!name||!url){toast('请填写背景名称和 URL','error');return;}
+ state.backgrounds.push({id:uid(), name, url, desc});
+ persist(true); renderPanel(); toast('背景已添加');
+}
+function exportSave(){
+ persist(true);
+ const exportable=sanitizeForStorage(state);
+ exportable.audioCache = {};
+ exportable.settings.customFont = localStorage.getItem('yueying-custom-font') || '';
+ exportable.meta={exportedAt:Date.now(),app:'yueying-visual-novel',version:16};
+ const blob=new Blob([JSON.stringify(exportable,null,2)],{type:'application/json'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download=`那什么dk-${new Date().toISOString().slice(0,10)}.json`;
+ a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ toast('存档已导出');
+}
+async function importSave(file){
+ if(!file)return;
+ if(file.size>20*1024*1024){toast('文件过大，请选择 20MB 以内的存档','error');return;}
+ try{
+  const raw=JSON.parse(await file.text());
+  if(!Array.isArray(raw.story)||!Array.isArray(raw.characters))throw new Error('格式');
+  raw.awaitingSetup=!(raw.player&&raw.player.name&&raw.player.name.trim());
+  if(raw.audioCache) raw.audioCache = {};
+  localStorage.setItem(STORE,JSON.stringify(raw));
+  if (raw.settings && raw.settings.customFont) localStorage.setItem('yueying-custom-font', raw.settings.customFont);
+  state=loadState();
+  applyUiScale(); applyFont(); applyTheme();
+  await injectBuiltins();
+  panel='home';
+  if(state.awaitingSetup)openSetup();else renderScene();
+  renderPanel();
+  persist(true);
+  toast('存档导入成功');
+ }catch(e){ toast('导入失败：这不是有效的存档','error'); }
+ $('#importFile').value='';
+}
+
+function buildSystem(){
+ const activeNames=new Set(state.story.slice(-12).map(e=>e.speaker));
+ const chars=state.characters.map(c=>{
+  const full=charFull(c);
+  if(!full)return null;
+  const entries=state.groups.filter(g=>g.target==='all'||(g.target===c.id&&activeNames.has(c.name))).flatMap(g=>g.entries.filter(e=>e.enabled).map(e=>`${g.name}/${e.title}：${e.content}`));
+  return {姓名:full.name,性别:full.gender,身份:full.identity,与玩家关系:full.relation,对玩家称呼:full.address,性格:full.personality,设定:full.description,补充条目:entries,所在小区:full.district||'其他',偏好地点:full.preferredLocations||''};
+ }).filter(Boolean);
+ const bgList = state.backgrounds.map(b => `- ${b.name}${b.desc ? ' (描述:' + b.desc + ')' : ''}`).join('\n');
+ const plot=state.plotDirection?.trim()?`\n【剧情走向】${state.plotDirection.trim()}`:'';
+ const lenStr = state.settings.generateLength || 600;
+ const thought = state.api.thoughtChain?.trim() ? `【思维链 / 必读规则】\n${state.api.thoughtChain.trim()}\n\n` : '';
+ return `${thought}你是一名中文互动视觉小说编剧。严格根据设定续写，不替玩家“${state.player.name}”决定言行。
+【世界背景】${state.world.background}
+【叙事规则】${state.world.rules}
+【叙事人称】旁白叙述时必须以第二人称“你”指代玩家（${state.player.name}），严禁用玩家姓名或“他/她”来称呼玩家；只有玩家本人开口说话时，才使用“${state.player.name}：”作为行首。
+【玩家】姓名：${state.player.name}；性别：女；身份：${state.player.identity}；设定：${state.player.description}${plot}
+【人物与生效条目】${JSON.stringify(chars)}
+【已有背景库】\n${bgList}
+【已有记忆摘要】${state.memory.summaries.map(m=>m.content).join('\n')||'无'}
+【地图与场景】如果玩家在剧情中决定前往某个地点，或者约定去某地，请在正文最后一行输出：【前往地图：地点名】。
+
+【硬性输出格式】只输出剧情正文，不要 Markdown、解释、引号或编号。
+1. 若场景发生变动，必须在新场景第一句台词之前另起一行，输出【场景：场景名】。例如：【场景：学校走廊】。如果场景名不在【已有背景库】中，系统会自动提示用户处理。
+2. 每行台词必须严格是“角色名：台词”或“旁白：叙述”，例如“秦梧：（轻笑了一声）承让了呀。”。一次生成 3 至 7 行，允许同一人物连续说话。字数约 ${lenStr} 字。旁白必须以“你”称呼玩家。
+${state.settings.generateOptions?'3. 剧情正文之后必须空一行，再严格输出四个选项：\nA：玩家可能说的一句话\nB：另一种不同态度的玩家台词\nC：第三种走向的玩家台词\nD：自由输入\nA/B/C 只能是玩家要说的话，不要描述结果。':''}`;
+}
+async function callChat(messages){
+ if(!state.api.endpoint||!state.api.key)throw new Error('请先填写剧情 API 地址与密钥');
+ const endpoint = resolveEndpoint(state.api.endpoint, 'chat');
+ const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.api.key},body:JSON.stringify({model:state.api.model,messages,temperature:Number(state.api.temperature)})});
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok)throw new Error(data.error?.message||data.message||`接口请求失败（${res.status}）`);
+ const text=data.choices?.[0]?.message?.content;
+ if(!text)throw new Error('接口没有返回有效的剧情文本');
+ return text;
+}
+let mapJumpQueue = null;
+function parseStory(text){
+ const story=[],choices=[],scenes=[];
+ let currentBg = null;
+ const flushBg = () => {
+   if (currentBg) {
+     story.push({id:uid(),speaker:'旁白',text:`[场景切换：${currentBg}]`});
+     currentBg = null;
+   }
+ };
+ for(const raw of text.split(/\r?\n/)){
+  const line=raw.trim();
+  if(!line)continue;
+  let mapMatch = line.match(/^【前往地图[：:]\s*(.+?)】$/);
+  if(mapMatch) { mapJumpQueue = mapMatch[1].trim(); continue; }
+  let bgMatch = line.match(/^【场景[：:]\s*(.+?)】$/);
+  if(bgMatch) { currentBg = bgMatch[1].trim(); scenes.push(currentBg); continue; }
+
+  flushBg();
+
+  let m=line.match(/^([ABCD])[：:]\s*(.+)$/i);
+  if(m){choices.push({key:m[1].toUpperCase(),text:m[2].trim()});continue;}
+  m=line.match(/^([^：:\n]{1,30})[：:]\s*(.+)$/);
+  if(m){
+    const speaker = m[1].trim();
+    story.push({id:uid(),speaker,text:m[2].trim()});
+    if (speaker !== '旁白' && speaker !== state.player.name) {
+      if (!state.characters.some(c => c.name === speaker)) {
+        const newNPC = {
+          id: uid(), builtIn: false, name: speaker,
+          gender: '未知', identity: '剧情中出现的角色',
+          relation: '未知', address: '你',
+          personality: '未知', description: '在剧情中自动登场的角色。',
+          voiceId: '', activeScheme: 'default', schemes: [],
+          useSprite: false, portraitId: '',
+          district: '其他', preferredLocations: '', voiceEnabled: false
+        };
+        newNPC.schemes = [{id: 'default', name: '默认方案', data: characterSchemeData(newNPC)}];
+        state.characters.push(newNPC);
+        toast(`发现新角色：${speaker}，已加入设定`);
+      }
+    }
+  } else {
+    story.push({id:uid(),speaker:'旁白',text:line});
+  }
+ }
+ flushBg();
+ return {story,choices,scenes};
+}
+async function generateStory(userText, isAction = false, isRetry = false){
+ if(busy||!userText.trim())return;
+ const clean=userText.trim();
+ const pendingEntry = isAction
+  ? {id:uid(),speaker:'旁白',text:`[你前往了${clean}]`}
+  : {id:uid(),speaker:state.player.name,text:clean};
+ const lastEntry = state.story[state.story.length-1];
+ if (!isRetry || !lastEntry || lastEntry.speaker!==pendingEntry.speaker || lastEntry.text!==pendingEntry.text) {
+  state.story.push(pendingEntry);
+ }
+ state.cursor=state.story.length-1;
+ state.choices=[];state.freeInput=false;busy=true;
+ mapJumpQueue = null;
+ renderScene();persist();
+ try{
+  const transcript=state.story.slice(-36).map(e=>`${e.speaker}：${e.text}`).join('\n');
+  const promptHint = isAction ? "请根据玩家的移动/行动指令，直接续写到达目的地后的剧情。" : "请续写下面的剧情。最后一条是玩家刚刚的回应。";
+  const text=await callChat([{role:'system',content:buildSystem()},{role:'user',content:`${promptHint}\n\n${transcript}`}]);
+  const parsed=parseStory(text);
+  if(!parsed.story.length)throw new Error('未识别到“角色名：台词”格式，请检查模型输出');
+  const start=state.story.length;
+  state.story.push(...parsed.story);
+  state.cursor=start;
+  if(state.settings.generateOptions){
+   const abc=parsed.choices.filter(c=>['A','B','C'].includes(c.key));
+   state.choices=abc.length?[...abc,{key:'D',text:'自由输入'}]:[];
+   state.freeInput=!abc.length;
+  }else{state.choices=[];state.freeInput=false;}
+  if (parsed.scenes && parsed.scenes.length) {
+    const lastScene = parsed.scenes[parsed.scenes.length - 1];
+    setTimeout(() => handleSceneChange(lastScene), 800);
+  }
+  if(mapJumpQueue) {
+    setTimeout(()=>{ openMap(); toast(`触发剧情：前往${mapJumpQueue}`); mapJumpQueue = null; }, 1000);
+  }
+ }catch(e){
+  const errMsg = e.message || '剧情生成失败';
+  state.freeInput=true;
+  setTimeout(() => {
+      if ($('#dialogOverlay').classList.contains('open')) return;
+      openDialog('剧情生成失败', `<p class="section-intro" style="margin:0">${esc(errMsg)}</p>`, null, { showConfirm:true, showCancel:true });
+      const confirmBtn = $('#dialogConfirmBtn');
+      const cancelBtn = $('#dialogCancelBtn');
+      confirmBtn.style.display = '';
+      cancelBtn.style.display = '';
+      confirmBtn.textContent = '重试';
+      cancelBtn.textContent = '返回大地图';
+      const newConfirm = confirmBtn.cloneNode(true); confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+      const newCancel = cancelBtn.cloneNode(true); cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+      newConfirm.onclick = () => { closeDialog(); setTimeout(() => generateStory(userText, isAction, true), 200); };
+      newCancel.onclick = () => { closeDialog(); setTimeout(() => openMap(), 200); };
+  }, 100);
+ }finally{ busy=false;persist();renderScene(); }
+ maybeAutoMemory();
+}
+async function summarize(manual=true){
+ if(summarizing)return;
+ const entries=state.story.slice(state.memory.lastSummaryIndex);
+ if(!entries.length){toast('当前没有需要总结的新剧情');return;}
+ summarizing=true;
+ if(panel==='memory')renderPanel();
+ try{
+  const transcript=entries.map(e=>`${e.speaker}：${e.text}`).join('\n');
+  const result=await callChat([{role:'system',content:'你是剧情记忆整理器。用简体中文总结剧情，保留关键事实、人物关系变化、承诺、秘密、未解决事件与当前场景。只输出一段 300 字以内的摘要，不要标题。'},{role:'user',content:transcript}]);
+  state.memory.summaries.push({id:uid(),content:result.trim(),createdAt:Date.now(),source:manual?'manual':'auto'});
+  state.memory.lastSummaryIndex=state.story.length;
+  persist(true);
+  toast(manual?'记忆总结完成':'已自动整理一段剧情记忆');
+ }catch(e){ if(manual)toast(e.message,'error'); }
+ finally{ summarizing=false;if(panel==='memory')renderPanel(); }
+}
+function maybeAutoMemory(){
+ if(state.settings.autoMemory&&!summarizing&&state.api.key&&memoryChars()>=Number(state.settings.memoryThreshold))summarize(false);
+}
+async function speak(text, speaker, lineId, force=false) {
+  const c = state.characters.find(c => c.name === speaker);
+  if (c && !c.voiceEnabled && !force) return;
+
+  const hasKey = state.voice.key && state.voice.groupId;
+  if (!force) {
+    if (!state.voice.enabled || !hasKey) return;
+  } else if (!hasKey) {
+    toast('请填写 MiniMax 密钥与 Group ID', 'error');
+    openPanel('voice');
+    return;
+  }
+
+  const full = c ? charFull(c) : null;
+  const voiceId = String((full && full.voiceId) || state.voice.defaultVoiceId || '').trim();
+  if (!voiceId) {
+    if (force) {
+      if (c && c.builtIn && !c.useCustomVoice && !RAW_BUILTIN_LIB.find(x=>x.id===c.id)?.voiceId) toast('该内置角色未提供内置音色，请前往人物设定配置自定义音色', 'error');
+      else if (c && c.builtIn && c.useCustomVoice && !(c.voiceOverride||'').trim()) toast('请填写自定义音色 ID，或在语音配置中填写默认音色 ID', 'error');
+      else toast('该角色未配置音色，也没有可用的默认音色 ID', 'error');
+    }
+    return;
+  }
+
+  // 缓存键绑定音色与模型，避免切换音色后仍播放旧声音。
+  const cacheKey = lineId ? `${lineId}::${voiceId}::${state.voice.model || 'default'}` : '';
+  if (cacheKey && state.audioCache[cacheKey]) {
+    if (audio) audio.pause();
+    audio = new Audio(state.audioCache[cacheKey]);
+    audio.play().catch(() => {});
+    return;
+  }
+
+  let base = resolveEndpoint(state.voice.endpoint, 'speech');
+  if(!base) base = 'https://api.minimax.chat/v1/t2a_v2';
+  let url;
+  try { url = new URL(base); } catch(e) { if(force) toast('语音接口地址无效', 'error'); return; }
+  url.searchParams.set('GroupId', state.voice.groupId);
+  const speechText = String(text || '').replace(/[（(][^）)]*[）)]/g, '').replace(/\s+/g, ' ').trim() || String(text || '').trim();
+  if (!speechText) return;
+
+  try {
+    if (force) toast('正在生成语音…');
+    const res = await smartFetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.voice.key },
+      body: JSON.stringify({
+        model: state.voice.model,
+        text: speechText,
+        stream: false,
+        voice_setting: { voice_id: voiceId, speed: 1, vol: 1, pitch: 0 },
+        audio_setting: { sample_rate: 32000, bitrate: 128000, format: 'mp3', channel: 1 }
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.base_resp?.status_code) {
+      const errorMsg = data.base_resp?.status_msg || data.error?.message || `接口请求失败（状态码 ${res.status}）`;
+      throw new Error(errorMsg);
+    }
+    const hex = data.data?.audio;
+    if (!hex) throw new Error('接口未返回音频数据');
+    let blob;
+    if (/^[0-9a-f]+$/i.test(hex) && hex.length % 2 === 0) {
+      const bytes = new Uint8Array(hex.match(/.{2}/g).map(x => parseInt(x, 16)));
+      blob = new Blob([bytes], { type: 'audio/mpeg' });
+    } else {
+      const bin = atob(hex), bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+      blob = new Blob([bytes], { type: 'audio/mpeg' });
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    if (cacheKey) {
+      const reader = new FileReader();
+      reader.onloadend = () => { state.audioCache[cacheKey] = reader.result; persist(true); };
+      reader.readAsDataURL(blob);
+    }
+    if (audio) audio.pause();
+    audio = new Audio(blobUrl);
+    audio.onended = () => { URL.revokeObjectURL(blobUrl); audio = null; };
+    await audio.play();
+  } catch (e) { if (force) toast(e.message || '语音生成失败', 'error'); else console.warn('自动语音播放失败:', e); }
+}
+async function testAPI(){
+ if(busy)return; busy=true;
+ const status=$('#apiStatus');
+ if(status)status.textContent='正在请求…';
+ try{
+  const result=await callChat([{role:'user',content:'请仅回复“连接成功”。'}]);
+  toast(result.slice(0,60));
+  if(status)status.textContent='连接成功';
+ }catch(e){ toast(e.message,'error'); if(status)status.textContent='连接失败'; }
+ finally{busy=false;}
+}
+async function testImageAPI() {
+ if(busy)return; busy=true;
+ const status=$('#imageApiStatus');
+ if(status)status.textContent='正在请求…';
+ try {
+   const endpoint = resolveEndpoint(state.imageApi.endpoint, 'image');
+   const res = await smartFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.imageApi.key },
+      body: JSON.stringify({ model: state.imageApi.model, prompt: "A simple test image, a red apple on a wooden table", n: 1, size: "1024x1024" })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error?.message || '请求失败');
+    if(!data.data || !data.data[0] || !data.data[0].url) throw new Error('无有效返回');
+    toast('生图连接成功');
+    if(status)status.textContent='连接成功';
+ } catch(e) { toast(e.message, 'error'); if(status)status.textContent='连接失败'; }
+ finally { busy=false; }
+}
+
+function handleAction(action,el){
+ if(action==='open-map'){ showConfirm('前往地图', '是否结束当前剧情，回到大地图？', () => { closePanel(); openMap(); }); }
+ else if(action==='close-map'){ closeMap(); renderScene(); }
+ else if(action==='open-menu'){
+   if(!$('#mapOverlay').hidden && $('#mapOverlay').classList.contains('open')){ panelContext = 'map'; closeMap(); } else { panelContext = 'scene'; }
+   openPanel('home');
+ }
+ else if(action==='open-replay'){
+   if(!$('#mapOverlay').hidden && $('#mapOverlay').classList.contains('open')){ panelContext = 'map'; closeMap(); } else { panelContext = 'scene'; }
+   openPanel('replay');
+ }
+ else if(action==='close-panel')closePanel();
+ else if(action==='go-home'){panel='home';renderPanel();}
+ else if(action==='export')exportSave();
+ else if(action==='continue-story'){state.cursor=Math.min(state.story.length-1,state.cursor+1);renderScene();persist();}
+else if(action==='speak-current'){const e=state.story[state.cursor];speak(e.text,e.speaker,e.id,true);}
+else if(action==='replay-line'){const e=state.story[Number(el.dataset.index)];speak(e.text,e.speaker,e.id,true);}
+ else if(action==='fetch-models'){ fetchModelsFor(el.dataset.target, el); }
+ else if(action==='toggle-combo'){
+   const listId = el.dataset.list;
+   const combo = el.closest('.combo');
+   const box = combo ? combo.querySelector('.combo-list') : null;
+   if(box && !box.hidden) closeAllCombos();
+   else openCombo(listId);
+ }
+ else if(action==='choose'){
+  const key=el.dataset.key;
+  if(key==='D'){state.freeInput=true;renderScene();setTimeout(()=>$('#storyInput').focus(),50);}
+  else{const c=state.choices.find(x=>x.key===key);if(c)generateStory(c.text);}
+ }
+ else if(action==='new-story'){
+   showConfirm('重新开始', '确定要完全重新开始吗？将清空所有进度和个人设定（公告无需重看）。', () => {
+     state = baseState();
+     state.awaitingSetup = true;
+     state.currentBackground = '教室';
+     localStorage.removeItem(STORE);
+     localStorage.removeItem('yueying-custom-font');
+     localStorage.setItem(STORE, JSON.stringify(sanitizeForStorage(state)));
+     closePanel();
+     closeMap();
+     closeDialog();
+     applyUiScale();
+     applyTheme();
+     applyFont();
+     renderScene();
+     openSetup();
+   });
+ }
+ else if(action==='manual-memory')summarize(true);
+ else if(action==='save-memory'){persist(true);toast('记忆修改已保存');}
+ else if(action==='delete-memory'){
+   showConfirm('删除记忆', '确定删除这条记忆摘要吗？', () => {
+     state.memory.summaries=state.memory.summaries.filter(m=>m.id!==el.dataset.id);
+     persist();renderPanel();
+   });
+ }
+ else if(action==='select-character'){state.selectedCharacterId=el.dataset.id;renderPanel();}
+ else if(action==='add-character'){showAddCharacter();}
+ else if(action==='delete-character'){
+  const c=state.characters.find(c=>c.id===el.dataset.id);
+  if(c && !c.builtIn){
+   showConfirm('删除人物', `确定删除人物“${c.name}”吗？`, () => {
+     state.characters=state.characters.filter(x=>x.id!==c.id);
+     state.selectedCharacterId=state.characters[0]?.id;
+     persist();renderPanel();
+   });
+  }
+ }
+ else if(action==='update-scheme'){saveScheme(false);}
+ else if(action==='add-scheme'){showSaveScheme();}
+ else if(action==='delete-scheme'){
+  const c=selectedChar();
+  if(c && !c.builtIn && c.schemes.length>1){
+   showConfirm('删除方案', '确定删除当前设定方案吗？', () => {
+     c.schemes=c.schemes.filter(s=>s.id!==c.activeScheme);
+     c.activeScheme=c.schemes[0].id;
+     Object.assign(c,clone(c.schemes[0].data));
+     persist();renderPanel();
+   });
+  }
+ }
+ else if(action==='add-group'){state.groups.push({id:uid(),name:`分组 ${state.groups.length+1}`,target:'all',entries:[]});persist();renderPanel();}
+ else if(action==='delete-group'){
+  showConfirm('删除分组', '确定删除此分组及其中所有条目吗？', () => {
+   state.groups=state.groups.filter(g=>g.id!==el.dataset.id);
+   persist();renderPanel();
+  });
+ }
+ else if(action==='add-entry'){state.groups.find(g=>g.id===el.dataset.id)?.entries.push({id:uid(),title:'新条目',content:'',enabled:true});persist();renderPanel();}
+ else if(action==='delete-entry'){
+  const g=state.groups.find(g=>g.id===el.dataset.group);
+  if(g){g.entries=g.entries.filter(e=>e.id!==el.dataset.id);persist();renderPanel();}
+ }
+ else if(action==='delete-image'){
+  const img=state.images.find(i=>i.id===el.dataset.id);
+  if(img && !img.builtIn){
+   showConfirm('删除立绘', '确定要删除这张立绘吗？', () => {
+     state.images=state.images.filter(i=>i.id!==img.id);
+     delete state.spriteOffsets[img.id];
+     persist();renderPanel();renderScene();toast('立绘已删除');
+   });
+  }
+ }
+ else if(action==='delete-bg'){
+  const bg=state.backgrounds.find(b=>b.id===el.dataset.id);
+  if(bg){
+   showConfirm('删除背景', '确定要删除这张背景吗？', () => {
+     state.backgrounds=state.backgrounds.filter(b=>b.id!==bg.id);
+     delete state.backgroundOffsets[bg.id];
+     persist();renderPanel();renderScene();toast('背景已删除');
+   });
+  }
+ }
+ else if(action==='edit-sil'){ showEditSilhouette(el.dataset.id); }
+ else if(action==='delete-sil'){
+  showConfirm('删除剪影', '确定要删除这张剪影吗？', () => {
+    state.silhouettes = state.silhouettes.filter(s => s.id !== el.dataset.id);
+    persist(); renderPanel(); renderScene(); toast('剪影已删除');
+  });
+ }
+ else if(action==='remove-font'){
+   state.settings.customFont = '';
+   localStorage.removeItem('yueying-custom-font');
+   applyFont(); persist(); renderPanel(); toast('已恢复系统默认字体');
+ }
+ else if(action==='set-theme'){ state.settings.theme = el.dataset.theme; applyTheme(); persist(); renderPanel(); }
+ else if(action==='test-api')testAPI();
+ else if(action==='test-image-api')testImageAPI();
+ else if(action==='test-voice')speak('夜色很深，而我们的故事才刚刚开始。',selectedChar()?.name||'',null,true);
+}
+
+document.addEventListener('click',e=>{
+ const action=e.target.closest('[data-action]');
+ if(action){handleAction(action.dataset.action,action);return;}
+ const p=e.target.closest('[data-panel]');
+ if(p){panel=p.dataset.panel;renderPanel();return;}
+ const tab=e.target.closest('[data-settings-tab]');
+ if(tab){settingsTab=tab.dataset.settingsTab;renderPanel();}
+});
+
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(t.hasAttribute('data-ui-scale')){
+   const v=Number(t.value);
+   state.settings.uiScale=v; applyUiScale(); persist();
+   const out=t.parentElement.querySelector('output'); if(out) out.textContent=(+v).toFixed(2);
+ }
+ if(t.dataset.bind){
+  let v=t.type==='checkbox'?t.checked:t.type==='number'?Number(t.value):t.value;
+  setPath(state,t.dataset.bind,v); persist();
+ }
+ if(t.dataset.charField){
+  const c=selectedChar();
+  if(c){
+   if(c.builtIn && t.dataset.charField === 'voiceOverride') c.voiceOverride = t.value;
+   else if(!c.builtIn) c[t.dataset.charField] = t.value;
+   else if(t.dataset.charField === 'portraitId' || t.dataset.charField === 'useSprite') c[t.dataset.charField] = t.value;
+   else if(t.dataset.charField === 'district' || t.dataset.charField === 'preferredLocations') c[t.dataset.charField] = t.value;
+   persist();
+  }
+ }
+   if(t.dataset.profileField){
+ const c=selectedChar();
+ if(c && c.builtIn){
+  if(!c.customProfile) c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+  c.customProfile[t.dataset.profileField] = t.value;
+  persist();
+ }
+   }
+ if(t.dataset.bgDesc){ const bg = state.backgrounds.find(b=>b.id === t.dataset.bgDesc); if(bg){ bg.desc = t.value; persist(); } }
+ if(t.dataset.memoryId){ const m=state.memory.summaries.find(m=>m.id===t.dataset.memoryId); if(m){m.content=t.value;persist();} }
+ if(t.dataset.groupField){ const g=state.groups.find(g=>g.id===t.dataset.id); if(g){g[t.dataset.groupField]=t.type==='checkbox'?t.checked:t.value;persist();} }
+ if(t.dataset.entryField){ const g=state.groups.find(g=>g.id===t.dataset.group); const entry=g?.entries.find(e=>e.id===t.dataset.id); if(entry){entry[t.dataset.entryField]=t.type==='checkbox'?t.checked:t.value;persist();} }
+ if(t.dataset.offset){
+  const id=t.dataset.img;
+  if(id){
+   if(!state.spriteOffsets[id])state.spriteOffsets[id]={x:0,y:0,s:1};
+   state.spriteOffsets[id][t.dataset.offset]=Number(t.value); persist();
+   const imgPreview=t.closest('.image-card')?.querySelector('.image-preview img');
+   const o=state.spriteOffsets[id];
+   if(imgPreview){ imgPreview.style.setProperty('--px',o.x+'px'); imgPreview.style.setProperty('--py',o.y+'px'); imgPreview.style.setProperty('--ps',o.s); }
+   const out=t.parentElement.querySelector('output'); if(out)out.textContent=t.dataset.offset==='s'?(+o.s).toFixed(2):o[t.dataset.offset];
+   renderScene();
+  }
+ }
+ if(t.dataset.bgOffset){
+  const id=t.dataset.bgId;
+  if(id){
+   if(!state.backgroundOffsets[id])state.backgroundOffsets[id]={x:0,y:0,s:1};
+   state.backgroundOffsets[id][t.dataset.bgOffset]=Number(t.value); persist();
+   const imgPreview=t.closest('.image-card')?.querySelector('.image-preview img');
+   const o=state.backgroundOffsets[id];
+   if(imgPreview){ imgPreview.style.setProperty('--px',o.x+'px'); imgPreview.style.setProperty('--py',o.y+'px'); imgPreview.style.setProperty('--ps',o.s); }
+   const out=t.parentElement.querySelector('output'); if(out)out.textContent=t.dataset.bgOffset==='s'?(+o.s).toFixed(2):o[t.dataset.bgOffset];
+   renderScene();
+  }
+ }
+});
+
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.id === 'fontUpload'){
+   const file = t.files[0]; if(!file) return;
+   if(file.size > 3 * 1024 * 1024) { toast('字体文件建议不超过 3MB，过大可能导致浏览器存储失败', 'error'); return; }
+   const reader = new FileReader();
+   reader.onload = (ev) => { localStorage.setItem('yueying-custom-font', ev.target.result); applyFont(); persist(); renderPanel(); toast('自定义字体已应用'); };
+   reader.readAsDataURL(file);
+ }
+ if(t.dataset.locBg){ state.locationBackgrounds[t.dataset.locBg] = t.value; persist(); }
+ if(t.dataset.visitBg){ state.residentVisitBackgrounds[t.dataset.visitBg] = t.value; persist(); }
+ if(t.dataset.toggleImage) { const img = state.images.find(i=>i.id===t.dataset.toggleImage); if(img) { img.enabled = t.checked; persist(); renderPanel(); renderScene(); } }
+ if(t.dataset.change==='character-scheme'){
+  const c=selectedChar();
+  if(c && !c.builtIn){
+   const s=c.schemes.find(s=>s.id===t.value);
+   if(s){c.activeScheme=s.id;Object.assign(c,clone(s.data));persist();renderPanel();}
+  }
+ }
+ if(t.dataset.change==='voice-region') {
+   state.voice.region = t.value;
+   if(t.value === 'cn') state.voice.endpoint = 'https://api.minimax.chat/v1';
+   else if (t.value === 'global') state.voice.endpoint = 'https://api.minimaxi.chat/v1';
+   persist(); renderPanel();
+ }
+ if(t.dataset.change==='voice-mode') {
+   const c = state.characters.find(x=>x.id===t.dataset.id);
+   if (c) { c.useCustomVoice = (t.value === 'custom'); persist(); renderPanel(); }
+ }
+  if(t.dataset.change==='profile-mode') {
+  const c = state.characters.find(x=>x.id===t.dataset.id);
+  if (c) {
+    c.useCustomProfile = (t.value === 'custom');
+    if (c.useCustomProfile && !c.customProfile) {
+      c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+    }
+    persist(); renderPanel();
+  }
+  }
+ if(t.dataset.groupField==='target')renderPanel();
+});
+
+document.addEventListener('click', e => {
+  const pick = e.target.closest('[data-combo-pick]');
+  if(pick){
+    e.preventDefault();
+    const listId = pick.dataset.list;
+    const value = pick.dataset.comboPick;
+    const combo = document.querySelector('.combo[data-combo="' + listId + '"]');
+    const input = combo ? combo.querySelector('[data-combo-input]') : null;
+    if(input){
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    closeAllCombos();
+    return;
+  }
+  if(!e.target.closest('.combo')) closeAllCombos();
+});
+
+document.addEventListener('focusin', e => {
+  const input = e.target.closest('[data-combo-input]');
+  if(!input) return;
+  const combo = input.closest('.combo');
+  if(!combo) return;
+  const listId = combo.dataset.combo;
+  if((MODEL_LISTS[listId] || []).length) openCombo(listId);
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && document.querySelector('.combo-list:not([hidden])')){
+    closeAllCombos();
+  }
+}, true);
+
+$('#storyForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ const input=$('#storyInput'),text=input.value;
+ if(!text.trim()){toast('请先输入你的回应');return;}
+ input.value='';
+ generateStory(text);
+});
+$('#storyInput').addEventListener('keydown',e=>{
+ if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('#storyForm').requestSubmit();}
+});
+document.addEventListener('submit',e=>{
+ if(e.target.id==='imageForm'){e.preventDefault();addImage().catch(()=>toast('图片读取失败','error'));}
+ if(e.target.id==='bgForm'){e.preventDefault();addBackground().catch(()=>toast('背景添加失败','error'));}
+ if(e.target.id==='spriteGenForm'){
+   e.preventDefault();
+   const name=$('#genSpriteCharacter').value.trim();
+   const prompt=$('#genSpritePrompt').value.trim();
+   const neg=$('#genSpriteNeg').value.trim();
+   if(!name||!prompt){toast('请填写角色名与生图描述','error');return;}
+   doGenerateSprite(name,prompt,neg);
+ }
+ if(e.target.id==='bgGenForm'){
+   e.preventDefault();
+   const name=$('#genBgName').value.trim();
+   const prompt=$('#genBgPrompt').value.trim();
+   const neg=$('#genBgNeg').value.trim();
+   const desc=$('#genBgDesc').value.trim();
+   if(!name||!prompt){toast('请填写背景名与生图描述','error');return;}
+   doGenerateBackground(name,prompt,neg,desc);
+ }
+ if(e.target.id==='silForm'){
+   e.preventDefault();
+   addSilhouette().catch(()=>toast('剪影读取失败','error'));
+ }
+});
+$('#importFile').addEventListener('change',e=>importSave(e.target.files[0]));
+$('#overlay').addEventListener('click',e=>{if(e.target===$('#overlay'))closePanel();});
+$('#setupConfirm').addEventListener('click',confirmSetup);
+
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'&&!$('#overlay').hidden)closePanel();
+ else if(e.key==='Escape'&&!$('#dialogOverlay').hidden)closeDialog();
+ else if(e.key==='Escape'&&!$('#mapOverlay').hidden)closeMap();
+ else if(e.key===' '&&$('#overlay').hidden&&$('#setupOverlay').hidden&&$('#dialogOverlay').hidden&&$('#mapOverlay').hidden&&state.cursor<state.story.length-1&&!['TEXTAREA','INPUT'].includes(document.activeElement.tagName)){
+  e.preventDefault();handleAction('continue-story',document.body);
+ }
+});
+$('#sprite').addEventListener('error',()=>{
+ $('#sprite').classList.remove('visible'); $('#sprite').style.display='none'; $('#sprite').removeAttribute('src');
+});
+$('#dynamicBg').addEventListener('error',()=>{
+ $('#dynamicBg').classList.remove('visible'); $('#dynamicBg').style.display='none'; $('#dynamicBg').removeAttribute('src');
+});
+
+$('#mapEditBtn').addEventListener('click', () => {
+  isEditingMap = !isEditingMap;
+  if(isEditingMap) { $('#mapEditBtn').textContent = '✓'; $('#mapEditBtn').style.color = 'var(--accent)'; $('#mapEditBtn').style.borderColor = 'var(--accent)'; }
+  else { $('#mapEditBtn').textContent = '⤡'; $('#mapEditBtn').style.color = 'var(--p-ink)'; $('#mapEditBtn').style.borderColor = 'var(--p-paper)'; persist(); toast('地图位置已保存'); }
+  renderMapSpots();
+});
+
+/* ===================== 启动逻辑 ===================== */
+applyUiScale();
+applyFont();
+applyTheme();
+
+const DATA_VERSION = 'v1.8';
+const isInitialized = localStorage.getItem('story_data_initialized') === DATA_VERSION;
+
+/* 公告页点击「进入游戏」后由公告脚本调用 */
+window.onNoticeAccepted = function(){
+  try {
+    state = baseState();
+    state.awaitingSetup = true;
+    state.currentBackground = '教室';
+    persist(true);
+    localStorage.setItem('story_data_initialized', DATA_VERSION);
+
+    const app = $('#noticeApp');
+    if (app) app.hidden = true;
+    document.body.classList.remove('panel-open');
+
+    toast('数据加载成功，游戏开始！');
+    openSetup();
+    renderScene();
+    renderPanel();
+  } catch (e) {
+    console.error('初始化失败:', e);
+    toast('初始化失败，请刷新重试。', 'error');
+  }
+};
+
+function initNoticePage(){
+  const PAGES = [
+    {
+      eyebrow: 'A LETTER',
+      title: '一封未知的来信',
+      html: `
+        <p class="lead">这是一个属于你的故事。</p>
+        <p>你可以是一名普通的学生，也可以再次选择成为与「他」并肩的人。</p>
+        <p class="dim">为确保故事顺利进行，请向左翻动这封信.</p>`
+    },
+    {
+      eyebrow: 'BEFORE ENTERING',
+      title: '进入之前',
+      html: `
+        <p class="lead">请确认您已年满十八周岁，并满足以下要求：</p>
+        <div class="rule"><span class="idx">01</span><span class="txt">您从未将《捉鬼师后日谈》任意角色割席，也不认可这个做法。<em>［禁割席］</em></span></div>
+        <div class="rule"><span class="idx">02</span><span class="txt">您从未以任何形式对《捉鬼师后日谈》及作者爱发电任意内容进行恶意辱骂 / 造谣。<em>［禁造谣］</em></span></div>
+        <div class="rule"><span class="idx">03</span><span class="txt">您始终坚信《捉鬼师后日谈》内的主控就是你。<em>［禁女主党］</em></span></div>
+        <div class="rule"><span class="idx">04</span><span class="txt">您不会观看 / 创作任何《捉鬼师后日谈》内的乙女腐内容。<em>［禁乙女腐］</em></span></div>
+        <div class="rule"><span class="idx">05</span><span class="txt">由于创作者是秦梧梦女，因此需要额外确认：如果您是拒一切，请退出作品。</span></div>
+        <p class="dim">若以上任意一条无法确定，请直接关闭本作品。</p>`
+    },
+    {
+      eyebrow: 'FEATURES · 01',
+      title: '当前主要功能',
+      html: `
+        <div class="feature"><span class="idx">01</span><span class="txt"><b>剧情续写</b>：可接入兼容 OpenAI 格式的大语言模型（如 GPT-4o、DeepSeek 等），根据玩家输入和预设世界观续写剧情。</span></div>
+        <div class="feature"><span class="idx">02</span><span class="txt"><b>多模态交互</b>：支持点击「继续」阅读，也支持在底部输入框自由输入台词，还可通过 AI 生成的 A / B / C 选项进行分支选择。</span></div>
+        <div class="feature"><span class="idx">03</span><span class="txt"><b>场景与地图移动</b>：内置大地图（学校、居住区、酒吧等），点击地点会自动触发前往该地的剧情。</span></div>
+        <div class="feature"><span class="idx">04</span><span class="txt"><b>记忆总结</b>：剧情过长时，自动调用 AI 将前文浓缩成摘要，防止 AI 遗忘设定，也可手动修改摘要。</span></div>
+        <div class="feature"><span class="idx">05</span><span class="txt"><b>立绘与剪影兜底</b>：说话时自动匹配角色立绘；没有立绘时，自动分配对应性别的「剪影」。</span></div>
+        <div class="feature"><span class="idx">06</span><span class="txt"><b>动态背景切换</b>：根据 AI 输出的【场景：xxx】指令，自动匹配并切换场景背景图。</span></div>
+        <div class="feature"><span class="idx">07</span><span class="txt"><b>位置微调</b>：可在菜单用滑块实时调节背景图与立绘的 X / Y 偏移及缩放。</span></div>
+        <div class="feature"><span class="idx">08</span><span class="txt"><b>自定义角色方案</b>：内置角色有专属设定；手动创建的角色可以保存多套设定方案。</span></div>
+        <div class="feature"><span class="idx">09</span><span class="txt"><b>语音合成</b>：接入 MiniMax 语音模型，自动朗读角色台词，每个角色可独立配置音色 ID 与开关。</span></div>`
+    },
+    {
+      eyebrow: 'FEATURES · 02',
+      title: '当前主要功能',
+      html: `
+        <div class="feature"><span class="idx">10</span><span class="txt"><b>AI 生图补全</b>：接入兼容的生图 API（如 DALL·E 3）。</span></div>
+        <div class="feature"><span class="idx">11</span><span class="txt"><b>人物立绘</b>：遇到没有立绘的新角色时，可弹窗让 AI 生成。</span></div>
+        <div class="feature"><span class="idx">12</span><span class="txt"><b>场景背景</b>：遇到没有背景的新场景时，可弹窗让 AI 生成。</span></div>
+        <div class="feature"><span class="idx">13</span><span class="txt"><b>日夜主题</b>：一键切换日间（白底黑字）/ 夜间（黑底白字）阅读模式。</span></div>
+        <div class="feature"><span class="idx">14</span><span class="txt"><b>自定义字体</b>：支持上传 .ttf / .otf 等字体文件全局替换。</span></div>
+        <div class="feature"><span class="idx">15</span><span class="txt"><b>界面缩放</b>：支持 0.7 – 1.6 倍 UI 缩放，适配不同尺寸屏幕。</span></div>
+        <div class="feature"><span class="idx">16</span><span class="txt"><b>本地持久化</b>：所有数据默认保存在浏览器本地。</span></div>
+        <div class="feature"><span class="idx">17</span><span class="txt"><b>存档读档</b>：支持一键导入导出 JSON 存档备份。</span></div>`
+    },
+    {
+      eyebrow: 'NOTICE',
+      title: '其他内容',
+      html: `
+        <div class="note"><span class="mark">◆</span><span class="txt">请不要使用本作品进行任何不适内容创作。文本、语音、生图均为 AI 创作，与创作者无关，请理性看待。</span></div>
+        <div class="note"><span class="mark">◆</span><span class="txt">本作品完全免费。如果您是通过付费进入，请联系卖家退款。本作品只提供给《捉鬼师后日谈》的玩家，禁止任何形式的付费，也禁止私下二传。</span></div>
+        <div class="note"><span class="mark">◆</span><span class="txt">有任何疑问，请通过以下方式联系创作者：<br>小红书：Aswnzs<br>QQ 群：1107469751</span></div>
+        <p class="dim">感谢您阅读到这里，点击下方按钮即可进入故事。</p>`
+    }
+  ];
+
+  const invite   = $('#noticeApp .invite');
+  const eyebrowE = $('#eyebrow');
+  const titleE   = $('#title');
+  const bodyE    = $('#body');
+  const hintText = $('#hintText');
+  const hintArrow= $('#hintArrow');
+  const dotsWrap = $('#dots');
+  const sealSvg  = $('#sealSvg');
+  const prevBtn  = $('#prevBtn');
+  const nextBtn  = $('#nextBtn');
+  const enterBtn = $('#enterGameBtn');
+  const appRoot  = $('#noticeApp');
+
+  const BASE_TRANSFORM = 'rotate(2.5deg) translate(1.5%,-1.5%)';
+
+  sealSvg.innerHTML = `
+    <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <circle cx="24" cy="24" r="21" stroke="currentColor" stroke-width="1" opacity=".55"/>
+      <circle cx="24" cy="24" r="16.5" stroke="currentColor" stroke-width=".6" opacity=".35"/>
+      <path d="M24 10 C 27 16, 27 22, 24 30 C 21 22, 21 16, 24 10 Z" fill="currentColor" opacity=".85"/>
+      <path d="M24 30 C 24 34, 22 37, 18 39" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity=".6"/>
+      <path d="M18 16 C 15 18, 14 21, 15 25" stroke="currentColor" stroke-width=".8" stroke-linecap="round" opacity=".45"/>
+      <path d="M30 16 C 33 18, 34 21, 33 25" stroke="currentColor" stroke-width=".8" stroke-linecap="round" opacity=".45"/>
+    </svg>`;
+
+  dotsWrap.innerHTML = PAGES.map(() => '<span class="dot"></span>').join('');
+  const dotEls = [...dotsWrap.children];
+
+  let current = 0;
+
+  // —— 进入按钮的双重条件状态 ——
+  let timeUp = false;
+  let hasReachedLastPage = false;
+  let remain = 15;
+
+  function updateEnterBtn(){
+    if (timeUp && hasReachedLastPage){
+      enterBtn.disabled = false;
+      enterBtn.textContent = '进入游戏';
+    } else if (!timeUp){
+      enterBtn.disabled = true;
+      enterBtn.textContent = `强制阅读 (${remain}s)`;
+    } else {
+      // 计时已满，但还没翻到最后一页
+      enterBtn.disabled = true;
+      enterBtn.textContent = '请继续阅读';
+    }
+  }
+
+  function render(direction){
+    const page = PAGES[current];
+    const isLast = current === PAGES.length - 1;
+
+    eyebrowE.textContent = page.eyebrow;
+    titleE.textContent = page.title;
+    bodyE.innerHTML = page.html;
+    bodyE.scrollTop = 0;
+
+    hintText.textContent = isLast ? '这是最后一页' : '向左滑动 · 继续翻阅';
+    hintArrow.style.display = isLast ? 'none' : '';
+
+    dotEls.forEach((d,i)=>d.classList.toggle('active', i===current));
+    prevBtn.style.visibility = current === 0 ? 'hidden' : 'visible';
+    nextBtn.style.visibility = isLast ? 'hidden' : 'visible';
+
+    // 记录是否已到达过最后一页（到达即永久生效，回翻不重置）
+    if (isLast) hasReachedLastPage = true;
+    updateEnterBtn();
+
+    if (direction) {
+      const offset = direction === 'next' ? 40 : -40;
+      invite.style.transition = 'none';
+      invite.style.opacity = '0';
+      invite.style.transform = `${BASE_TRANSFORM} translateX(${offset}px)`;
+      requestAnimationFrame(() => {
+        invite.style.transition = 'transform .45s cubic-bezier(.22,.9,.32,1), opacity .35s ease';
+        invite.style.opacity = '1';
+        invite.style.transform = BASE_TRANSFORM;
+      });
+    } else {
+      invite.style.transition = 'transform .45s cubic-bezier(.22,.9,.32,1), opacity .35s ease';
+      invite.style.opacity = '1';
+      invite.style.transform = BASE_TRANSFORM;
+    }
+  }
+
+  function go(delta){
+    const next = current + delta;
+    if (next < 0 || next >= PAGES.length) return;
+    current = next;
+    render(delta > 0 ? 'next' : 'prev');
+  }
+
+  prevBtn.addEventListener('click', () => go(-1));
+  nextBtn.addEventListener('click', () => go(1));
+
+  let sx = null, sy = null;
+  invite.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  invite.addEventListener('touchend', e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+    sx = sy = null;
+  }, { passive: true });
+
+  let mx = null;
+  invite.addEventListener('mousedown', e => { mx = e.clientX; });
+  window.addEventListener('mouseup', e => {
+    if (mx === null) return;
+    const dx = e.clientX - mx;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    mx = null;
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') go(1);
+    else if (e.key === 'ArrowLeft') go(-1);
+  });
+
+  const motesWrap = $('#motes');
+  for (let i = 0; i < 16; i++){
+    const m = document.createElement('div');
+    m.className = 'mote';
+    m.style.left = Math.random()*100 + '%';
+    m.style.top  = Math.random()*100 + '%';
+    m.style.animationDelay = (Math.random()*9) + 's';
+    m.style.animationDuration = (7 + Math.random()*5) + 's';
+    motesWrap.appendChild(m);
+  }
+
+  // —— 15 秒强制阅读计时 ——
+  const READ_SECONDS = 15;
+  let timer = null;
+
+  updateEnterBtn();
+  timer = setInterval(() => {
+    remain--;
+    if (remain <= 0){
+      clearInterval(timer);
+      timeUp = true;
+    }
+    updateEnterBtn();
+  }, 1000);
+
+  enterBtn.addEventListener('click', () => {
+    if (enterBtn.disabled) return;
+    clearInterval(timer);
+    enterBtn.disabled = true;
+    enterBtn.textContent = '正在进入…';
+    appRoot.classList.add('leaving');
+    setTimeout(() => {
+      if (typeof window.onNoticeAccepted === 'function') {
+        try { window.onNoticeAccepted(); } catch (err) { console.error(err); }
+      } else {
+        window.dispatchEvent(new CustomEvent('notice:accepted'));
+      }
+    }, 450);
+  });
+
+  render(null);
+}
+
+injectBuiltins().then(() => {
+  if (state.characters.length && !state.selectedCharacterId) state.selectedCharacterId = state.characters[0].id;
+
+  if (!isInitialized) {
+    const app = $('#noticeApp');
+    if (app) app.hidden = false;
+    initNoticePage();
+  } else {
+    const app = $('#noticeApp');
+    if (app) app.hidden = true;
+    renderScene();
+    if (state.awaitingSetup) openSetup();
+  }
+  persist();
+});
+</script>
+</body>
+</html>
