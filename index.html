@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 V1.2 稳定版…</div>
 <script>
 'use strict';
 const frame=document.getElementById('legacy');
@@ -38,13 +38,17 @@ function boot(win,doc){
   // 1. 使用 MutationObserver 监听右上角按钮区域，只要出现就插入手机按钮
   function setupObserver(){
     const observer = new MutationObserver(() => {
-      const nav = doc.querySelector('.diamond-nav');
-      if (nav && !nav.querySelector('[data-action="open-phone"]')) {
-        const wrap = doc.createElement('div');
-        wrap.className = 'diamond-wrap';
-        wrap.innerHTML = '<button class="diamond" data-action="open-phone" aria-label="打开手机"><span>手机</span></button>';
-        nav.insertBefore(wrap, nav.firstChild);
-      }
+      // 遍历所有 .diamond-nav（包含场景内和大地图内的导航条），保证每个界面都有手机按钮
+      const navs = doc.querySelectorAll('.diamond-nav');
+      navs.forEach(nav => {
+        if (!nav.querySelector('[data-action="open-phone"]')) {
+          const wrap = doc.createElement('div');
+          wrap.className = 'diamond-wrap';
+          wrap.innerHTML = '<button class="diamond" data-action="open-phone" aria-label="打开手机"><span>手机</span></button>';
+          nav.insertBefore(wrap, nav.firstChild);
+        }
+      });
+      
       // 保证 iframe 覆盖层存在
       if (!doc.getElementById('phoneOverlay')) {
         const ov = doc.createElement('div');
@@ -71,11 +75,11 @@ function boot(win,doc){
           const phoneData = getPhoneData();
           const expectedLen = (phoneData.contacts || []).length;
           
-          // [修复] 发现联系人数量发生变化，强制重载 iframe 读取最新本地数据
+          // 发现联系人数量发生变化，强制重载 iframe 读取最新本地数据
           if (f.dataset.contactsLen !== String(expectedLen)) {
             f.dataset.contactsLen = String(expectedLen);
             try { f.contentWindow.location.reload(); } catch(err) { f.src = './phone.html?v=' + Date.now(); }
-            return; // 等待 reload 后的页面自行读取 localStorage 渲染
+            return; 
           }
 
           // 如果数量没变，正常同步活跃状态
@@ -102,6 +106,7 @@ function boot(win,doc){
             activeMeetup: phoneData.activeMeetup || null
           };
           
+          // 注入脚本：同步数据 + 添加手机端自定义设置功能
           const jsCode = `
             try {
               if (window.receiveData) window.receiveData(${JSON.stringify(payload)});
@@ -116,6 +121,164 @@ function boot(win,doc){
               else if (typeof window.render === 'function') window.render();
               else if (typeof window.refresh === 'function') window.refresh();
               else if (typeof window.updateUI === 'function') window.updateUI();
+
+              // --- 新增：注入单角色聊天自定义设置 ---
+              if (!window.__cp_injected) {
+                window.__cp_injected = true;
+                
+                // 注入样式
+                const injectStyle = document.createElement('style');
+                injectStyle.innerHTML = '.cp-settings-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.1); color: #333; font-size: 14px; cursor: pointer; margin-left: 8px; } ' +
+                  '.cp-settings-modal { position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-family: sans-serif; } ' +
+                  '.cp-settings-content { background: #fff; border-radius: 12px; padding: 20px; width: 85%; max-width: 320px; color: #333; } ' +
+                  '.cp-settings-content h3 { margin: 0 0 15px; font-size: 16px; text-align: center; } ' +
+                  '.cp-settings-content label { display: block; margin: 10px 0 5px; font-size: 13px; color: #666; } ' +
+                  '.cp-settings-content input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; } ' +
+                  '.cp-settings-actions { display: flex; gap: 10px; margin-top: 20px; } ' +
+                  '.cp-settings-actions button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; } ' +
+                  '.cp-settings-actions .cp-save { background: #007bff; color: #fff; } ' +
+                  '.cp-settings-actions .cp-cancel { background: #eee; color: #333; }';
+                document.head.appendChild(injectStyle);
+
+                // 获取当前聊天角色 ID
+                window.getCurrentCharId = function() {
+                  const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
+                  if (window.activeContactId) return window.activeContactId;
+                  if (window.activeContact) return window.activeContact.id || window.activeContact;
+                  if (location.hash && location.hash.startsWith('#chat/')) return location.hash.split('/')[1];
+                  const chars = p.characters || [];
+                  const header = document.querySelector('.chat-header') || document.querySelector('.header') || document.querySelector('.top-bar');
+                  if (header) {
+                    const text = header.textContent.trim();
+                    const found = chars.find(c => text.includes(c.name));
+                    if (found) return found.id;
+                  }
+                  return null;
+                };
+
+                // 应用自定义设置
+                window.applyCpSettings = function() {
+                  const charId = window.getCurrentCharId();
+                  if (!charId) return;
+                  const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
+                  const settings = (p.chatSettings || {})[charId] || {};
+                  
+                  let bgStyle = document.getElementById('cp-custom-bg-style');
+                  if (bgStyle) bgStyle.remove();
+                  
+                  // 如果角色有单独设置背景，覆盖背景样式
+                  if (settings.bg) {
+                    bgStyle = document.createElement('style');
+                    bgStyle.id = 'cp-custom-bg-style';
+                    bgStyle.innerHTML = "body, #app, .phone-container, .chat-bg { background-image: url(" + settings.bg + ") !important; background-size: cover !important; background-position: center !important; background-color: transparent !important; } .message-list, .chat-container { background: transparent !important; }";
+                    document.head.appendChild(bgStyle);
+                  }
+                  
+                  // 如果角色有单独设置头像，修改相关 img
+                  if (settings.avatar) {
+                    const header = document.querySelector('.chat-header') || document.querySelector('.header') || document.querySelector('.top-bar');
+                    if (header) {
+                      const imgs = header.querySelectorAll('img');
+                      for (let i=0; i<imgs.length; i++) imgs[i].src = settings.avatar;
+                    }
+                    const msgImgs = document.querySelectorAll('.message-list img');
+                    for (let i=0; i<msgImgs.length; i++) msgImgs[i].src = settings.avatar;
+                  }
+                };
+
+                // 弹窗
+                window.openCpSettings = function(charId) {
+                  const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
+                  const chars = p.characters || [];
+                  const char = chars.find(c => String(c.id) === String(charId)) || { name: '未知角色' };
+                  const chatSettings = p.chatSettings || {};
+                  const current = chatSettings[charId] || { avatar: '', bg: '' };
+                  
+                  const modal = document.createElement('div');
+                  modal.className = 'cp-settings-modal';
+                  modal.innerHTML = '<div class="cp-settings-content">' +
+                    '<h3>设置：' + char.name + '</h3>' +
+                    '<label>自定义头像 URL (留空恢复默认)</label>' +
+                    '<input type="text" id="cp-input-avatar" value="' + (current.avatar || '') + '" placeholder="https://...">' +
+                    '<label>自定义聊天背景 URL (留空使用手机全局背景)</label>' +
+                    '<input type="text" id="cp-input-bg" value="' + (current.bg || '') + '" placeholder="https://...">' +
+                    '<div class="cp-settings-actions">' +
+                      '<button class="cp-cancel" id="cp-cancel-btn">取消</button>' +
+                      '<button class="cp-save" id="cp-save-btn">保存并应用</button>' +
+                    '</div>' +
+                  '</div>';
+                  document.body.appendChild(modal);
+                  
+                  modal.querySelector('#cp-cancel-btn').onclick = function() { modal.remove(); };
+                  modal.querySelector('#cp-save-btn').onclick = function() {
+                    const newAvatar = modal.querySelector('#cp-input-avatar').value.trim();
+                    const newBg = modal.querySelector('#cp-input-bg').value.trim();
+                    
+                    const data = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
+                    if (!data.chatSettings) data.chatSettings = {};
+                    data.chatSettings[charId] = { avatar: newAvatar, bg: newBg };
+                    localStorage.setItem('sft_phone_v1', JSON.stringify(data));
+                    
+                    modal.remove();
+                    if (!newAvatar || !newBg) {
+                       location.reload(); // 清除自定义后刷新，彻底恢复默认样式
+                    } else {
+                       window.applyCpSettings(); // 直接替换显示
+                    }
+                  };
+                };
+
+                // 监听并寻找插入齿轮按钮的位置
+                setInterval(function() {
+                  const charId = window.getCurrentCharId();
+                  if (!charId) return;
+                  
+                  window.applyCpSettings();
+                  
+                  if (document.getElementById('cp-settings-btn')) return;
+                  
+                  let targetParent = null;
+                  // 找“约见”旁白
+                  const allElements = document.querySelectorAll('div, span, p');
+                  for (let i=0; i<allElements.length; i++) {
+                    const el = allElements[i];
+                    if (el.children.length === 0 && el.textContent.includes('约见')) {
+                      targetParent = el.parentNode;
+                      break;
+                    }
+                  }
+                  
+                  // 如果没找到约见，就挂载在头部栏
+                  if (!targetParent) {
+                    targetParent = document.querySelector('.chat-header') || document.querySelector('.header') || document.querySelector('.top-bar');
+                  }
+                  
+                  if (targetParent) {
+                    const btn = document.createElement('div');
+                    btn.id = 'cp-settings-btn';
+                    btn.className = 'cp-settings-btn';
+                    btn.innerHTML = '⚙️';
+                    btn.title = '修改该角色头像/背景';
+                    btn.onclick = function(e) { e.stopPropagation(); window.openCpSettings(charId); };
+                    
+                    if (targetParent.style.position !== 'absolute' && targetParent.style.position !== 'relative' && targetParent.style.position !== 'fixed') {
+                       targetParent.style.position = 'relative';
+                    }
+                    
+                    if (targetParent.textContent.includes('约见')) {
+                       targetParent.appendChild(btn);
+                    } else {
+                       btn.style.position = 'absolute';
+                       btn.style.right = '45px';
+                       btn.style.top = '50%';
+                       btn.style.transform = 'translateY(-50%)';
+                       targetParent.appendChild(btn);
+                    }
+                  }
+                }, 800);
+                
+                setTimeout(function() { window.applyCpSettings(); }, 300);
+              }
             } catch(e) { console.warn('同步数据异常', e); }
           `;
           f.contentWindow.eval(jsCode);
@@ -189,10 +352,10 @@ function boot(win,doc){
             p.contacts.push('qinwu');
             localStorage.setItem('sft_phone_v1', JSON.stringify(p));
             
-            // 1. 恢复浮动弹窗提示
+            // 1. 浮动弹窗提示
             if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
             
-            // 2. 在正文中插入旁白（用唯一 id 去重）
+            // 2. 正文旁白插入（去重）
             if (!win.state.story.some(s => s.id === 'notify_qinwu_contact')) {
               win.state.story.splice(win.state.cursor + 1, 0, {
                 id: 'notify_qinwu_contact',
@@ -382,7 +545,7 @@ function boot(win,doc){
 
     injectScript('./story-engine.js');
     injectScript('./js/mvu.js');
-    console.log('[启动器] V3.2 注入成功');
+    console.log('[启动器] V1.2 注入成功');
   });
 }
 </script>
