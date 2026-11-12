@@ -181,14 +181,34 @@ html,body{height:100%;width:100%;background:#111;overflow:hidden;color:var(--tex
 const PKEY='sft_phone_v1',MANIFEST_KEY='sft_phone_manifest_cache',BUILTIN_KEY='sft_phone_builtin_materials';
 const STORY_KEY=(id)=>'sft_phone_story_'+id;
 let P=loadPhone();
-function defaultPhone(){return{chats:{},moments:[],mode:'ai',activeStoryId:null,userProfile:{avatar:'',chatBg:'',momentsCover:''},charSettings:{},materialOverrides:{},activeMeetup:null,pendingInvites:[],relations:{},contacts:[]};}
-function loadPhone(){try{const o=JSON.parse(localStorage.getItem(PKEY))||{};const base=defaultPhone();return Object.assign(base,o,{userProfile:Object.assign(base.userProfile,o.userProfile||{}),charSettings:o.charSettings||{},materialOverrides:o.materialOverrides||{},relations:o.relations||{},pendingInvites:o.pendingInvites||[],moments:o.moments||[],chats:o.chats||{},contacts:o.contacts||[]});}catch(e){return defaultPhone();}}
+
+function defaultPhone(){
+  return{
+    chats:{},moments:[],mode:'ai',activeStoryId:null,
+    userProfile:{avatar:'',chatBg:'',momentsCover:''},
+    charSettings:{}, 
+    materialOverrides:{},activeMeetup:null,pendingInvites:[],relations:{},contacts:[]
+  };
+}
+function loadPhone(){
+  try{
+    const o=JSON.parse(localStorage.getItem(PKEY))||{};
+    const base=defaultPhone();
+    return Object.assign(base,o,{
+      userProfile:Object.assign(base.userProfile,o.userProfile||{}),
+      charSettings:o.charSettings||{}, 
+      materialOverrides:o.materialOverrides||{},
+      relations:o.relations||{},pendingInvites:o.pendingInvites||[],moments:o.moments||[],chats:o.chats||{},contacts:o.contacts||[]
+    });
+  }catch(e){return defaultPhone();}
+}
 function savePhone(){try{localStorage.setItem(PKEY,JSON.stringify(P));}catch(e){}}
+
 let MANIFEST=[],BUILTIN_MATS=[];
 async function loadManifest(){try{const c=JSON.parse(localStorage.getItem(MANIFEST_KEY)||'null');if(c)MANIFEST=c;}catch(e){}try{const r=await fetch('./stories/manifest.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();let arr=Array.isArray(j)?j:(j.stories||[]);arr=arr.map((s,i)=>typeof s==='string'?{id:'s'+(i+1),title:s,file:'./stories/'+s+'.txt'}:s);MANIFEST=arr;localStorage.setItem(MANIFEST_KEY,JSON.stringify(MANIFEST));}catch(e){}}
 async function loadBuiltinMaterials(){try{const c=JSON.parse(localStorage.getItem(BUILTIN_KEY)||'null');if(c)BUILTIN_MATS=c;}catch(e){}try{const r=await fetch('./materials/builtin.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();BUILTIN_MATS=Array.isArray(j)?j:(j.materials||[]);localStorage.setItem(BUILTIN_KEY,JSON.stringify(BUILTIN_MATS));}catch(e){}}
 
-let LOCAL_STATE = { characters:[], player:{}, api:{}, mvu:{}, settings:{}, recentStory:'', memoryContext:'' };
+let LOCAL_STATE = { characters:[], player:{}, api:{}, mvu:{}, settings:{}, recentStory:'', memoryContext:'', mapSpots:[] };
 window.receiveData = function(data) {
   LOCAL_STATE = data;
   applyTheme();
@@ -321,7 +341,7 @@ function saveCharSettings(){
   openChat(curChatId); 
 }
 
-// ★ 核心修改：AI 请求加入了主线下线记忆
+// ★ 核心请求逻辑：加入身份限制与地点判定
 async function callAI(){
   const api=parentApi();
   if(!api.endpoint||!api.key){(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（尚未配置 API）',t:Date.now()});savePhone();renderChat();return;}
@@ -331,20 +351,25 @@ async function callAI(){
   const relLines=[];
   if(P.relations[curChatId]){for(const oid in P.relations[curChatId]){const r=P.relations[curChatId][oid];if(!r.known)continue;const o=parentChars().find(x=>String(x.id)===String(oid));if(o)relLines.push(`你认识的 ${o.name}：${r.relation||'认识'}`);}}
   
-  // ★ 提取刚刚在主界面发生的剧情和记忆
   const recentStory = LOCAL_STATE.recentStory || '';
   const memoryContext = LOCAL_STATE.memoryContext || '';
+  
+  // 从本地地图获取真实地点
+  const mapLocs = (LOCAL_STATE.mapSpots || []).map(s => s.name);
+  const locString = mapLocs.length > 0 ? mapLocs.join('、') : '学校、商场、美食街、公园、酒吧、海滩、郊外、居住区、夜市';
 
   const sys=`你正在扮演${c.name||'角色'}，通过手机微信和用户聊天。用户名字是"${me.name||'你'}"。
+角色身份：${c.identity || '未知'}
 性格设定：${(c.personality||c.description||'').slice(0,600)}
 ${relLines.length?'【你认识的人】\n'+relLines.join('\n')+'\n':''}
 ${recentStory ? `【刚刚发生的线下剧情（你们刚才在线下经历的，你现在必须知道）】\n${recentStory}\n\n` : ''}
 ${memoryContext ? `【过往记忆摘要】\n${memoryContext}\n\n` : ''}
 ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location}（${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}）\n`:''}
 要求：
-- 你**必须结合【刚刚发生的线下剧情】**来回复玩家，就好像你刚刚确实在场一样。
 - 只发纯文字消息，不用括号描述动作，每次 1~3 条短消息，每条不超过 30 字。
-- 如果想约玩家见面，请输出 [约见邀请:${c.name||'角色'}|地点|天数(0=现在,1=1天后)]，然后不要重复描述此事。`;
+- **【核心要求】**：如果玩家在聊天中邀请你线下见面，或你想主动约玩家，你**必须结合你的【角色身份】来判断地方是否合理**。
+- **【地点限制】**：你**绝对只能从以下大地图已有地点中选择**：${locString}。如果玩家提了不在列表里的地方，如果有相近意思的，可以发出类似地点的卡片。
+- 如果你同意了这个地点，你**必须**在回复的最后一行输出卡片标记：[约见邀请:${c.name||'角色'}|最终同意的地点|天数(0=现在,1=1天后)]。例如：[约见邀请:${c.name||'角色'}|美食街|0]。系统会把它渲染成卡片发给玩家。`;
 
   (P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（对方正在输入…）',t:Date.now()});
   savePhone();renderChat();
@@ -384,11 +409,28 @@ ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location
   }
 }
 
+// ★ 拦截 AI 瞎编地点
 function extractInvites(text,char){
   const invites=[];const re=/\[约见邀请[:：]([^\]]+)\]/g;
+  const mapLocs = (LOCAL_STATE.mapSpots || []).map(s => s.name);
+  
   const cleanText=text.replace(re,(all,body)=>{
     const parts=body.split('|').map(s=>s.trim());
-    if(parts.length>=2){const location=parts[1];const days=Number(parts[2])||0;invites.push({id:'inv_'+Date.now()+Math.random().toString(36).slice(2,6),charId:char.id,charName:char.name||parts[0],location,daysFromNow:days,from:'char',createdAt:Date.now()});}
+    if(parts.length>=2){
+      const location=parts[1];
+      
+      // 如果 AI 说的地点不在大地图里（兼容模糊匹配），就不生成卡片
+      let isValid = mapLocs.length === 0 || mapLocs.includes(location) || mapLocs.some(l => location.includes(l) || l.includes(location));
+      
+      if(isValid) {
+        const days=Number(parts[2])||0;
+        invites.push({id:'inv_'+Date.now()+Math.random().toString(36).slice(2,6),charId:char.id,charName:char.name||parts[0],location,daysFromNow:days,from:'char',createdAt:Date.now()});
+        return ''; // 成功了，把标记从聊天文本里删掉
+      } else {
+        // 如果 AI 瞎编了地点，不生成卡片，保留文字提醒
+        return `（${char.name} 想约你去${location}，但那个地方好像去不了……）`;
+      }
+    }
     return '';
   }).trim();
   return{cleanText,invites};
@@ -409,40 +451,29 @@ function respondInvite(invId,agree){
   }
 }
 
+// ★ 约见弹窗：只允许选大地图地点
 function openInviteDialog(){
   if(!curChatId)return;
   const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char)return;
-  const locs=BUILTIN_MATS.filter(m=>m.key.startsWith('场景-')).map(m=>m.key.replace('场景-',''));
+  
+  // 直接从大地图获取你的地点，不再瞎编
+  const locs = (LOCAL_STATE.mapSpots || []).map(s => s.name);
+  if(locs.length === 0) locs.push('学校', '酒吧'); // 兜底
+  
   const locOpts=locs.map(l=>`<option value="${escAttr(l)}">${escHtml(l)}</option>`).join('');
-  openModal('约见角色',`<div class="field"><label>地点</label><select id="inv-loc">${locOpts||'<option value="">（仓库中暂无地点）</option>'}</select></div><div class="field"><label>时间</label><select id="inv-when"><option value="0">现在</option><option value="1">1天后</option><option value="3">3天后</option><option value="7">7天后</option></select></div>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-invite">发送邀请</button>`);
+  openModal('约见角色',`<div class="field"><label>地点</label><select id="inv-loc">${locOpts}</select></div><div class="field"><label>时间</label><select id="inv-when"><option value="0">现在</option><option value="1">1天后</option><option value="3">3天后</option><option value="7">7天后</option></select></div>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-invite">发送邀请</button>`);
 }
 
+// ★ 发送邀请：玩家只是发一句话，由 AI 决定是否发卡片
 function submitInvite(){
   const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char){closeModal();return;}
   const loc=document.getElementById('inv-loc').value;const days=Number(document.getElementById('inv-when').value)||0;
   if(!loc){toast('请选择地点');return;}
   closeModal();
-  const enableMvu=parentEnableMvu();let agree=true,reason='';
-  if(enableMvu){
-    const fav=mvuCharFav(char.name);
-    const personality=(char.personality||char.description||'');
-    const cold=/冷漠|疏离|内向|冷淡|不近人情|孤僻|高傲/.test(personality);
-    const warm=/热情|开朗|活泼|主动|温柔|友善|大方/.test(personality);
-    let threshold=20;if(cold)threshold=60;else if(warm)threshold=10;
-    if(days===0)threshold+=20;
-    agree=fav>=threshold;reason=`（好感${fav}，阈值${threshold}，${cold?'冷淡':warm?'热情':'普通'}人设）`;
-  }
-  (P.chats[char.id]=P.chats[char.id]||[]).push({r:'user',c:`（邀请你去 ${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});
-  if(agree){
-    P.activeMeetup={id:'meet_'+Date.now(),charId:char.id,charName:char.name,location:loc,daysFromNow:days,targetDay:mvuCurrentDay()+days,status:'accepted',createdAt:Date.now()};
-    P.chats[char.id].push({r:'sys',c:`（对方同意了约见，${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});
-    savePhone();renderChat();
-    try{window.parent.onMeetupAccepted&&window.parent.onMeetupAccepted(P.activeMeetup);}catch(e){}
-    toast('约见成功，请打开地图前往约定地点');
-  }else{
-    P.chats[char.id].push({r:'sys',c:`（对方婉拒了这次约见）${reason}`,t:Date.now()});
-    savePhone();renderChat();
-  }
+  
+  (P.chats[char.id]=P.chats[char.id]||[]).push({r:'user',c:`（我邀请你去 ${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});
+  savePhone();renderChat();
+  callAI(); 
 }
 
 function renderMoments(){
@@ -455,6 +486,7 @@ function renderMoments(){
   }).join('')||'<div class="empty">还没有动态，点右上角「发布」发一条吧</div>';
   box.innerHTML=`<div class="mo-cover" ${cover}><div class="mo-user"><span>${escHtml(displayName)}</span><img src="${escAttr(prof.avatar)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"></div></div><div style="padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface);"><button class="btn" style="width:100%;" data-action="open-modal" data-type="post-moment">＋ 发布动态</button></div>${postsHtml}`;
 }
+
 function postMoment(){openModal('发布动态',`<textarea id="mo-text" placeholder="说点什么..."></textarea>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-moment">发布</button>`);}
 function submitMoment(){const text=document.getElementById('mo-text').value.trim();if(!text){toast('内容不能为空');return;}closeModal();P.moments.unshift({id:'m_'+Date.now(),authorName:parentPlayer().name||'我',authorAvatar:P.userProfile.avatar||'',text,t:Date.now(),comments:[]});savePhone();renderMoments();}
 function momentDelete(id){openModal('删除动态',`<p>确定要删除这条动态吗？</p>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="del-moment" data-id="${id}">删除</button>`);}
@@ -469,6 +501,7 @@ function renderMode(){
   const matHtml=Object.keys(groups).length?Object.keys(groups).map(g=>`<div class="mat-group"><div class="mat-group-title">${escHtml(g)}</div>${groups[g].map(m=>{const isCustom=!!P.materialOverrides[m.key];const val=P.materialOverrides[m.key]||'';return `<div class="mat-item"><div class="mat-head"><div class="mat-name">${escHtml(m.key)}</div><div class="mat-toggle"><button class="${!isCustom?'on':''}" data-action="set-mat-mode" data-key="${escAttr(m.key)}" data-mode="builtin">内置</button><button class="${isCustom?'on':''}" data-action="set-mat-mode" data-key="${escAttr(m.key)}" data-mode="custom">自定义</button></div></div>${isCustom?`<input class="mat-custom-input" placeholder="输入自定义图片链接" value="${escAttr(val)}" oninput="onMatInput('${escAttr(m.key)}',this.value)">`:''}</div>`;}).join('')}</div>`).join(''):'<div class="loading">仓库中未找到内置素材</div>';
   const relHtml=renderRelationsHtml();
   const meetupHtml=P.activeMeetup?`<div class="meetup-card"><div class="mc-title">📅 进行中的约见</div><div class="mc-info">角色：${escHtml(P.activeMeetup.charName)}<br>地点：${escHtml(P.activeMeetup.location)}<br>时间：${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}<br><button class="btn danger" style="margin-top:8px;padding:6px 12px;font-size:12px;" data-action="cancel-meetup">取消约见</button></div></div>`:'<div class="loading">当前没有约见</div>';
+  
   box.innerHTML=`
     <div class="sec"><div class="sec-title">模式</div><div class="row"><button class="mode-btn ${modeAi?'on':''}" onclick="setMode('ai')">AI 自由模式</button><button class="mode-btn ${modeStory?'on':''}" onclick="setMode('story')">剧情模式</button></div><div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7;">${modeAi?'AI 会根据人设与世界书自动续写剧情。':'按所选剧本演绎，支持分支、立绘、场景切换。'}</div></div>
     <div class="sec"><div class="sec-title">我的资料</div>
@@ -508,6 +541,7 @@ async function pickStory(id){
 }
 function setMatMode(key,mode){if(mode==='builtin')delete P.materialOverrides[key];else if(!P.materialOverrides[key])P.materialOverrides[key]='';savePhone();renderMode();}
 function onMatInput(key,val){P.materialOverrides[key]=val;savePhone();}
+
 function addRelationDialog(){
   const chars=parentChars();if(chars.length<2){toast('至少需要 2 个角色');return;}
   const opts=chars.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
