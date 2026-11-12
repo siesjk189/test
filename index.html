@@ -15,11 +15,13 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </style>
 </head>
 <body>
-<iframe id="legacy" src="./legacy.html" allow="autoplay; fullscreen"></iframe>
-<div id="boot">正在加载…</div>
+<iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
+<div id="boot">正在加载 V3.2 稳定版…</div>
 <script>
 'use strict';
 const frame=document.getElementById('legacy');
+frame.src = './legacy.html?v=' + Date.now();
+
 frame.addEventListener('load',()=>{
   try{boot(frame.contentWindow,frame.contentDocument);document.getElementById('boot').classList.add('hide');}
   catch(e){console.error('[启动器] 注入失败：',e);document.getElementById('boot').textContent='注入失败：'+e.message;}
@@ -27,27 +29,40 @@ frame.addEventListener('load',()=>{
 
 function boot(win,doc){
   const ready=()=>win.state&&win.renderScene;
-  const whenReady=(fn)=>{if(ready())return fn();let n=0;const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);};
+  const whenReady=(fn)=>{
+    if(ready())return fn();
+    let n=0;
+    const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);
+  };
 
-  function installPhoneUI(){
-    const nav=doc.querySelector('.diamond-nav');
-    if(nav&&!nav.querySelector('[data-action="open-phone"]')){
-      const wrap=doc.createElement('div');wrap.className='diamond-wrap';
-      wrap.innerHTML='<button class="diamond" data-action="open-phone" aria-label="打开手机"><span>手机</span></button>';
-      nav.insertBefore(wrap,nav.firstChild);
-    }
-    if(!doc.getElementById('phoneOverlay')){
-      const ov=doc.createElement('div');ov.id='phoneOverlay';ov.hidden=true;
-      ov.style.cssText='position:fixed;inset:0;z-index:9997;background:#111;display:flex;align-items:center;justify-content:center;';
-      ov.innerHTML='<iframe id="phoneFrame" src="./phone.html?v=10" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
-      doc.body.appendChild(ov);
-    }
+  // 1. 使用 MutationObserver 监听右上角按钮区域，只要出现就插入手机按钮
+  function setupObserver(){
+    const observer = new MutationObserver(() => {
+      const nav = doc.querySelector('.diamond-nav');
+      if (nav && !nav.querySelector('[data-action="open-phone"]')) {
+        const wrap = doc.createElement('div');
+        wrap.className = 'diamond-wrap';
+        wrap.innerHTML = '<button class="diamond" data-action="open-phone" aria-label="打开手机"><span>手机</span></button>';
+        nav.insertBefore(wrap, nav.firstChild);
+      }
+      // 保证 iframe 覆盖层存在
+      if (!doc.getElementById('phoneOverlay')) {
+        const ov = doc.createElement('div');
+        ov.id = 'phoneOverlay';
+        ov.hidden = true;
+        ov.style.cssText = 'position:fixed;inset:0;z-index:9997;background:#111;display:flex;align-items:center;justify-content:center;';
+        ov.innerHTML = '<iframe id="phoneFrame" src="./phone.html?v=10" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
+        doc.body.appendChild(ov);
+      }
+    });
+    observer.observe(doc.body, { childList: true, subtree: true });
   }
 
-  // 拦截手机按钮
+  // 2. 拦截点击事件
   doc.addEventListener('click', (e) => {
-    const target = e.target.closest('[data-action="open-phone"]');
-    if (target) {
+    // 拦截“手机”按钮
+    const targetPhone = e.target.closest('[data-action="open-phone"]');
+    if (targetPhone) {
       e.preventDefault();e.stopPropagation();
       doc.getElementById('phoneOverlay').hidden = false;
       const f = doc.getElementById('phoneFrame');
@@ -62,39 +77,31 @@ function boot(win,doc){
               c.portraitUrl = url;
             }
           });
-          const payload = {
-            characters: win.state.characters,
-            player: win.state.player,
-            api: win.state.api,
-            mvu: win.state.mvu,
-            settings: win.state.settings
-          };
+          const payload = { characters: win.state.characters, player: win.state.player, api: win.state.api, mvu: win.state.mvu, settings: win.state.settings };
           f.contentWindow.eval(`if(window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
         } catch(err) { console.warn('同步失败', err); }
       }
+      return;
     }
-  }, true);
 
-  // 拦截“重新开始”按钮，彻底清空所有数据并刷新页面
-  doc.addEventListener('click', (e) => {
-    const target = e.target.closest('[data-action="new-story"]');
-    if (target) {
-      e.preventDefault();
-      e.stopPropagation();
-      win.showConfirm('重新开始', '确定要完全重新开始吗？将清空所有进度、手机聊天记录和个人设定（公告无需重看）。', () => {
+    // 拦截“重新开始”按钮
+    const targetNew = e.target.closest('[data-action="new-story"]');
+    if (targetNew) {
+      e.preventDefault(); e.stopPropagation();
+      win.showConfirm('重新开始', '确定要完全重新开始吗？将清空所有进度、手机聊天记录和个人设定。', () => {
         localStorage.removeItem('sft_phone_v1');
         for (let i = localStorage.length - 1; i >= 0; i--) {
           const key = localStorage.key(i);
-          if (key && key.startsWith('sft_phone_story_')) {
-            localStorage.removeItem(key);
-          }
+          if (key && key.startsWith('sft_phone_story_')) localStorage.removeItem(key);
         }
         if(win.STORE) localStorage.removeItem(win.STORE);
         window.top.location.reload();
       });
+      return;
     }
   }, true);
 
+  // 3. 模式判断
   function isStoryMode(){
     try{const raw=localStorage.getItem('sft_phone_v1');if(!raw)return false;return (JSON.parse(raw).mode||'ai')==='story';}
     catch(e){return false;}
@@ -109,47 +116,34 @@ function boot(win,doc){
     doc.body.appendChild(s);
   }
 
-  function installMapLock(){
-    if(win._mapLockInstalled)return;
-    const orig=win.handleMapSpotClick;
-    if(typeof orig!=='function')return;
-    win.handleMapSpotClick=function(spot){
-      const p=getPhoneData();
-      const meetup=p.activeMeetup;
-      if(meetup&&meetup.status==='accepted'){
-        const enableMvu=win.state&&win.state.settings&&win.state.settings.enableMVU;
-        let locked=true;
-        if(enableMvu&&meetup.targetDay){
-          const m=win.state.mvu||{};
-          const d=(m['基础信息']&&m['基础信息']['日期'])||{};
-          const curDay=(Number(d['年'])||3000)*360+(Number(d['月'])||1)*30+(Number(d['日'])||1);
-          locked=curDay>=meetup.targetDay;
-        }
-        if(locked&&spot.name!==meetup.location){
-          if(typeof win.toast==='function')win.toast(`请前往约定的地点「${meetup.location}」`);
-          return;
-        }
-        if(locked&&spot.name===meetup.location){
-          p.activeMeetup=null;
-          localStorage.setItem('sft_phone_v1',JSON.stringify(p));
-          if(typeof win.toast==='function')win.toast('已到达约定地点');
+  // 4. 拦截场景渲染（只负责检测加好友，不破坏原版函数）
+  function hookScene(){
+    const origRenderScene = win.renderScene;
+    win.renderScene = function() {
+      if(win.state && win.state.story && win.state.story.length > 0) {
+        const current = win.state.story[win.state.cursor];
+        if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
+          const p = getPhoneData();
+          p.contacts = p.contacts || [];
+          if (!p.contacts.includes('qinwu')) {
+            p.contacts.push('qinwu');
+            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+            if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
+          }
         }
       }
-      if(isStoryMode()&&win.state.storyPlayback&&win.state.storyPlayback.pendingMap){
-        const allow=win.state.storyPlayback.pendingMap;
-        if(spot.name!==allow){if(typeof win.toast==='function')win.toast(`请先点击「${allow}」`);return;}
-        win.state.storyPlayback.pendingMap=null;
-        if(typeof win.closeMap==='function')win.closeMap();
-        win.state.storyPlayback.lineIndex++;
-        if(typeof win.persist==='function')win.persist();
-        if(typeof win.renderStoryScene==='function')win.renderStoryScene();
+      const mapBtn = doc.querySelector('[data-action="open-map"]');
+      if(mapBtn) mapBtn.parentElement.style.display = isStoryMode() ? 'none' : '';
+      
+      if (isStoryMode() && typeof win.renderStoryScene === 'function') {
+        win.renderStoryScene();
         return;
       }
-      return orig.call(this,spot);
+      return origRenderScene.call(this);
     };
-    win._mapLockInstalled=true;
   }
 
+  // 5. 构建发给 AI 的上下文
   function buildPhoneContext(){
     try{
       const p=getPhoneData();
@@ -237,50 +231,8 @@ function boot(win,doc){
     localStorage.setItem('sft_phone_v1',JSON.stringify(p));
   }
 
-  function hookCore(){
-    const origRenderScene=win.renderScene;
-    win.renderScene=function(){
-      // 【安全加固】防止空数据导致崩溃
-      if(win.state && win.state.story && win.state.story.length > 0) {
-        const current = win.state.story[win.state.cursor];
-        if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
-          const p = getPhoneData();
-          p.contacts = p.contacts || [];
-          if (!p.contacts.includes('qinwu')) {
-            p.contacts.push('qinwu');
-            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
-            if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
-          }
-        }
-      }
-
-      const mapBtn=doc.querySelector('[data-action="open-map"]');
-      if(mapBtn)mapBtn.parentElement.style.display=isStoryMode()?'none':'';
-      if(isStoryMode()&&typeof win.renderStoryScene==='function'){
-        win.renderStoryScene();return;
-      }
-      return origRenderScene.call(this);
-    };
-
-    const origRenderPanel=win.renderPanel;
-    win.renderPanel=function(){
-      if(isStoryMode()&&!['home','notice','replay'].includes(win.panel))win.panel='notice';
-      origRenderPanel.call(this);
-      setTimeout(injectMVUToggle,20);
-    };
-
-    const origRenderHome=win.renderHome;
-    win.renderHome=function(){
-      if(!isStoryMode()) {
-        // AI 模式下：完全去掉了“继续剧情”，只保留面板
-        return `<p class="section-intro">当前进度 ${win.state.cursor+1} / ${win.state.story.length}。所有数据保存在此浏览器中。</p><div class="menu-grid">${[['save','存档'],['load','读档'],['memory','记忆'],['settings','设定'],['images','立绘库'],['backgrounds','背景库'],['api','API 配置'],['voice','语音配置'],['imageapi','生图 API'],['notice','公告'],['replay','剧情回放']].map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div><div class="actions"><button class="danger-btn" data-action="new-story">重新开始</button></div>`;
-      }
-      
-      const menuList=[['notice','公告'],['replay','剧情回放']];
-      return `<p class="section-intro">当前处于剧情模式，剧情由所选剧本演绎。</p>
-        <div class="menu-grid">${menuList.map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div>`;
-    };
-
+  // 6. 拦截 AI 生成逻辑
+  function hookAPI(){
     if(typeof win.buildSystem==='function'){
       const origBuild=win.buildSystem;
       win.buildSystem=function(){
@@ -288,7 +240,6 @@ function boot(win,doc){
         const phoneCtx=buildPhoneContext();
         let prefix='';
         if(phoneCtx)prefix+=`\n【手机端上下文】\n${phoneCtx}\n`;
-        
         prefix += '\n【剧情中角色自发行动标记（不显示给玩家）】\n';
         prefix += '[朋友圈:角色名|内容]  表示该角色发了一条朋友圈\n';
         prefix += '[消息:角色名|内容]    表示该角色私聊玩家发了消息\n';
@@ -298,7 +249,6 @@ function boot(win,doc){
         } else {
           prefix += '如果玩家在线下请求加某个角色好友，或某角色想主动加玩家好友，请根据人设和记忆判断。热情的人设更容易同意/主动。如果同意，请输出 [加好友:角色名] 。\n';
         }
-
         if(win.state.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
         return prefix+base;
       };
@@ -321,7 +271,6 @@ function boot(win,doc){
         return clean;
       };
     }
-    if(typeof win.handleMapSpotClick==='function')installMapLock();
   }
 
   function injectMVUToggle(){
@@ -347,12 +296,20 @@ function boot(win,doc){
   win.parent.onMeetupCancelled=function(){ if(typeof win.toast==='function')win.toast('约见已取消'); };
 
   whenReady(()=>{
-    installPhoneUI();
-    hookCore();
+    setupObserver();
+    hookScene();
+    hookAPI();
+    
+    // 劫持 renderPanel，只为了插入 MVU 开关
+    const origRenderPanel=win.renderPanel;
+    win.renderPanel=function(){
+      origRenderPanel.call(this);
+      setTimeout(injectMVUToggle,20);
+    };
+
     injectScript('./story-engine.js');
     injectScript('./js/mvu.js');
-    if(typeof win.renderScene==='function')win.renderScene();
-    setInterval(installPhoneUI, 200);
+    console.log('[启动器] V3.2 注入成功');
   });
 }
 </script>
