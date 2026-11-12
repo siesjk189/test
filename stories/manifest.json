@@ -1,0 +1,5 @@
+{
+  "stories": [
+    { "id": "world1", "title": "测试剧本", "file": "./stories/world1.txt" }
+  ]
+}
