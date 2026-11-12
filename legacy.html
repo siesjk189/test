@@ -394,6 +394,15 @@ body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
 ◆有任何疑问，请通过以下方式联系创作者
 小红书：Aswnzs
 QQ群：1107469751</div>
+  <div id="changelogBody" hidden>
+【V1.1 |2026.11.12】
+新增：手机系统（支持微信聊天、朋友圈、约见）。
+目前剧情模式尚未开启，仅占位。
+刚更新可能有较多bug，有问题请联系xhs:Aswnzs
+
+【V1.0 |2026.10.31】
+初始版本。
+  </div>
 
 <div class="overlay" id="mapOverlay" hidden>
   <div class="map-container" id="mapContainer">
@@ -1140,8 +1149,59 @@ function renderPanel(){
 function renderHome(){
  return `<p class="section-intro">当前进度 ${state.cursor+1} / ${state.story.length}。请注意，所有剧情、设定与图片默认只保存在此浏览器中，如需换设备请先导出存档。</p><div class="menu-grid">${[['save','存档'],['load','读档'],['memory','记忆'],['settings','设定'],['images','立绘库'],['backgrounds','背景库'],['api','API 配置'],['voice','语音配置'],['imageapi','生图 API'],['notice','公告'],['replay','剧情回放']].map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div><div class="actions"><button class="primary-btn" data-action="close-panel">继续剧情</button><button class="danger-btn" data-action="new-story">重新开始</button></div>`;
 }
+let noticeSubTab = 'rules'; 
+function switchNoticeTab(tab) {
+  noticeSubTab = tab;
+  renderPanel(); 
+}
+
 function renderNotice(){
- return `<div style="white-space: pre-wrap; line-height: 1.8; color: var(--text); font-size: 15px;">${esc($('#noticeBody').textContent.trim())}</div>`;
+  const tabsHtml = `
+    <div class="tabs" style="margin-bottom: 24px;">
+      <button class="tab ${noticeSubTab === 'rules' ? 'active' : ''}" onclick="switchNoticeTab('rules')">玩家须知</button>
+      <button class="tab ${noticeSubTab === 'changelog' ? 'active' : ''}" onclick="switchNoticeTab('changelog')">更新日志</button>
+    </div>
+  `;
+
+  let contentHtml = '';
+  
+  if (noticeSubTab === 'rules') {
+    contentHtml = `<div style="white-space: pre-wrap; line-height: 1.8; color: var(--text); font-size: 15px;">${esc($('#noticeBody').textContent.trim())}</div>`;
+  } else if (noticeSubTab === 'changelog') {
+    const rawText = $('#changelogBody').textContent.trim();
+    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+    let html = '';
+    let isFirst = true; 
+    let block = null;
+
+    lines.forEach(line => {
+      const match = line.match(/^【(.*?)\|(.*?)(?:\|(最新))?】$/);
+      if (match) {
+        if (block) html += buildBlock(block);
+        block = { version: match[1], date: match[2], isLatest: match[3] === '最新' || isFirst, items: [] };
+        isFirst = false;
+      } else if (block) {
+        block.items.push(line);
+      }
+    });
+    if (block) html += buildBlock(block);
+    contentHtml = `<div style="line-height: 1.8; color: var(--text); font-size: 15px;">${html}</div>`;
+  }
+  return tabsHtml + contentHtml;
+}
+
+function buildBlock(block) {
+  return `
+    <div style="margin-bottom: 24px; padding: 16px; background: var(--surface-2); border-radius: var(--radius); border-left: 3px solid ${block.isLatest ? 'var(--accent)' : 'transparent'}; ${!block.isLatest ? 'opacity: 0.7;' : ''}">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+        <h3 style="color: ${block.isLatest ? 'var(--accent)' : 'var(--text)'}; font-size: 16px; margin: 0;">${esc(block.version)}</h3>
+        <span style="font-size: 12px; color: var(--muted);">${esc(block.date)}</span>
+      </div>
+      <ul style="padding-left: 20px; margin-bottom: 0;">
+        ${block.items.map(item => `<li style="margin-bottom: 6px;">${item}</li>`).join('')}
+      </ul>
+    </div>
+  `;
 }
 function renderSave(){
  return `<p class="section-intro">存档包含剧情进度、记忆摘要、人物方案、世界书、背景与图片链接、地点背景设置、自定义字体等所有配置。<strong>文件仍会包含你填写的 API 与语音密钥，请妥善保管。</strong></p><div class="status-line">共 ${state.story.length} 条剧情 · ${state.memory.summaries.length} 条记忆 · ${state.characters.length} 位人物 · ${state.images.length} 张立绘 · ${state.silhouettes.length} 张剪影 · ${state.backgrounds.length} 张背景</div><div class="actions"><button class="primary-btn" data-action="export">导出存档文件</button><button class="secondary-btn" data-action="go-home">返回</button></div>`;
