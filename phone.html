@@ -353,8 +353,6 @@ async function callAI(){
   
   const recentStory = LOCAL_STATE.recentStory || '';
   const memoryContext = LOCAL_STATE.memoryContext || '';
-  
-  // 从本地地图获取真实地点
   const mapLocs = (LOCAL_STATE.mapSpots || []).map(s => s.name);
   const locString = mapLocs.length > 0 ? mapLocs.join('、') : '学校、商场、美食街、公园、酒吧、海滩、郊外、居住区、夜市';
 
@@ -362,14 +360,16 @@ async function callAI(){
 角色身份：${c.identity || '未知'}
 性格设定：${(c.personality||c.description||'').slice(0,600)}
 ${relLines.length?'【你认识的人】\n'+relLines.join('\n')+'\n':''}
-${recentStory ? `【刚刚发生的线下剧情（你们刚才在线下经历的，你现在必须知道）】\n${recentStory}\n\n` : ''}
+${recentStory ? `【刚刚发生的线下剧情】\n${recentStory}\n\n` : ''}
 ${memoryContext ? `【过往记忆摘要】\n${memoryContext}\n\n` : ''}
 ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location}（${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}）\n`:''}
 要求：
 - 只发纯文字消息，不用括号描述动作，每次 1~3 条短消息，每条不超过 30 字。
-- **【核心要求】**：如果玩家在聊天中邀请你线下见面，或你想主动约玩家，你**必须结合你的【角色身份】来判断地方是否合理**。
-- **【地点限制】**：你**绝对只能从以下大地图已有地点中选择**：${locString}。如果玩家提了不在列表里的地方，如果有相近意思的，可以发出类似地点的卡片。
-- 如果你同意了这个地点，你**必须**在回复的最后一行输出卡片标记：[约见邀请:${c.name||'角色'}|最终同意的地点|天数(0=现在,1=1天后)]。例如：[约见邀请:${c.name||'角色'}|美食街|0]。系统会把它渲染成卡片发给玩家。`;
+- **【核心要求】**：如果玩家在聊天中邀请你线下见面，或你想主动约玩家，你**必须结合你的【身份】判断地方是否合理**。如果你是学生，遇到酒吧等地方必须拒绝并建议换个地方。
+- **【地点限制】**：你**绝对只能从以下大地图已有地点中选择**：${locString}。
+- **【极其重要】**：如果你同意了这个地点，你**必须、务必、绝对要在回复的最后，严格加上这行代码**：[约见邀请:${c.name||'角色'}|最终同意的地点|天数(0=现在,1=1天后)]。
+  ★ 示范回复：那就美食街吧，下雨天学校也没啥好逛的。[约见邀请:${c.name||'角色'}|美食街|0]
+  （如果你不输出这行代码，玩家就无法赴约，请严格遵守！）`;
 
   (P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（对方正在输入…）',t:Date.now()});
   savePhone();renderChat();
@@ -396,10 +396,37 @@ ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location
     const reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
     const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');
     if(idx>=0)P.chats[curChatId].splice(idx,1);
+    
     const{cleanText,invites}=extractInvites(reply,c);
     const lines=cleanText.split(/\n+/).map(s=>s.trim()).filter(Boolean);
     for(const ln of lines)P.chats[curChatId].push({r:'ai',c:ln,t:Date.now()});
-    for(const inv of invites)P.pendingInvites.push(inv);
+
+    // ★ 核心修复：处理约见的去向
+    for(const inv of invites) {
+       // 判断是不是玩家主动发起的邀请（通过看最后一句玩家的话）
+       const lastUserMsg = P.chats[curChatId].slice().reverse().find(m => m.r === 'user');
+       const isPlayerInvite = lastUserMsg && (lastUserMsg.c.includes('邀请你去') || lastUserMsg.c.includes('我们去') || lastUserMsg.c.includes('走吧'));
+       
+       if (isPlayerInvite) {
+           // 玩家发起的，AI同意，直接生效，不需要再弹卡片
+           P.activeMeetup = {
+               id: 'meet_'+Date.now(),
+               charId: inv.charId,
+               charName: inv.charName,
+               location: inv.location,
+               daysFromNow: inv.daysFromNow,
+               targetDay: mvuCurrentDay()+inv.daysFromNow,
+               status: 'accepted',
+               createdAt: Date.now()
+           };
+           P.chats[curChatId].push({r:'sys',c:`（对方同意了约见：${inv.location}，${inv.daysFromNow===0?'现在':inv.daysFromNow+'天后'}）`,t:Date.now()});
+           try{window.parent.onMeetupAccepted && window.parent.onMeetupAccepted(P.activeMeetup);}catch(e){}
+       } else {
+           // AI 自己突发奇想约你，才进待处理列表，显示卡片让你同意
+           P.pendingInvites.push(inv);
+       }
+    }
+    
     savePhone();renderChat();
   }catch(e){
     const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');
@@ -408,6 +435,7 @@ ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location
     savePhone();renderChat();
   }
 }
+
 
 // ★ 拦截 AI 瞎编地点
 function extractInvites(text,char){
