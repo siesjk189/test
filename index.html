@@ -16,11 +16,9 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V1.2 稳定版…</div>
+<div id="boot">正在加载 V3.2 稳定版…</div>
 <script>
 'use strict';
-
-// 为手机端提供跨域代理服务
 window.proxyFetch = async function(url, opts) {
   const proxies = ["", "https://corsproxy.io/?", "https://api.allorigins.win/raw?url="];
   let lastErr;
@@ -31,33 +29,20 @@ window.proxyFetch = async function(url, opts) {
       const res = await fetch(fetchUrl, opts);
       if (!res.ok && p !== "") continue;
       const text = await res.text();
-      return {
-         ok: res.ok,
-         status: res.status,
-         json: async () => JSON.parse(text),
-         text: async () => text
-      };
+      return { ok: res.ok, status: res.status, json: async () => JSON.parse(text), text: async () => text };
     } catch (e) { lastErr = e; }
   }
   throw lastErr;
 };
-
 const frame=document.getElementById('legacy');
 frame.src = './legacy.html?v=' + Date.now();
-
 frame.addEventListener('load',()=>{
   try{boot(frame.contentWindow,frame.contentDocument);document.getElementById('boot').classList.add('hide');}
   catch(e){console.error('[启动器] 注入失败：',e);document.getElementById('boot').textContent='注入失败：'+e.message;}
 });
-
 function boot(win,doc){
   const ready=()=>typeof win.renderScene==='function';
-  const whenReady=(fn)=>{
-    if(ready())return fn();
-    let n=0;
-    const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);
-  };
-
+  const whenReady=(fn)=>{if(ready())return fn();let n=0;const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);};
   function setupObserver(){
     const observer = new MutationObserver(() => {
       const navs = doc.querySelectorAll('.diamond-nav');
@@ -69,7 +54,6 @@ function boot(win,doc){
           nav.insertBefore(wrap, nav.firstChild);
         }
       });
-      
       if (!doc.getElementById('phoneOverlay')) {
         const ov = doc.createElement('div');
         ov.id = 'phoneOverlay';
@@ -81,7 +65,6 @@ function boot(win,doc){
     });
     observer.observe(doc.body, { childList: true, subtree: true });
   }
-
   doc.addEventListener('click', (e) => {
     const targetPhone = e.target.closest('[data-action="open-phone"]');
     if (targetPhone) {
@@ -92,14 +75,11 @@ function boot(win,doc){
         try {
           const phoneData = getPhoneData();
           const expectedLen = (phoneData.contacts || []).length;
-          
-          // 发现联系人数量发生变化，强制重载 iframe 读取最新本地数据
           if (f.dataset.contactsLen !== String(expectedLen)) {
             f.dataset.contactsLen = String(expectedLen);
             try { f.contentWindow.location.reload(); } catch(err) { f.src = './phone.html?v=' + Date.now(); }
             return; 
           }
-
           const imgs = win.state.images || [];
           (win.state.characters || []).forEach(c => {
             if(!c.portraitUrl) {
@@ -110,12 +90,17 @@ function boot(win,doc){
             }
           });
           
+          const recentStory = (win.state.story || []).slice(-15).map(s => `${s.speaker}：${s.text}`).join('\n');
+          const memoryContext = (win.state.memory && win.state.memory.summaries) ? win.state.memory.summaries.slice(-2).map(m => m.content).join('\n') : '';
+
           const payload = { 
             characters: win.state.characters, 
             player: win.state.player, 
             api: win.state.api, 
             mvu: win.state.mvu, 
-            settings: win.state.settings
+            settings: win.state.settings,
+            recentStory: recentStory,
+            memoryContext: memoryContext
           };
           
           f.contentWindow.eval(`if (window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
@@ -123,7 +108,6 @@ function boot(win,doc){
       }
       return;
     }
-
     const targetNew = e.target.closest('[data-action="new-story"]');
     if (targetNew) {
       e.preventDefault(); e.stopPropagation();
@@ -133,18 +117,13 @@ function boot(win,doc){
           const key = localStorage.key(i);
           if (key && key.startsWith('sft_phone_story_')) localStorage.removeItem(key);
         }
-
         let storeKey = '';
         try { storeKey = win.eval('typeof STORE === "string" ? STORE : ""'); } catch (err) {}
         if (!storeKey) storeKey = 'yueying-visual-novel-v16';
         localStorage.removeItem(storeKey);
         localStorage.removeItem('yueying-custom-font');
-
         try { window.top.location.reload(); } catch (err) {
-          try {
-            document.getElementById('boot').classList.remove('hide');
-            frame.src = './legacy.html?v=' + Date.now();
-          } catch (e2) { location.reload(); }
+          try { document.getElementById('boot').classList.remove('hide'); frame.src = './legacy.html?v=' + Date.now(); } catch (e2) { location.reload(); }
         }
       });
       return;
@@ -152,18 +131,11 @@ function boot(win,doc){
   }, true);
 
   function isStoryMode(){
-    try{const raw=localStorage.getItem('sft_phone_v1');if(!raw)return false;return (JSON.parse(raw).mode||'ai')==='story';}
-    catch(e){return false;}
+    try{const raw=localStorage.getItem('sft_phone_v1');if(!raw)return false;return (JSON.parse(raw).mode||'ai')==='story';}catch(e){return false;}
   }
   win.isStoryMode=isStoryMode;window.isStoryMode=isStoryMode;
-
   function getPhoneData(){try{return JSON.parse(localStorage.getItem('sft_phone_v1'))||{};}catch(e){return{};}}
-
-  function injectScript(src,cb){
-    const s=doc.createElement('script');
-    s.src=src;s.onload=()=>cb&&cb();s.onerror=()=>console.warn('[启动器] 脚本加载失败：',src);
-    doc.body.appendChild(s);
-  }
+  function injectScript(src,cb){const s=doc.createElement('script');s.src=src;s.onload=()=>cb&&cb();s.onerror=()=>console.warn('[启动器] 脚本加载失败：',src);doc.body.appendChild(s);}
 
   function hookScene(){
     const origRenderScene = win.renderScene;
@@ -178,49 +150,32 @@ function boot(win,doc){
             localStorage.setItem('sft_phone_v1', JSON.stringify(p));
             if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
             if (!win.state.story.some(s => s.id === 'notify_qinwu_contact')) {
-              win.state.story.splice(win.state.cursor + 1, 0, {
-                id: 'notify_qinwu_contact', speaker: '旁白', text: '【获得秦梧的联系方式】'
-              });
+              win.state.story.splice(win.state.cursor + 1, 0, { id: 'notify_qinwu_contact', speaker: '旁白', text: '【获得秦梧的联系方式】' });
               if (typeof win.persist === 'function') win.persist();
             }
           }
         }
       }
-      
       const mapBtn = doc.querySelector('[data-action="open-map"]');
       if(mapBtn) mapBtn.parentElement.style.display = isStoryMode() ? 'none' : '';
-      if (isStoryMode() && typeof win.renderStoryScene === 'function') {
-        win.renderStoryScene();
-        return;
-      }
+      if (isStoryMode() && typeof win.renderStoryScene === 'function') { win.renderStoryScene(); return; }
       return origRenderScene.call(this);
     };
   }
 
   function buildPhoneContext(){
     try{
-      const p=getPhoneData();
-      const chars=win.state.characters||[];
-      const lines=[];
-      lines.push('【手机私聊最近消息】');
-      const chatLines=[];
+      const p=getPhoneData();const chars=win.state.characters||[];const lines=[];lines.push('【手机私聊最近消息】');const chatLines=[];
       for(const cid in (p.chats||{})){
-        const c=chars.find(x=>String(x.id)===String(cid));
-        if(!c)continue;
-        const list=(p.chats[cid]||[]).filter(m=>m.r!=='sys').slice(-5);
-        if(!list.length)continue;
-        chatLines.push(`--- ${c.name} ---`);
-        list.forEach(m=>chatLines.push(`${m.r==='user'?'玩家':c.name}：${m.c}`));
+        const c=chars.find(x=>String(x.id)===String(cid));if(!c)continue;
+        const list=(p.chats[cid]||[]).filter(m=>m.r!=='sys').slice(-5);if(!list.length)continue;
+        chatLines.push(`--- ${c.name} ---`);list.forEach(m=>chatLines.push(`${m.r==='user'?'玩家':c.name}：${m.c}`));
       }
-      lines.push(chatLines.join('\n')||'（暂无）');
-      lines.push('\n【朋友圈最近动态】');
-      const moLines=(p.moments||[]).slice(0,5).map(m=>`${m.authorName}：${m.text}`);
-      lines.push(moLines.join('\n')||'（暂无）');
-      lines.push('\n【角色关系】');
-      const relLines=[];
+      lines.push(chatLines.join('\n')||'（暂无）');lines.push('\n【朋友圈最近动态】');
+      const moLines=(p.moments||[]).slice(0,5).map(m=>`${m.authorName}：${m.text}`);lines.push(moLines.join('\n')||'（暂无）');
+      lines.push('\n【角色关系】');const relLines=[];
       for(const idA in (p.relations||{})){
-        const cA=chars.find(x=>String(x.id)===String(idA));
-        if(!cA)continue;
+        const cA=chars.find(x=>String(x.id)===String(idA));if(!cA)continue;
         for(const idB in p.relations[idA]){
           const r=p.relations[idA][idB];if(!r.known)continue;
           const cB=chars.find(x=>String(x.id)===String(idB));if(!cB)continue;
@@ -228,52 +183,31 @@ function boot(win,doc){
         }
       }
       lines.push(relLines.join('\n')||'（暂无）');
-      if(p.activeMeetup){
-        lines.push(`\n【当前约见】${p.activeMeetup.charName} 约在 ${p.activeMeetup.location}（${p.activeMeetup.daysFromNow===0?'今天':p.activeMeetup.daysFromNow+'天后'}）`);
-      }
+      if(p.activeMeetup){ lines.push(`\n【当前约见】${p.activeMeetup.charName} 约在 ${p.activeMeetup.location}（${p.activeMeetup.daysFromNow===0?'今天':p.activeMeetup.daysFromNow+'天后'}）`);}
       return lines.join('\n');
     }catch(e){return '';}
   }
 
   function parseSpecialMarkers(text){
-    const RE=/\[(朋友圈|消息|加好友)[:：]([^\]]+)\]/g;
-    const actions=[];
+    const RE=/\[(朋友圈|消息|加好友)[:：]([^\]]+)\]/g;const actions=[];
     const clean=text.replace(RE,(all,type,body)=>{
-      const parts=body.split('|').map(s=>s.trim());
-      if(parts.length>=1)actions.push({type,parts});
-      return '';
+      const parts=body.split('|').map(s=>s.trim());if(parts.length>=1)actions.push({type,parts});return '';
     }).trim();
     return {clean,actions};
   }
-
   function executeMarkerActions(actions){
-    const p=getPhoneData();
-    const chars=win.state.characters||[];
+    const p=getPhoneData();const chars=win.state.characters||[];
     for(const act of actions){
       if(act.type==='加好友'){
-        const charName=act.parts[0];
-        const c=chars.find(x=>x.name===charName);
-        if(c){
-          p.contacts=p.contacts||[];
-          if(!p.contacts.includes(String(c.id))){
-            p.contacts.push(String(c.id));
-            if(typeof win.toast==='function')win.toast(`（${charName} 加你为好友了）`);
-          }
-        }
+        const charName=act.parts[0];const c=chars.find(x=>x.name===charName);
+        if(c){ p.contacts=p.contacts||[]; if(!p.contacts.includes(String(c.id))){p.contacts.push(String(c.id));if(typeof win.toast==='function')win.toast(`（${charName} 加你为好友了）`);} }
         continue;
       }
       if(act.parts.length<2) continue;
-      const [charName,content]=act.parts;
-      const c=chars.find(x=>x.name===charName);
-      if(!c)continue;
+      const [charName,content]=act.parts;const c=chars.find(x=>x.name===charName);if(!c)continue;
       if(act.type==='朋友圈'){
         p.moments=p.moments||[];
-        p.moments.unshift({
-          id:'m_'+Date.now()+Math.random().toString(36).slice(2,6),
-          authorId:c.id,authorName:charName,
-          authorAvatar:c.portraitUrl||c.a||'',
-          text:content,t:Date.now(),comments:[]
-        });
+        p.moments.unshift({ id:'m_'+Date.now()+Math.random().toString(36).slice(2,6), authorId:c.id,authorName:charName, authorAvatar:c.portraitUrl||c.a||'', text:content,t:Date.now(),comments:[] });
         if(typeof win.toast==='function')win.toast(`（你注意到手机震了一下，${charName} 发了条朋友圈）`);
       }else if(act.type==='消息'){
         p.chats=p.chats||{};
@@ -288,35 +222,25 @@ function boot(win,doc){
     if(typeof win.buildSystem==='function'){
       const origBuild=win.buildSystem;
       win.buildSystem=function(){
-        const base=origBuild.call(this);
-        const phoneCtx=buildPhoneContext();
-        let prefix='';
+        const base=origBuild.call(this);const phoneCtx=buildPhoneContext();let prefix='';
         if(phoneCtx)prefix+=`\n【手机端上下文】\n${phoneCtx}\n`;
-        prefix += '\n【剧情中角色自发行动标记（不显示给玩家）】\n';
-        prefix += '[朋友圈:角色名|内容]  表示该角色发了一条朋友圈\n';
-        prefix += '[消息:角色名|内容]    表示该角色私聊玩家发了消息\n';
-        prefix += '\n【关于加好友】\n';
-        if (win.state.settings.enableMVU) {
-          prefix += '如果玩家在线下请求加某个角色好友，或某角色想主动加玩家好友，请根据该角色的 MVU 好感度和人设判断。好感度高或热情的人设更容易同意/主动。如果同意，请输出 [加好友:角色名] 。\n';
-        } else {
-          prefix += '如果玩家在线下请求加某个角色好友，或某角色想主动加玩家好友，请根据人设和记忆判断。热情的人设更容易同意/主动。如果同意，请输出 [加好友:角色名] 。\n';
-        }
+        
+        prefix += '\n【手机端主动联动（极其重要）】\n';
+        prefix += '你不仅是在生成文字剧情，你还在操控角色们的“手机系统”。如果发生了特殊事件、角色内心产生波动、或者线下见面结束后，请务必使用以下指令让角色主动发手机动态（这些指令不会显示在正文里）：\n';
+        prefix += '[朋友圈:角色名|内容] 表示该角色刚刚发了一条朋友圈。请在合适的时机使用，内容要符合人设。\n';
+        prefix += '[消息:角色名|内容] 表示该角色刚刚私聊给你发了一条消息。如果是线上聊天，或者角色想主动找你，请使用。\n';
+        prefix += '[加好友:角色名] 表示该角色同意了你的好友请求。\n';
+        
         if(win.state.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
         return prefix+base;
       };
     }
-
     if(typeof win.callChat==='function'){
       const origChat=win.callChat;
       win.callChat=async function(messages){
-        const reply=await origChat.call(this,messages);
-        let out=reply;
+        const reply=await origChat.call(this,messages);let out=reply;
         if(win.state.settings.enableMVU&&typeof win.mvuParseFromReply==='function'&&typeof win.mvuApplyPatch==='function'){
-          try{
-            const patches=win.mvuParseFromReply(out);
-            if(patches&&patches.length)win.mvuApplyPatch(patches);
-            if(typeof win.mvuStripVariableBlocks==='function')out=win.mvuStripVariableBlocks(out);
-          }catch(e){console.warn('[MVU] 解析失败',e);}
+          try{const patches=win.mvuParseFromReply(out);if(patches&&patches.length)win.mvuApplyPatch(patches);if(typeof win.mvuStripVariableBlocks==='function')out=win.mvuStripVariableBlocks(out);}catch(e){}
         }
         const {clean,actions}=parseSpecialMarkers(out);
         if(actions.length)executeMarkerActions(actions);
@@ -326,19 +250,13 @@ function boot(win,doc){
   }
 
   function injectMVUToggle(){
-    const status=doc.getElementById('apiStatus');
-    if(!status||doc.getElementById('mvuToggleRow'))return;
-    const actionsDiv=status.parentElement;
-    if(!actionsDiv||!actionsDiv.parentNode)return;
+    const status=doc.getElementById('apiStatus');if(!status||doc.getElementById('mvuToggleRow'))return;
+    const actionsDiv=status.parentElement;if(!actionsDiv||!actionsDiv.parentNode)return;
     const checked=win.state.settings.enableMVU?'checked':'';
-    const row=doc.createElement('div');
-    row.id='mvuToggleRow';row.className='switch-row';row.style.marginTop='8px';
-    row.innerHTML='<div class="switch-copy"><strong>启用 MVU 变量同步</strong><small>开启后生成剧情会附带当前世界变量，并解析 AI 输出的 UpdateVariable 来推进数值</small></div><label class="switch"><input type="checkbox" id="mvuCheckbox" '+checked+'><span class="switch-ui"></span></label>';
+    const row=doc.createElement('div');row.id='mvuToggleRow';row.className='switch-row';row.style.marginTop='8px';
+    row.innerHTML='<div class="switch-copy"><strong>启用 MVU 变量同步</strong><small>开启后生成剧情会附带当前世界变量</small></div><label class="switch"><input type="checkbox" id="mvuCheckbox" '+checked+'><span class="switch-ui"></span></label>';
     actionsDiv.parentNode.insertBefore(row,actionsDiv);
-    doc.getElementById('mvuCheckbox').addEventListener('change',function(e){
-      win.state.settings.enableMVU=e.target.checked;
-      win.persist();
-    });
+    doc.getElementById('mvuCheckbox').addEventListener('change',function(e){win.state.settings.enableMVU=e.target.checked;win.persist();});
   }
 
   win.parent.startStoryById=function(storyId){ if(typeof win.startStoryById==='function')win.startStoryById(storyId); };
@@ -348,19 +266,10 @@ function boot(win,doc){
   win.parent.onMeetupCancelled=function(){ if(typeof win.toast==='function')win.toast('约见已取消'); };
 
   whenReady(()=>{
-    setupObserver();
-    hookScene();
-    hookAPI();
-    
+    setupObserver();hookScene();hookAPI();
     const origRenderPanel=win.renderPanel;
-    win.renderPanel=function(){
-      origRenderPanel.call(this);
-      setTimeout(injectMVUToggle,20);
-    };
-
-    injectScript('./story-engine.js');
-    injectScript('./js/mvu.js');
-    console.log('[启动器] V3.2 注入成功');
+    win.renderPanel=function(){origRenderPanel.call(this);setTimeout(injectMVUToggle,20);};
+    injectScript('./story-engine.js');injectScript('./js/mvu.js');
   });
 }
 </script>
