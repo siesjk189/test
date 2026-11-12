@@ -146,9 +146,9 @@ html,body{height:100%;width:100%;background:#111;overflow:hidden;color:var(--tex
     <div id="p-mode" class="page"></div>
   </div>
   <div id="tabbar">
-    <div class="tab active" data-tab="msg" onclick="switchTab('msg',this)"><span class="ico">💬</span><span>消息</span></div>
-    <div class="tab" data-tab="moments" onclick="switchTab('moments',this)"><span class="ico">🌙</span><span>朋友圈</span></div>
-    <div class="tab" data-tab="mode" onclick="switchTab('mode',this)"><span class="ico">⚙️</span><span>设置</span></div>
+    <div class="tab active" data-tab="msg" data-action="switch-tab"><span class="ico">💬</span><span>消息</span></div>
+    <div class="tab" data-tab="moments" data-action="switch-tab"><span class="ico">🌙</span><span>朋友圈</span></div>
+    <div class="tab" data-tab="mode" data-action="switch-tab"><span class="ico">⚙️</span><span>设置</span></div>
   </div>
 </div>
 
@@ -186,23 +186,100 @@ let MANIFEST=[],BUILTIN_MATS=[];
 async function loadManifest(){try{const c=JSON.parse(localStorage.getItem(MANIFEST_KEY)||'null');if(c)MANIFEST=c;}catch(e){}try{const r=await fetch('./stories/manifest.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();let arr=Array.isArray(j)?j:(j.stories||[]);arr=arr.map((s,i)=>typeof s==='string'?{id:'s'+(i+1),title:s,file:'./stories/'+s+'.txt'}:s);MANIFEST=arr;localStorage.setItem(MANIFEST_KEY,JSON.stringify(MANIFEST));}catch(e){console.warn('[phone] 剧本清单加载失败：',e);}}
 async function loadBuiltinMaterials(){try{const c=JSON.parse(localStorage.getItem(BUILTIN_KEY)||'null');if(c)BUILTIN_MATS=c;}catch(e){}try{const r=await fetch('./materials/builtin.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();BUILTIN_MATS=Array.isArray(j)?j:(j.materials||[]);localStorage.setItem(BUILTIN_KEY,JSON.stringify(BUILTIN_MATS));}catch(e){console.warn('[phone] 内置素材加载失败：',e);}}
 
-const PW=window.parent;
-function parentState(){try{return PW.state||{};}catch(e){return{};}}
-function parentChars(){return parentState().characters||[];}
-function parentPlayer(){return parentState().player||{};}
-function parentApi(){return parentState().api||{};}
-function parentMvu(){return parentState().mvu||{};}
-function parentEnableMvu(){const s=parentState();return !!(s.settings&&s.settings.enableMVU);}
-function applyTheme(){const s=parentState();const theme=(s.settings&&s.settings.theme)||'light';document.body.className='theme-'+theme;}
+/* =========================================================
+ * 【核心修复】数据同步机制：不再依赖 window.parent
+ * ========================================================= */
+let LOCAL_STATE = { characters:[], player:{}, api:{}, mvu:{}, settings:{} };
+window.receiveData = function(data) {
+  LOCAL_STATE = data;
+  applyTheme();
+  // 如果当前在消息页，刷新一下角色列表
+  if(curTab === 'msg') renderMsgList();
+};
+
+function parentState(){return LOCAL_STATE;}
+function parentChars(){return LOCAL_STATE.characters||[];}
+function parentPlayer(){return LOCAL_STATE.player||{};}
+function parentApi(){return LOCAL_STATE.api||{};}
+function parentMvu(){return LOCAL_STATE.mvu||{};}
+function parentEnableMvu(){return !!(LOCAL_STATE.settings&&LOCAL_STATE.settings.enableMVU);}
+function applyTheme(){const theme=(LOCAL_STATE.settings&&LOCAL_STATE.settings.theme)||'light';document.body.className='theme-'+theme;}
 function mvuCurrentDay(){const m=parentMvu();const d=(m['基础信息']&&m['基础信息']['日期'])||{};return (Number(d['年'])||3000)*360+(Number(d['月'])||1)*30+(Number(d['日'])||1);}
 function mvuCharFav(n){const m=parentMvu();const f=m['好感度']||{};return Number(f[n])||0;}
 
+/* =========================================================
+ * 【核心修复】点击事件委托（解决 QQ 浏览器点不动的问题）
+ * ========================================================= */
+document.addEventListener('click', e => {
+  const target = e.target.closest('[data-action]');
+  if(!target) return;
+  const action = target.getAttribute('data-action');
+  
+  if(action === 'switch-tab') {
+    switchTab(target.getAttribute('data-tab'), target);
+  }
+  else if(action === 'pick-story') {
+    pickStory(target.getAttribute('data-id'));
+  }
+  else if(action === 'open-chat') {
+    openChat(target.getAttribute('data-id'));
+  }
+  else if(action === 'set-mat-mode') {
+    setMatMode(target.getAttribute('data-key'), target.getAttribute('data-mode'));
+  }
+  else if(action === 'del-relation') {
+    deleteRelation(target.getAttribute('data-a'), target.getAttribute('data-b'));
+  }
+  else if(action === 'respond-invite') {
+    respondInvite(target.getAttribute('data-id'), target.getAttribute('data-agree')==='true');
+  }
+  else if(action === 'del-moment') {
+    doDeleteMoment(target.getAttribute('data-id'));
+  }
+  else if(action === 'reply-moment') {
+    momentReply(target.getAttribute('data-id'));
+  }
+  else if(action === 'cancel-meetup') {
+    cancelMeetup();
+  }
+  else if(action === 'open-modal') {
+    const type = target.getAttribute('data-type');
+    if(type === 'add-relation') addRelationDialog();
+    if(type === 'post-moment') postMoment();
+    if(type === 'close-modal') closeModal();
+  }
+  else if(action === 'submit-invite') {
+    submitInvite();
+  }
+  else if(action === 'submit-relation') {
+    submitRelation();
+  }
+  else if(action === 'submit-moment') {
+    submitMoment();
+  }
+  else if(action === 'submit-comment') {
+    submitComment(target.getAttribute('data-id'));
+  }
+});
+
+/* =========================================================
+ * 业务逻辑
+ * ========================================================= */
 let curTab='msg';
-function switchTab(tab,el){curTab=tab;document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('p-'+tab).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('nav-title').textContent={msg:'消息',moments:'朋友圈',mode:'设置'}[tab];document.getElementById('nav-action').style.display=tab==='moments'?'block':'none';if(tab==='msg')renderMsgList();if(tab==='moments')renderMoments();if(tab==='mode')renderMode();}
+function switchTab(tab,el){
+  curTab=tab;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('p-'+tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('nav-title').textContent={msg:'消息',moments:'朋友圈',mode:'设置'}[tab];
+  document.getElementById('nav-action').style.display=tab==='moments'?'block':'none';
+  if(tab==='msg')renderMsgList();
+  if(tab==='moments')renderMoments();
+  if(tab==='mode')renderMode();
+}
 function navAction(){if(curTab==='moments')postMoment();}
-function closePhone(){try{PW.closePhoneOverlay?PW.closePhoneOverlay():(PW.document.getElementById('phoneOverlay').hidden=true);}catch(e){}}
-async function phoneRefresh(){applyTheme();await loadManifest();await loadBuiltinMaterials();switchTab(curTab,document.querySelector('.tab.active'));}
-window.phoneRefresh=phoneRefresh;
+function closePhone(){try{window.parent.closePhoneOverlay?window.parent.closePhoneOverlay():(window.parent.document.getElementById('phoneOverlay').hidden=true);}catch(e){}}
 
 function escHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function escAttr(s){return escHtml(s).replace(/`/g,'');}
@@ -210,53 +287,248 @@ function openModal(title,bodyHtml,footerHtml){document.getElementById('modalTitl
 function closeModal(){document.getElementById('modal').hidden=true;}
 function toast(msg){const el=document.createElement('div');el.style.cssText='position:fixed;top:30px;left:50%;transform:translateX(-50%);background:var(--surface);color:var(--text);padding:10px 20px;border-radius:var(--radius);border:1px solid var(--line);z-index:200;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.3);';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2200);}
 
-function renderMsgList(){const chars=parentChars();const box=document.getElementById('p-msg');if(!chars.length){box.innerHTML='<div class="empty">主界面还没有角色</div>';return;}box.innerHTML=chars.map(c=>{const list=P.chats[c.id]||[];const last=list.length?list[list.length-1]:null;const sub=last?(last.c||'').slice(0,22):'还没有聊过';const hasPending=(P.pendingInvites||[]).find(inv=>String(inv.charId)===String(c.id)&&inv.from==='char');const badge=hasPending?' <span class="tag">约见</span>':'';return `<div class="cell" onclick="openChat('${c.id}')"><img class="avatar" src="${escAttr(c.portraitUrl||c.a||'')}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="cell-body"><div class="cell-name">${escHtml(c.name||'')}${badge}</div><div class="cell-sub">${escHtml(sub)}</div></div></div>`;}).join('');}
+function renderMsgList(){
+  const chars=parentChars();const box=document.getElementById('p-msg');
+  if(!chars.length){box.innerHTML='<div class="empty">正在同步角色数据，或主界面暂无角色...</div>';return;}
+  box.innerHTML=chars.map(c=>{
+    const list=P.chats[c.id]||[];const last=list.length?list[list.length-1]:null;
+    const sub=last?(last.c||'').slice(0,22):'还没有聊过';
+    const hasPending=(P.pendingInvites||[]).find(inv=>String(inv.charId)===String(c.id)&&inv.from==='char');
+    const badge=hasPending?' <span class="tag">约见</span>':'';
+    return `<div class="cell" data-action="open-chat" data-id="${c.id}"><img class="avatar" src="${escAttr(c.portraitUrl||c.a||'')}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="cell-body"><div class="cell-name">${escHtml(c.name||'')}${badge}</div><div class="cell-sub">${escHtml(sub)}</div></div></div>`;
+  }).join('');
+}
 
 let curChatId=null;
-function openChat(id){curChatId=id;const c=parentChars().find(x=>String(x.id)===String(id));document.getElementById('chat-title').textContent=c?(c.name||''):'聊天';const chatEl=document.getElementById('chat');chatEl.style.backgroundImage=P.userProfile.chatBg?`url('${escAttr(P.userProfile.chatBg)}')`:'none';chatEl.style.display='flex';renderChat();}
+function openChat(id){
+  curChatId=id;const c=parentChars().find(x=>String(x.id)===String(id));
+  document.getElementById('chat-title').textContent=c?(c.name||''):'聊天';
+  const chatEl=document.getElementById('chat');
+  chatEl.style.backgroundImage=P.userProfile.chatBg?`url('${escAttr(P.userProfile.chatBg)}')`:'none';
+  chatEl.style.display='flex';renderChat();
+}
 function closeChat(){document.getElementById('chat').style.display='none';curChatId=null;}
-function renderChat(){const box=document.getElementById('chat-area');const list=P.chats[curChatId]||[];const c=parentChars().find(x=>String(x.id)===String(curChatId));const avatarC=c?(c.portraitUrl||c.a||''):'';const avatarMe=P.userProfile.avatar||'';let invitesHtml='';const pendingForThis=(P.pendingInvites||[]).filter(inv=>String(inv.charId)===String(curChatId)&&inv.from==='char');for(const inv of pendingForThis){invitesHtml+=`<div class="invite-card"><div class="ic-title">📅 ${escHtml(inv.charName)} 邀请你线下见面</div><div class="ic-info">地点：${escHtml(inv.location)}<br>时间：${inv.daysFromNow===0?'现在':inv.daysFromNow+'天后'}</div><div class="ic-actions"><button class="ok" onclick="respondInvite('${inv.id}',true)">同意</button><button class="no" onclick="respondInvite('${inv.id}',false)">拒绝</button></div></div>`;}box.innerHTML=invitesHtml+list.map(m=>{if(m.r==='sys')return `<div class="sys-line"><span>${escHtml(m.c)}</span></div>`;const isUser=m.r==='user';const av=isUser?avatarMe:avatarC;return `<div class="msg ${isUser?'user':''}"><img class="avatar" src="${escAttr(av)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="bubble">${escHtml(m.c)}</div></div>`;}).join('');box.scrollTop=box.scrollHeight;}
 
-async function sendChat(){if(!curChatId)return;const input=document.getElementById('chat-in');const text=input.value.trim();if(text){input.value='';(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'user',c:text,t:Date.now()});savePhone();renderChat();}await callAI();}
+function renderChat(){
+  const box=document.getElementById('chat-area');const list=P.chats[curChatId]||[];
+  const c=parentChars().find(x=>String(x.id)===String(curChatId));
+  const avatarC=c?(c.portraitUrl||c.a||''):'';const avatarMe=P.userProfile.avatar||'';
+  let invitesHtml='';
+  const pendingForThis=(P.pendingInvites||[]).filter(inv=>String(inv.charId)===String(curChatId)&&inv.from==='char');
+  for(const inv of pendingForThis){
+    invitesHtml+=`<div class="invite-card"><div class="ic-title">📅 ${escHtml(inv.charName)} 邀请你线下见面</div><div class="ic-info">地点：${escHtml(inv.location)}<br>时间：${inv.daysFromNow===0?'现在':inv.daysFromNow+'天后'}</div><div class="ic-actions"><button class="ok" data-action="respond-invite" data-id="${inv.id}" data-agree="true">同意</button><button class="no" data-action="respond-invite" data-id="${inv.id}" data-agree="false">拒绝</button></div></div>`;
+  }
+  box.innerHTML=invitesHtml+list.map(m=>{
+    if(m.r==='sys')return `<div class="sys-line"><span>${escHtml(m.c)}</span></div>`;
+    const isUser=m.r==='user';const av=isUser?avatarMe:avatarC;
+    return `<div class="msg ${isUser?'user':''}"><img class="avatar" src="${escAttr(av)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="bubble">${escHtml(m.c)}</div></div>`;
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
 
-async function callAI(){const api=parentApi();if(!api.endpoint||!api.key){(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（尚未配置 API）',t:Date.now()});savePhone();renderChat();return;}const c=parentChars().find(x=>String(x.id)===String(curChatId))||{};const me=parentPlayer();const hist=(P.chats[curChatId]||[]).slice(-20).filter(m=>m.r!=='sys').map(m=>({role:m.r==='user'?'user':'assistant',content:m.c}));const relLines=[];if(P.relations[curChatId]){for(const oid in P.relations[curChatId]){const r=P.relations[curChatId][oid];if(!r.known)continue;const o=parentChars().find(x=>String(x.id)===String(oid));if(o)relLines.push(`你认识的 ${o.name}：${r.relation||'认识'}`);}}const sys=`你正在扮演${c.name||'角色'}，通过手机微信和用户聊天。用户名字是"${me.name||'你'}"。\n性格设定：${(c.personality||c.description||'').slice(0,600)}\n${relLines.length?'【你认识的人】\n'+relLines.join('\n'):''}\n${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location}（${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}）\n`:''}\n要求：\n- 只发纯文字消息，不用括号描述动作，每次 1~3 条短消息，每条不超过 30 字。\n- 如果想约玩家见面，请输出 [约见邀请:${c.name||'角色'}|地点|天数(0=现在,1=1天后)]，然后不要重复描述此事。`;(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（对方正在输入…）',t:Date.now()});savePhone();renderChat();try{const base=api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');const res=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},body:JSON.stringify({model:api.model||'gpt-4o-mini',messages:[{role:'system',content:sys},...hist]})});const data=await res.json();const reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');if(idx>=0)P.chats[curChatId].splice(idx,1);const{cleanText,invites}=extractInvites(reply,c);const lines=cleanText.split(/\n+/).map(s=>s.trim()).filter(Boolean);for(const ln of lines)P.chats[curChatId].push({r:'ai',c:ln,t:Date.now()});for(const inv of invites)P.pendingInvites.push(inv);savePhone();renderChat();}catch(e){const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');if(idx>=0)P.chats[curChatId].splice(idx,1);P.chats[curChatId].push({r:'sys',c:'（回复失败：'+e.message+'）',t:Date.now()});savePhone();renderChat();}}
+async function sendChat(){
+  if(!curChatId)return;
+  const input=document.getElementById('chat-in');const text=input.value.trim();
+  if(text){input.value='';(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'user',c:text,t:Date.now()});savePhone();renderChat();}
+  await callAI();
+}
 
-function extractInvites(text,char){const invites=[];const re=/\[约见邀请[:：]([^\]]+)\]/g;const cleanText=text.replace(re,(all,body)=>{const parts=body.split('|').map(s=>s.trim());if(parts.length>=2){const location=parts[1];const days=Number(parts[2])||0;invites.push({id:'inv_'+Date.now()+Math.random().toString(36).slice(2,6),charId:char.id,charName:char.name||parts[0],location,daysFromNow:days,from:'char',createdAt:Date.now()});}return '';}).trim();return{cleanText,invites};}
+async function callAI(){
+  const api=parentApi();
+  if(!api.endpoint||!api.key){(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（尚未配置 API）',t:Date.now()});savePhone();renderChat();return;}
+  const c=parentChars().find(x=>String(x.id)===String(curChatId))||{};
+  const me=parentPlayer();
+  const hist=(P.chats[curChatId]||[]).slice(-20).filter(m=>m.r!=='sys').map(m=>({role:m.r==='user'?'user':'assistant',content:m.c}));
+  const relLines=[];
+  if(P.relations[curChatId]){for(const oid in P.relations[curChatId]){const r=P.relations[curChatId][oid];if(!r.known)continue;const o=parentChars().find(x=>String(x.id)===String(oid));if(o)relLines.push(`你认识的 ${o.name}：${r.relation||'认识'}`);}}
+  const sys=`你正在扮演${c.name||'角色'}，通过手机微信和用户聊天。用户名字是"${me.name||'你'}"。
+性格设定：${(c.personality||c.description||'').slice(0,600)}
+${relLines.length?'【你认识的人】\n'+relLines.join('\n'):''}
+${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location}（${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}）\n`:''}
+要求：
+- 只发纯文字消息，不用括号描述动作，每次 1~3 条短消息，每条不超过 30 字。
+- 如果想约玩家见面，请输出 [约见邀请:${c.name||'角色'}|地点|天数(0=现在,1=1天后)]，然后不要重复描述此事。`;
 
-function respondInvite(invId,agree){const idx=(P.pendingInvites||[]).findIndex(x=>x.id===invId);if(idx<0)return;const inv=P.pendingInvites[idx];P.pendingInvites.splice(idx,1);if(agree){P.activeMeetup={id:'meet_'+Date.now(),charId:inv.charId,charName:inv.charName,location:inv.location,daysFromNow:inv.daysFromNow,targetDay:mvuCurrentDay()+inv.daysFromNow,status:'accepted',createdAt:Date.now()};(P.chats[inv.charId]=P.chats[inv.charId]||[]).push({r:'sys',c:`（已接受约见：${inv.location}，${inv.daysFromNow===0?'现在':inv.daysFromNow+'天后'}）`,t:Date.now()});savePhone();renderChat();try{PW.onMeetupAccepted&&PW.onMeetupAccepted(P.activeMeetup);}catch(e){}toast('已接受约见，请打开地图前往约定地点');}else{(P.chats[inv.charId]=P.chats[inv.charId]||[]).push({r:'sys',c:'（你拒绝了这次约见）',t:Date.now()});savePhone();renderChat();}}
+  (P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（对方正在输入…）',t:Date.now()});
+  savePhone();renderChat();
 
-function openInviteDialog(){if(!curChatId)return;const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char)return;const locs=BUILTIN_MATS.filter(m=>m.key.startsWith('场景-')).map(m=>m.key.replace('场景-',''));const locOpts=locs.map(l=>`<option value="${escAttr(l)}">${escHtml(l)}</option>`).join('');openModal('约见角色',`<div class="field"><label>地点</label><select id="inv-loc">${locOpts||'<option value="">（仓库中暂无地点）</option>'}</select></div><div class="field"><label>时间</label><select id="inv-when"><option value="0">现在</option><option value="1">1天后</option><option value="3">3天后</option><option value="7">7天后</option></select></div>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitInvite()">发送邀请</button>`);}
+  try{
+    const base=api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');
+    const res=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},body:JSON.stringify({model:api.model||'gpt-4o-mini',messages:[{role:'system',content:sys},...hist]})});
+    const data=await res.json();
+    const reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');
+    if(idx>=0)P.chats[curChatId].splice(idx,1);
+    const{cleanText,invites}=extractInvites(reply,c);
+    const lines=cleanText.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    for(const ln of lines)P.chats[curChatId].push({r:'ai',c:ln,t:Date.now()});
+    for(const inv of invites)P.pendingInvites.push(inv);
+    savePhone();renderChat();
+  }catch(e){
+    const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');
+    if(idx>=0)P.chats[curChatId].splice(idx,1);
+    P.chats[curChatId].push({r:'sys',c:'（回复失败：'+e.message+'）',t:Date.now()});
+    savePhone();renderChat();
+  }
+}
 
-function submitInvite(){const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char){closeModal();return;}const loc=document.getElementById('inv-loc').value;const days=Number(document.getElementById('inv-when').value)||0;if(!loc){toast('请选择地点');return;}closeModal();const enableMvu=parentEnableMvu();let agree=true,reason='';if(enableMvu){const fav=mvuCharFav(char.name);const personality=(char.personality||char.description||'');const cold=/冷漠|疏离|内向|冷淡|不近人情|孤僻|高傲/.test(personality);const warm=/热情|开朗|活泼|主动|温柔|友善|大方/.test(personality);let threshold=20;if(cold)threshold=60;else if(warm)threshold=10;if(days===0)threshold+=20;agree=fav>=threshold;reason=`（好感${fav}，阈值${threshold}，${cold?'冷淡':warm?'热情':'普通'}人设）`;}(P.chats[char.id]=P.chats[char.id]||[]).push({r:'user',c:`（邀请你去 ${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});if(agree){P.activeMeetup={id:'meet_'+Date.now(),charId:char.id,charName:char.name,location:loc,daysFromNow:days,targetDay:mvuCurrentDay()+days,status:'accepted',createdAt:Date.now()};P.chats[char.id].push({r:'sys',c:`（对方同意了约见，${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});savePhone();renderChat();try{PW.onMeetupAccepted&&PW.onMeetupAccepted(P.activeMeetup);}catch(e){}toast('约见成功，请打开地图前往约定地点');}else{P.chats[char.id].push({r:'sys',c:`（对方婉拒了这次约见）${reason}`,t:Date.now()});savePhone();renderChat();}}
+function extractInvites(text,char){
+  const invites=[];const re=/\[约见邀请[:：]([^\]]+)\]/g;
+  const cleanText=text.replace(re,(all,body)=>{
+    const parts=body.split('|').map(s=>s.trim());
+    if(parts.length>=2){const location=parts[1];const days=Number(parts[2])||0;invites.push({id:'inv_'+Date.now()+Math.random().toString(36).slice(2,6),charId:char.id,charName:char.name||parts[0],location,daysFromNow:days,from:'char',createdAt:Date.now()});}
+    return '';
+  }).trim();
+  return{cleanText,invites};
+}
 
-function renderMoments(){const box=document.getElementById('p-moments');const prof=P.userProfile;const displayName=parentPlayer().name||'我';const cover=prof.momentsCover?`style="background-image:url('${escAttr(prof.momentsCover)}')"`:'';const postsHtml=P.moments.map(m=>{const comments=(m.comments||[]).map(c=>`<div class="cm"><b>${escHtml(c.n)}：</b>${escHtml(c.t)}</div>`).join('');const timeStr=new Date(m.t||Date.now()).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});return `<div class="post"><img class="avatar" src="${escAttr(m.authorAvatar||'')}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="post-body"><div class="post-author">${escHtml(m.authorName||'')}</div><div class="post-text">${escHtml(m.text||'')}</div><div class="post-time">${timeStr}</div>${comments?`<div class="post-comments">${comments}</div>`:''}<div class="post-actions"><button onclick="momentReply('${m.id}')">💬 回复</button><button onclick="momentDelete('${m.id}')">🗑 删除</button></div></div></div>`;}).join('')||'<div class="empty">还没有动态，点右上角「发布」发一条吧</div>';box.innerHTML=`<div class="mo-cover" ${cover}><div class="mo-user"><span>${escHtml(displayName)}</span><img src="${escAttr(prof.avatar)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"></div></div><div style="padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface);"><button class="btn" style="width:100%;" onclick="postMoment()">＋ 发布动态</button></div>${postsHtml}`;}
+function respondInvite(invId,agree){
+  const idx=(P.pendingInvites||[]).findIndex(x=>x.id===invId);if(idx<0)return;
+  const inv=P.pendingInvites[idx];P.pendingInvites.splice(idx,1);
+  if(agree){
+    P.activeMeetup={id:'meet_'+Date.now(),charId:inv.charId,charName:inv.charName,location:inv.location,daysFromNow:inv.daysFromNow,targetDay:mvuCurrentDay()+inv.daysFromNow,status:'accepted',createdAt:Date.now()};
+    (P.chats[inv.charId]=P.chats[inv.charId]||[]).push({r:'sys',c:`（已接受约见：${inv.location}，${inv.daysFromNow===0?'现在':inv.daysFromNow+'天后'}）`,t:Date.now()});
+    savePhone();renderChat();
+    try{window.parent.onMeetupAccepted&&window.parent.onMeetupAccepted(P.activeMeetup);}catch(e){}
+    toast('已接受约见，请打开地图前往约定地点');
+  }else{
+    (P.chats[inv.charId]=P.chats[inv.charId]||[]).push({r:'sys',c:'（你拒绝了这次约见）',t:Date.now()});
+    savePhone();renderChat();
+  }
+}
 
-function postMoment(){openModal('发布动态',`<textarea id="mo-text" placeholder="说点什么..."></textarea>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitMoment()">发布</button>`);}
+function openInviteDialog(){
+  if(!curChatId)return;
+  const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char)return;
+  const locs=BUILTIN_MATS.filter(m=>m.key.startsWith('场景-')).map(m=>m.key.replace('场景-',''));
+  const locOpts=locs.map(l=>`<option value="${escAttr(l)}">${escHtml(l)}</option>`).join('');
+  openModal('约见角色',`<div class="field"><label>地点</label><select id="inv-loc">${locOpts||'<option value="">（仓库中暂无地点）</option>'}</select></div><div class="field"><label>时间</label><select id="inv-when"><option value="0">现在</option><option value="1">1天后</option><option value="3">3天后</option><option value="7">7天后</option></select></div>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-invite">发送邀请</button>`);
+}
+
+function submitInvite(){
+  const char=parentChars().find(x=>String(x.id)===String(curChatId));if(!char){closeModal();return;}
+  const loc=document.getElementById('inv-loc').value;const days=Number(document.getElementById('inv-when').value)||0;
+  if(!loc){toast('请选择地点');return;}
+  closeModal();
+  const enableMvu=parentEnableMvu();let agree=true,reason='';
+  if(enableMvu){
+    const fav=mvuCharFav(char.name);
+    const personality=(char.personality||char.description||'');
+    const cold=/冷漠|疏离|内向|冷淡|不近人情|孤僻|高傲/.test(personality);
+    const warm=/热情|开朗|活泼|主动|温柔|友善|大方/.test(personality);
+    let threshold=20;if(cold)threshold=60;else if(warm)threshold=10;
+    if(days===0)threshold+=20;
+    agree=fav>=threshold;reason=`（好感${fav}，阈值${threshold}，${cold?'冷淡':warm?'热情':'普通'}人设）`;
+  }
+  (P.chats[char.id]=P.chats[char.id]||[]).push({r:'user',c:`（邀请你去 ${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});
+  if(agree){
+    P.activeMeetup={id:'meet_'+Date.now(),charId:char.id,charName:char.name,location:loc,daysFromNow:days,targetDay:mvuCurrentDay()+days,status:'accepted',createdAt:Date.now()};
+    P.chats[char.id].push({r:'sys',c:`（对方同意了约见，${loc}，${days===0?'现在':days+'天后'}）`,t:Date.now()});
+    savePhone();renderChat();
+    try{window.parent.onMeetupAccepted&&window.parent.onMeetupAccepted(P.activeMeetup);}catch(e){}
+    toast('约见成功，请打开地图前往约定地点');
+  }else{
+    P.chats[char.id].push({r:'sys',c:`（对方婉拒了这次约见）${reason}`,t:Date.now()});
+    savePhone();renderChat();
+  }
+}
+
+function renderMoments(){
+  const box=document.getElementById('p-moments');
+  const prof=P.userProfile;
+  const displayName=parentPlayer().name||'我';
+  const cover=prof.momentsCover?`style="background-image:url('${escAttr(prof.momentsCover)}')"`:'';
+  const postsHtml=P.moments.map(m=>{
+    const comments=(m.comments||[]).map(c=>`<div class="cm"><b>${escHtml(c.n)}：</b>${escHtml(c.t)}</div>`).join('');
+    const timeStr=new Date(m.t||Date.now()).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="post"><img class="avatar" src="${escAttr(m.authorAvatar||'')}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="post-body"><div class="post-author">${escHtml(m.authorName||'')}</div><div class="post-text">${escHtml(m.text||'')}</div><div class="post-time">${timeStr}</div>${comments?`<div class="post-comments">${comments}</div>`:''}<div class="post-actions"><button data-action="reply-moment" data-id="${m.id}">💬 回复</button><button data-action="del-moment" data-id="${m.id}">🗑 删除</button></div></div></div>`;
+  }).join('')||'<div class="empty">还没有动态，点右上角「发布」发一条吧</div>';
+  box.innerHTML=`<div class="mo-cover" ${cover}><div class="mo-user"><span>${escHtml(displayName)}</span><img src="${escAttr(prof.avatar)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"></div></div><div style="padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface);"><button class="btn" style="width:100%;" data-action="open-modal" data-type="post-moment">＋ 发布动态</button></div>${postsHtml}`;
+}
+
+function postMoment(){openModal('发布动态',`<textarea id="mo-text" placeholder="说点什么..."></textarea>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-moment">发布</button>`);}
 function submitMoment(){const text=document.getElementById('mo-text').value.trim();if(!text){toast('内容不能为空');return;}closeModal();P.moments.unshift({id:'m_'+Date.now(),authorName:parentPlayer().name||'我',authorAvatar:P.userProfile.avatar||'',text,t:Date.now(),comments:[]});savePhone();renderMoments();}
-function momentDelete(id){openModal('删除动态',`<p>确定要删除这条动态吗？</p>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="doDeleteMoment('${id}')">删除</button>`);}
+function momentDelete(id){openModal('删除动态',`<p>确定要删除这条动态吗？</p>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="del-moment" data-id="${id}">删除</button>`);}
 function doDeleteMoment(id){P.moments=P.moments.filter(m=>m.id!==id);savePhone();closeModal();renderMoments();}
-function momentReply(id){const m=P.moments.find(x=>x.id===id);if(!m)return;openModal('回复动态',`<div style="padding:10px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:12px;font-size:13px;color:var(--muted);">${escHtml(m.text||'')}</div><textarea id="cm-text" placeholder="说点什么..."></textarea>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitComment('${id}')">发送</button>`);}
+function momentReply(id){const m=P.moments.find(x=>x.id===id);if(!m)return;openModal('回复动态',`<div style="padding:10px;background:var(--surface-2);border-radius:var(--radius);margin-bottom:12px;font-size:13px;color:var(--muted);">${escHtml(m.text||'')}</div><textarea id="cm-text" placeholder="说点什么..."></textarea>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-comment" data-id="${id}">发送</button>`);}
 function submitComment(id){const m=P.moments.find(x=>x.id===id);if(!m)return;const text=document.getElementById('cm-text').value.trim();if(!text){toast('内容不能为空');return;}m.comments=m.comments||[];m.comments.push({n:parentPlayer().name||'我',t:text});savePhone();closeModal();renderMoments();}
 
-function renderMode(){const box=document.getElementById('p-mode');const modeAi=P.mode==='ai';const modeStory=P.mode==='story';const prof=P.userProfile;const storyListHtml=MANIFEST.length?MANIFEST.map(s=>`<div class="story-item ${P.activeStoryId===s.id?'on':''}" onclick="pickStory('${s.id}')"><div class="meta"><div class="title">${escHtml(s.title||s.id)}</div><div class="sub">点击选择并载入</div></div>${P.activeStoryId===s.id?'<div class="badge">已选用</div>':''}</div>`).join(''):'<div class="loading">仓库中未找到剧本</div>';const groups={};BUILTIN_MATS.forEach(m=>{const prefix=(m.key||'').split('-')[0]||'其他';(groups[prefix]=groups[prefix]||[]).push(m);});const matHtml=Object.keys(groups).length?Object.keys(groups).map(g=>`<div class="mat-group"><div class="mat-group-title">${escHtml(g)}</div>${groups[g].map(m=>{const isCustom=!!P.materialOverrides[m.key];const val=P.materialOverrides[m.key]||'';return `<div class="mat-item"><div class="mat-head"><div class="mat-name">${escHtml(m.key)}</div><div class="mat-toggle"><button class="${!isCustom?'on':''}" onclick="setMatMode('${escAttr(m.key)}','builtin')">内置</button><button class="${isCustom?'on':''}" onclick="setMatMode('${escAttr(m.key)}','custom')">自定义</button></div></div>${isCustom?`<input class="mat-custom-input" placeholder="输入自定义图片链接" value="${escAttr(val)}" oninput="onMatInput('${escAttr(m.key)}',this.value)">`:''}</div>`;}).join('')}</div>`).join(''):'<div class="loading">仓库中未找到内置素材</div>';const relHtml=renderRelationsHtml();const meetupHtml=P.activeMeetup?`<div class="meetup-card"><div class="mc-title">📅 进行中的约见</div><div class="mc-info">角色：${escHtml(P.activeMeetup.charName)}<br>地点：${escHtml(P.activeMeetup.location)}<br>时间：${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}<br><button class="btn danger" style="margin-top:8px;padding:6px 12px;font-size:12px;" onclick="cancelMeetup()">取消约见</button></div></div>`:'<div class="loading">当前没有约见</div>';box.innerHTML=`<div class="sec"><div class="sec-title">模式</div><div class="row"><button class="mode-btn ${modeAi?'on':''}" onclick="setMode('ai')">AI 自由模式</button><button class="mode-btn ${modeStory?'on':''}" onclick="setMode('story')">剧情模式</button></div><div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7;">${modeAi?'AI 会根据人设与世界书自动续写剧情。':'按所选剧本演绎，支持分支、立绘、场景切换。'}</div></div><div class="sec"><div class="sec-title">我的资料</div><div class="field"><label>头像链接</label><input value="${escAttr(prof.avatar)}" placeholder="https://..." oninput="setProfile('avatar',this.value)"></div><div class="field"><label>聊天背景图链接</label><input value="${escAttr(prof.chatBg)}" placeholder="https://...（留空为纯色）" oninput="setProfile('chatBg',this.value)"></div><div class="field"><label>朋友圈背景图链接</label><input value="${escAttr(prof.momentsCover)}" placeholder="https://..." oninput="setProfile('momentsCover',this.value)"></div></div><div class="sec"><div class="sec-title">剧本</div>${storyListHtml}</div><div class="sec"><div class="sec-title">素材库</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">每个素材可选择「内置」（仓库提供）或「自定义」（填写自己的链接）。</div>${matHtml}</div><div class="sec"><div class="sec-title">角色关系</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">设置角色之间是否认识、什么关系。角色认识后会在朋友圈中互动。</div>${relHtml}<button class="btn" style="width:100%;margin-top:8px;" onclick="addRelationDialog()">＋ 添加关系</button></div><div class="sec"><div class="sec-title">约见</div>${meetupHtml}</div>`;}
+function renderMode(){
+  const box=document.getElementById('p-mode');const modeAi=P.mode==='ai';const modeStory=P.mode==='story';const prof=P.userProfile;
+  const storyListHtml=MANIFEST.length?MANIFEST.map(s=>`<div class="story-item ${P.activeStoryId===s.id?'on':''}" data-action="pick-story" data-id="${s.id}"><div class="meta"><div class="title">${escHtml(s.title||s.id)}</div><div class="sub">点击选择并载入</div></div>${P.activeStoryId===s.id?'<div class="badge">已选用</div>':''}</div>`).join(''):'<div class="loading">仓库中未找到剧本</div>';
+  const groups={};BUILTIN_MATS.forEach(m=>{const prefix=(m.key||'').split('-')[0]||'其他';(groups[prefix]=groups[prefix]||[]).push(m);});
+  const matHtml=Object.keys(groups).length?Object.keys(groups).map(g=>`<div class="mat-group"><div class="mat-group-title">${escHtml(g)}</div>${groups[g].map(m=>{const isCustom=!!P.materialOverrides[m.key];const val=P.materialOverrides[m.key]||'';return `<div class="mat-item"><div class="mat-head"><div class="mat-name">${escHtml(m.key)}</div><div class="mat-toggle"><button class="${!isCustom?'on':''}" data-action="set-mat-mode" data-key="${escAttr(m.key)}" data-mode="builtin">内置</button><button class="${isCustom?'on':''}" data-action="set-mat-mode" data-key="${escAttr(m.key)}" data-mode="custom">自定义</button></div></div>${isCustom?`<input class="mat-custom-input" placeholder="输入自定义图片链接" value="${escAttr(val)}" oninput="onMatInput('${escAttr(m.key)}',this.value)">`:''}</div>`;}).join('')}</div>`).join(''):'<div class="loading">仓库中未找到内置素材</div>';
+  const relHtml=renderRelationsHtml();
+  const meetupHtml=P.activeMeetup?`<div class="meetup-card"><div class="mc-title">📅 进行中的约见</div><div class="mc-info">角色：${escHtml(P.activeMeetup.charName)}<br>地点：${escHtml(P.activeMeetup.location)}<br>时间：${P.activeMeetup.daysFromNow===0?'现在':P.activeMeetup.daysFromNow+'天后'}<br><button class="btn danger" style="margin-top:8px;padding:6px 12px;font-size:12px;" data-action="cancel-meetup">取消约见</button></div></div>`:'<div class="loading">当前没有约见</div>';
+  
+  box.innerHTML=`
+    <div class="sec"><div class="sec-title">模式</div><div class="row"><button class="mode-btn ${modeAi?'on':''}" onclick="setMode('ai')">AI 自由模式</button><button class="mode-btn ${modeStory?'on':''}" onclick="setMode('story')">剧情模式</button></div><div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7;">${modeAi?'AI 会根据人设与世界书自动续写剧情。':'按所选剧本演绎，支持分支、立绘、场景切换。'}</div></div>
+    <div class="sec"><div class="sec-title">我的资料</div>
+      <div class="field"><label>头像链接</label><input value="${escAttr(prof.avatar)}" placeholder="https://..." oninput="setProfile('avatar',this.value)"></div>
+      <div class="field"><label>聊天背景图链接</label><input value="${escAttr(prof.chatBg)}" placeholder="https://...（留空为纯色）" oninput="setProfile('chatBg',this.value)"></div>
+      <div class="field"><label>朋友圈背景图链接</label><input value="${escAttr(prof.momentsCover)}" placeholder="https://..." oninput="setProfile('momentsCover',this.value)"></div>
+    </div>
+    <div class="sec"><div class="sec-title">剧本</div>${storyListHtml}</div>
+    <div class="sec"><div class="sec-title">素材库</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">每个素材可选择「内置」或「自定义」。</div>${matHtml}</div>
+    <div class="sec"><div class="sec-title">角色关系</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7;">设置角色之间是否认识、什么关系。角色认识后会在朋友圈中互动。</div>${relHtml}<button class="btn" style="width:100%;margin-top:8px;" data-action="open-modal" data-type="add-relation">＋ 添加关系</button></div>
+    <div class="sec"><div class="sec-title">约见</div>${meetupHtml}</div>
+  `;
+}
 
-function renderRelationsHtml(){const chars=parentChars();const lines=[];for(const idA in (P.relations||{})){const cA=chars.find(x=>String(x.id)===String(idA));if(!cA)continue;for(const idB in P.relations[idA]){const r=P.relations[idA][idB];if(!r.known)continue;const cB=chars.find(x=>String(x.id)===String(idB));if(!cB)continue;lines.push(`<div class="rel-item"><div class="rel-head"><div class="rel-names">${escHtml(cA.name)} ↔ ${escHtml(cB.name)}</div><button class="rel-del" onclick="deleteRelation('${idA}','${idB}')">✕</button></div><div class="rel-relation">关系：${escHtml(r.relation||'认识')}</div></div>`);}}return lines.length?lines.join(''):'<div class="loading">还没有设置关系</div>';}
+function renderRelationsHtml(){
+  const chars=parentChars();const lines=[];
+  for(const idA in (P.relations||{})){
+    const cA=chars.find(x=>String(x.id)===String(idA));if(!cA)continue;
+    for(const idB in P.relations[idA]){
+      const r=P.relations[idA][idB];if(!r.known)continue;
+      const cB=chars.find(x=>String(x.id)===String(idB));if(!cB)continue;
+      lines.push(`<div class="rel-item"><div class="rel-head"><div class="rel-names">${escHtml(cA.name)} ↔ ${escHtml(cB.name)}</div><button class="rel-del" data-action="del-relation" data-a="${idA}" data-b="${idB}">✕</button></div><div class="rel-relation">关系：${escHtml(r.relation||'认识')}</div></div>`);
+    }
+  }
+  return lines.length?lines.join(''):'<div class="loading">还没有设置关系</div>';
+}
 
 function setProfile(key,val){P.userProfile[key]=val;savePhone();}
-function setMode(m){P.mode=m;savePhone();if(m==='ai'){try{PW.closePhoneOverlay&&PW.closePhoneOverlay();PW.renderMainScene&&PW.renderMainScene();}catch(e){}}renderMode();}
-async function pickStory(id){const story=MANIFEST.find(s=>s.id===id);if(!story){toast('剧本未找到');return;}const cache=localStorage.getItem(STORY_KEY(id));if(!cache){try{const r=await fetch(story.file||('./stories/'+id+'.txt'),{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const txt=await r.text();localStorage.setItem(STORY_KEY(id),txt);}catch(e){toast('剧本加载失败：'+e.message);return;}}P.activeStoryId=id;P.mode='story';savePhone();try{PW.startStoryById&&PW.startStoryById(id);PW.closePhoneOverlay&&PW.closePhoneOverlay();}catch(e){console.warn('[phone] 启动剧情失败：',e);}renderMode();}
+function setMode(m){P.mode=m;savePhone();if(m==='ai'){try{window.parent.closePhoneOverlay&&window.parent.closePhoneOverlay();window.parent.renderMainScene&&window.parent.renderMainScene();}catch(e){}}renderMode();}
+async function pickStory(id){
+  const story=MANIFEST.find(s=>s.id===id);if(!story){toast('剧本未找到');return;}
+  const cache=localStorage.getItem(STORY_KEY(id));
+  if(!cache){
+    try{const r=await fetch(story.file||('./stories/'+id+'.txt'),{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const txt=await r.text();localStorage.setItem(STORY_KEY(id),txt);}catch(e){toast('剧本加载失败：'+e.message);return;}
+  }
+  P.activeStoryId=id;P.mode='story';savePhone();
+  try{window.parent.startStoryById&&window.parent.startStoryById(id);window.parent.closePhoneOverlay&&window.parent.closePhoneOverlay();}catch(e){}
+  renderMode();
+}
 function setMatMode(key,mode){if(mode==='builtin')delete P.materialOverrides[key];else if(!P.materialOverrides[key])P.materialOverrides[key]='';savePhone();renderMode();}
 function onMatInput(key,val){P.materialOverrides[key]=val;savePhone();}
 
-function addRelationDialog(){const chars=parentChars();if(chars.length<2){toast('至少需要 2 个角色');return;}const opts=chars.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');openModal('添加角色关系',`<div class="field"><label>角色 A</label><select id="rel-a">${opts}</select></div><div class="field"><label>角色 B</label><select id="rel-b">${opts}</select></div><div class="field"><label>关系描述</label><input id="rel-desc" placeholder="如同班同学、青梅竹马、兄弟..."></div>`,`<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="submitRelation()">保存</button>`);}
-function submitRelation(){const a=document.getElementById('rel-a').value;const b=document.getElementById('rel-b').value;const desc=document.getElementById('rel-desc').value.trim();if(a===b){toast('角色不能相同');return;}if(!desc){toast('请填写关系');return;}P.relations[a]=P.relations[a]||{};P.relations[b]=P.relations[b]||{};P.relations[a][b]={known:true,relation:desc};P.relations[b][a]={known:true,relation:desc};savePhone();closeModal();renderMode();}
+function addRelationDialog(){
+  const chars=parentChars();if(chars.length<2){toast('至少需要 2 个角色');return;}
+  const opts=chars.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+  openModal('添加角色关系',`<div class="field"><label>角色 A</label><select id="rel-a">${opts}</select></div><div class="field"><label>角色 B</label><select id="rel-b">${opts}</select></div><div class="field"><label>关系描述</label><input id="rel-desc" placeholder="如同班同学、青梅竹马..."></div>`,`<button class="secondary" data-action="open-modal" data-type="close-modal">取消</button><button class="primary" data-action="submit-relation">保存</button>`);
+}
+function submitRelation(){
+  const a=document.getElementById('rel-a').value;const b=document.getElementById('rel-b').value;const desc=document.getElementById('rel-desc').value.trim();
+  if(a===b){toast('角色不能相同');return;}if(!desc){toast('请填写关系');return;}
+  P.relations[a]=P.relations[a]||{};P.relations[b]=P.relations[b]||{};
+  P.relations[a][b]={known:true,relation:desc};P.relations[b][a]={known:true,relation:desc};
+  savePhone();closeModal();renderMode();
+}
 function deleteRelation(a,b){if(P.relations[a])delete P.relations[a][b];if(P.relations[b])delete P.relations[b][a];savePhone();renderMode();}
-function cancelMeetup(){P.activeMeetup=null;savePhone();renderMode();try{PW.onMeetupCancelled&&PW.onMeetupCancelled();}catch(e){}toast('已取消约见');}
+function cancelMeetup(){P.activeMeetup=null;savePhone();renderMode();try{window.parent.onMeetupCancelled&&window.parent.onMeetupCancelled();}catch(e){}toast('已取消约见');}
 
-window.pushMomentFromMain=function({authorName,authorId,authorAvatar,text}){P.moments.unshift({id:'m_'+Date.now()+Math.random().toString(36).slice(2,6),authorId,authorName,authorAvatar,text,t:Date.now(),comments:[]});savePhone();if(curTab==='moments')renderMoments();};
-window.pushMessageFromMain=function({charId,charName,text}){(P.chats[charId]=P.chats[charId]||[]).push({r:'ai',c:text,t:Date.now()});savePhone();if(curTab==='msg')renderMsgList();};
-
-(async function init(){applyTheme();await loadManifest();await loadBuiltinMaterials();renderMsgList();})();
+(async function init(){
+  // 初始加载时，尝试同步一次数据（以防万一）
+  try {
+    if(window.parent && window.parent.state) {
+       window.receiveData(window.parent.state);
+    }
+  } catch(e) {}
+  await loadManifest();
+  await loadBuiltinMaterials();
+  renderMsgList();
+})();
 </script>
 </body>
 </html>

@@ -39,26 +39,42 @@ function boot(win,doc){
     if(!doc.getElementById('phoneOverlay')){
       const ov=doc.createElement('div');ov.id='phoneOverlay';ov.hidden=true;
       ov.style.cssText='position:fixed;inset:0;z-index:9997;background:#111;display:flex;align-items:center;justify-content:center;';
-      ov.innerHTML='<iframe id="phoneFrame" src="./phone.html" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
+      // 【关键修复】给 iframe 加上时间戳，强制突破手机浏览器缓存
+      ov.innerHTML='<iframe id="phoneFrame" src="./phone.html?v='+Date.now()+'" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
       doc.body.appendChild(ov);
     }
   }
 
-  function syncStateToParent(){
-    try{
-      if(!win.state)return;
-      const imgs=win.state.images||[];
-      (win.state.characters||[]).forEach(c=>{
-        if(!c)return;
-        if(c.portraitUrl)return;
-        let url='';
-        if(c.portraitId){const img=imgs.find(i=>i.id===c.portraitId);if(img)url=img.url;}
-        if(!url){const list=imgs.filter(i=>i.character===c.name&&(i.builtIn||i.enabled!==false));if(list.length)url=list[0].url;}
-        c.portraitUrl=url;
-      });
-      win.parent.state=win.state;
-    }catch(e){}
-  }
+  // 【关键修复】拦截点击，并主动把数据塞进 iframe 里
+  doc.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action="open-phone"]');
+    if (target) {
+      e.preventDefault();e.stopPropagation();
+      doc.getElementById('phoneOverlay').hidden = false;
+      const f = doc.getElementById('phoneFrame');
+      // 强行推送数据给手机端，绕过跨域限制
+      if (f && f.contentWindow && f.contentWindow.receiveData) {
+        // 补充头像数据
+        const imgs = win.state.images || [];
+        (win.state.characters || []).forEach(c => {
+          if(!c.portraitUrl) {
+            let url = '';
+            if(c.portraitId) { const img = imgs.find(i=>i.id===c.portraitId); if(img) url = img.url; }
+            if(!url) { const list = imgs.filter(i=>i.character===c.name&&(i.builtIn||i.enabled!==false)); if(list.length) url = list[0].url; }
+            c.portraitUrl = url;
+          }
+        });
+        // 将核心状态传给手机
+        f.contentWindow.receiveData({
+          characters: win.state.characters,
+          player: win.state.player,
+          api: win.state.api,
+          mvu: win.state.mvu,
+          settings: win.state.settings
+        });
+      }
+    }
+  }, true);
 
   function isStoryMode(){
     try{const raw=localStorage.getItem('sft_phone_v1');if(!raw)return false;return (JSON.parse(raw).mode||'ai')==='story';}
@@ -74,7 +90,6 @@ function boot(win,doc){
     doc.body.appendChild(s);
   }
 
-  /* ===== 地图锁定 ===== */
   function installMapLock(){
     if(win._mapLockInstalled)return;
     const orig=win.handleMapSpotClick;
@@ -98,11 +113,9 @@ function boot(win,doc){
         if(locked&&spot.name===meetup.location){
           p.activeMeetup=null;
           localStorage.setItem('sft_phone_v1',JSON.stringify(p));
-          try{const f=doc.getElementById('phoneFrame');if(f&&f.contentWindow&&f.contentWindow.phoneRefresh)f.contentWindow.phoneRefresh();}catch(e){}
           if(typeof win.toast==='function')win.toast('已到达约定地点');
         }
       }
-      // 剧情模式剧本锁
       if(isStoryMode()&&win.state.storyPlayback&&win.state.storyPlayback.pendingMap){
         const allow=win.state.storyPlayback.pendingMap;
         if(spot.name!==allow){if(typeof win.toast==='function')win.toast(`请先点击「${allow}」`);return;}
@@ -118,7 +131,6 @@ function boot(win,doc){
     win._mapLockInstalled=true;
   }
 
-  /* ===== 手机数据注入 system ===== */
   function buildPhoneContext(){
     try{
       const p=getPhoneData();
@@ -157,7 +169,6 @@ function boot(win,doc){
     }catch(e){return '';}
   }
 
-  /* ===== 解析 AI 输出的特殊标记 ===== */
   function parseSpecialMarkers(text){
     const RE=/\[(朋友圈|消息)[:：]([^\]]+)\]/g;
     const actions=[];
@@ -192,29 +203,15 @@ function boot(win,doc){
       }
     }
     localStorage.setItem('sft_phone_v1',JSON.stringify(p));
-    try{const f=doc.getElementById('phoneFrame');if(f&&f.contentWindow&&f.contentWindow.phoneRefresh)f.contentWindow.phoneRefresh();}catch(e){}
   }
 
-  /* ===== 核心 hook ===== */
   function hookCore(){
-    const origHandleAction=win.handleAction;
-    win.handleAction=function(action,el){
-      if(action==='open-phone'){
-        doc.getElementById('phoneOverlay').hidden=false;
-        const f=doc.getElementById('phoneFrame');
-        if(f&&f.contentWindow&&f.contentWindow.phoneRefresh)f.contentWindow.phoneRefresh();
-        return;
-      }
-      if(action==='close-phone'){doc.getElementById('phoneOverlay').hidden=true;return;}
-      return origHandleAction.call(this,action,el);
-    };
-
     const origRenderScene=win.renderScene;
     win.renderScene=function(){
       const mapBtn=doc.querySelector('[data-action="open-map"]');
       if(mapBtn)mapBtn.parentElement.style.display=isStoryMode()?'none':'';
       if(isStoryMode()&&typeof win.renderStoryScene==='function'){
-        win.renderStoryScene();syncStateToParent();return;
+        win.renderStoryScene();return;
       }
       return origRenderScene.call(this);
     };
@@ -234,9 +231,6 @@ function boot(win,doc){
         <div class="menu-grid">${menuList.map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div>
         <div class="actions"><button class="primary-btn" data-action="close-panel">继续剧情</button></div>`;
     };
-
-    const origPersist=win.persist;
-    win.persist=function(immediate){syncStateToParent();return origPersist.call(this,immediate);};
 
     if(typeof win.buildSystem==='function'){
       const origBuild=win.buildSystem;
@@ -268,18 +262,12 @@ function boot(win,doc){
         return clean;
       };
     }
-
-    if(win.state&&win.state.settings&&win.state.settings.enableMVU===undefined){
-      win.state.settings.enableMVU=false;
-    }
-
     if(typeof win.handleMapSpotClick==='function')installMapLock();
   }
 
   function injectMVUToggle(){
     const status=doc.getElementById('apiStatus');
-    if(!status)return;
-    if(doc.getElementById('mvuToggleRow'))return;
+    if(!status||doc.getElementById('mvuToggleRow'))return;
     const actionsDiv=status.parentElement;
     if(!actionsDiv||!actionsDiv.parentNode)return;
     const checked=win.state.settings.enableMVU?'checked':'';
@@ -293,33 +281,19 @@ function boot(win,doc){
     });
   }
 
-  win.parent.startStoryById=function(storyId){
-    if(typeof win.startStoryById==='function')win.startStoryById(storyId);
-  };
+  win.parent.startStoryById=function(storyId){ if(typeof win.startStoryById==='function')win.startStoryById(storyId); };
   win.parent.closePhoneOverlay=function(){const ov=doc.getElementById('phoneOverlay');if(ov)ov.hidden=true;};
   win.parent.renderMainScene=function(){if(typeof win.renderScene==='function')win.renderScene();};
-  win.parent.onMeetupAccepted=function(meetup){
-    if(typeof win.toast==='function')win.toast(`约见已确认：${meetup.location}`);
-    if(isStoryMode())return;
-    installMapLock();
-  };
-  win.parent.onMeetupCancelled=function(){
-    if(typeof win.toast==='function')win.toast('约见已取消');
-  };
+  win.parent.onMeetupAccepted=function(meetup){ if(typeof win.toast==='function')win.toast(`约见已确认：${meetup.location}`); };
+  win.parent.onMeetupCancelled=function(){ if(typeof win.toast==='function')win.toast('约见已取消'); };
 
   whenReady(()=>{
     installPhoneUI();
     hookCore();
-    injectScript('./story-engine.js',()=>console.log('[启动器] story-engine.js 已加载'));
-    injectScript('./js/mvu.js',()=>console.log('[启动器] mvu.js 已加载'));
-    syncStateToParent();
-    setInterval(syncStateToParent,3000);
+    injectScript('./story-engine.js');
+    injectScript('./js/mvu.js');
     if(typeof win.renderScene==='function')win.renderScene();
-    
-    // 【新增】巡逻机制：每秒钟检查一次，如果手机按钮被原版逻辑覆盖了，就立刻补回去
-    setInterval(() => {
-      installPhoneUI();
-    }, 1000);
+    setInterval(installPhoneUI, 200);
   });
 }
 </script>
