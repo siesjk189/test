@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.3…</div>
+<div id="boot">正在加载 V1.2…</div>
 <script>
 'use strict';
 const frame=document.getElementById('legacy');
@@ -28,7 +28,7 @@ frame.addEventListener('load',()=>{
 });
 
 function boot(win,doc){
-  const ready=()=>win.state&&win.renderScene;
+  const ready=()=>typeof win.renderScene==='function';
   const whenReady=(fn)=>{
     if(ready())return fn();
     let n=0;
@@ -77,8 +77,40 @@ function boot(win,doc){
               c.portraitUrl = url;
             }
           });
-          const payload = { characters: win.state.characters, player: win.state.player, api: win.state.api, mvu: win.state.mvu, settings: win.state.settings };
-          f.contentWindow.eval(`if(window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
+          
+          // [修复] 提取最新的手机数据，随 payload 一起发送给 iframe
+          const phoneData = getPhoneData();
+          const payload = { 
+            characters: win.state.characters, 
+            player: win.state.player, 
+            api: win.state.api, 
+            mvu: win.state.mvu, 
+            settings: win.state.settings,
+            contacts: phoneData.contacts || [],
+            chats: phoneData.chats || {},
+            moments: phoneData.moments || [],
+            relations: phoneData.relations || {},
+            activeMeetup: phoneData.activeMeetup || null
+          };
+          
+          // [修复] 强行覆盖 iframe 内部数据并重绘，解决界面不同步问题
+          const jsCode = `
+            try {
+              if (window.receiveData) window.receiveData(${JSON.stringify(payload)});
+              const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
+              if (window.state) {
+                window.state.contacts = p.contacts || [];
+                window.state.chats = p.chats || {};
+                window.state.moments = p.moments || [];
+              }
+              if (typeof window.renderChatList === 'function') window.renderChatList();
+              else if (typeof window.renderContacts === 'function') window.renderContacts();
+              else if (typeof window.render === 'function') window.render();
+              else if (typeof window.refresh === 'function') window.refresh();
+              else if (typeof window.updateUI === 'function') window.updateUI();
+            } catch(e) { console.warn('同步数据异常', e); }
+          `;
+          f.contentWindow.eval(jsCode);
         } catch(err) { console.warn('同步失败', err); }
       }
       return;
@@ -97,9 +129,6 @@ function boot(win,doc){
         }
 
         // 2) 游戏主存档
-        //    legacy.html 中的 STORE 是顶层 const，不会挂到 window 上，
-        //    因此不能直接用 win.STORE；用 win.eval 在 iframe 内部作用域读取，
-        //    并保留一个兜底键名，确保一定能删掉存档。
         let storeKey = '';
         try { storeKey = win.eval('typeof STORE === "string" ? STORE : ""'); } catch (err) {}
         if (!storeKey) storeKey = 'yueying-visual-novel-v16';
@@ -137,22 +166,34 @@ function boot(win,doc){
     doc.body.appendChild(s);
   }
 
-  // 4. 拦截场景渲染（只负责检测加好友，不破坏原版函数）
+  // 4. 拦截场景渲染
   function hookScene(){
     const origRenderScene = win.renderScene;
     win.renderScene = function() {
       if(win.state && win.state.story && win.state.story.length > 0) {
         const current = win.state.story[win.state.cursor];
+        
+        // [修复] 获取秦梧联系方式时，直接向正文插入一句旁白，不再使用 toast 弹窗
         if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
           const p = getPhoneData();
           p.contacts = p.contacts || [];
           if (!p.contacts.includes('qinwu')) {
             p.contacts.push('qinwu');
             localStorage.setItem('sft_phone_v1', JSON.stringify(p));
-            if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
+            
+            // 检查并插入旁白
+            if (!win.state.story.some(s => s.id === 'notify_qinwu_contact')) {
+              win.state.story.splice(win.state.cursor + 1, 0, {
+                id: 'notify_qinwu_contact',
+                speaker: '旁白',
+                text: '【获得秦梧的联系方式】'
+              });
+              if (typeof win.persist === 'function') win.persist();
+            }
           }
         }
       }
+      
       const mapBtn = doc.querySelector('[data-action="open-map"]');
       if(mapBtn) mapBtn.parentElement.style.display = isStoryMode() ? 'none' : '';
       
@@ -330,7 +371,7 @@ function boot(win,doc){
 
     injectScript('./story-engine.js');
     injectScript('./js/mvu.js');
-    console.log('[启动器] V3.3 注入成功');
+    console.log('[启动器] V1.2 注入成功');
   });
 }
 </script>
