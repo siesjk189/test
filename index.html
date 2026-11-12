@@ -39,39 +39,41 @@ function boot(win,doc){
     if(!doc.getElementById('phoneOverlay')){
       const ov=doc.createElement('div');ov.id='phoneOverlay';ov.hidden=true;
       ov.style.cssText='position:fixed;inset:0;z-index:9997;background:#111;display:flex;align-items:center;justify-content:center;';
-      // 【关键修复】给 iframe 加上时间戳，强制突破手机浏览器缓存
+      // 缓存时间戳，防止手机浏览器死缓存
       ov.innerHTML='<iframe id="phoneFrame" src="./phone.html?v='+Date.now()+'" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
       doc.body.appendChild(ov);
     }
   }
 
-  // 【关键修复】拦截点击，并主动把数据塞进 iframe 里
+  // 【核心修复】直接 Eval 注入，强行突破所有浏览器的跨域限制
   doc.addEventListener('click', (e) => {
     const target = e.target.closest('[data-action="open-phone"]');
     if (target) {
       e.preventDefault();e.stopPropagation();
       doc.getElementById('phoneOverlay').hidden = false;
       const f = doc.getElementById('phoneFrame');
-      // 强行推送数据给手机端，绕过跨域限制
-      if (f && f.contentWindow && f.contentWindow.receiveData) {
-        // 补充头像数据
-        const imgs = win.state.images || [];
-        (win.state.characters || []).forEach(c => {
-          if(!c.portraitUrl) {
-            let url = '';
-            if(c.portraitId) { const img = imgs.find(i=>i.id===c.portraitId); if(img) url = img.url; }
-            if(!url) { const list = imgs.filter(i=>i.character===c.name&&(i.builtIn||i.enabled!==false)); if(list.length) url = list[0].url; }
-            c.portraitUrl = url;
-          }
-        });
-        // 将核心状态传给手机
-        f.contentWindow.receiveData({
-          characters: win.state.characters,
-          player: win.state.player,
-          api: win.state.api,
-          mvu: win.state.mvu,
-          settings: win.state.settings
-        });
+      if (f && f.contentWindow) {
+        try {
+          // 准备头像数据
+          const imgs = win.state.images || [];
+          (win.state.characters || []).forEach(c => {
+            if(!c.portraitUrl) {
+              let url = '';
+              if(c.portraitId) { const img = imgs.find(i=>i.id===c.portraitId); if(img) url = img.url; }
+              if(!url) { const list = imgs.filter(i=>i.character===c.name&&(i.builtIn||i.enabled!==false)); if(list.length) url = list[0].url; }
+              c.portraitUrl = url;
+            }
+          });
+          const payload = {
+            characters: win.state.characters,
+            player: win.state.player,
+            api: win.state.api,
+            mvu: win.state.mvu,
+            settings: win.state.settings
+          };
+          // 暴力注入，同源下 100% 成功
+          f.contentWindow.eval(`if(window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
+        } catch(err) { console.warn('同步失败', err); }
       }
     }
   }, true);
@@ -170,11 +172,11 @@ function boot(win,doc){
   }
 
   function parseSpecialMarkers(text){
-    const RE=/\[(朋友圈|消息)[:：]([^\]]+)\]/g;
+    const RE=/\[(朋友圈|消息|加好友)[:：]([^\]]+)\]/g;
     const actions=[];
     const clean=text.replace(RE,(all,type,body)=>{
       const parts=body.split('|').map(s=>s.trim());
-      if(parts.length>=2)actions.push({type,parts});
+      if(parts.length>=1)actions.push({type,parts});
       return '';
     }).trim();
     return {clean,actions};
@@ -184,6 +186,19 @@ function boot(win,doc){
     const p=getPhoneData();
     const chars=win.state.characters||[];
     for(const act of actions){
+      if(act.type==='加好友'){
+        const charName=act.parts[0];
+        const c=chars.find(x=>x.name===charName);
+        if(c){
+          p.contacts=p.contacts||[];
+          if(!p.contacts.includes(String(c.id))){
+            p.contacts.push(String(c.id));
+            if(typeof win.toast==='function')win.toast(`（${charName} 加你为好友了）`);
+          }
+        }
+        continue;
+      }
+      if(act.parts.length<2) continue;
       const [charName,content]=act.parts;
       const c=chars.find(x=>x.name===charName);
       if(!c)continue;
@@ -208,6 +223,18 @@ function boot(win,doc){
   function hookCore(){
     const origRenderScene=win.renderScene;
     win.renderScene=function(){
+      // 拦截默认开场剧情：给秦梧加好友
+      const current = win.state.story[win.state.cursor];
+      if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
+        const p = getPhoneData();
+        p.contacts = p.contacts || [];
+        if (!p.contacts.includes('qinwu')) {
+          p.contacts.push('qinwu');
+          localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+          if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
+        }
+      }
+
       const mapBtn=doc.querySelector('[data-action="open-map"]');
       if(mapBtn)mapBtn.parentElement.style.display=isStoryMode()?'none':'';
       if(isStoryMode()&&typeof win.renderStoryScene==='function'){
@@ -239,7 +266,17 @@ function boot(win,doc){
         const phoneCtx=buildPhoneContext();
         let prefix='';
         if(phoneCtx)prefix+=`\n【手机端上下文】\n${phoneCtx}\n`;
-        prefix+='\n【剧情中如果需要角色自发行动，请使用以下标记（不显示给玩家）】\n[朋友圈:角色名|内容]  表示该角色发了一条朋友圈\n[消息:角色名|内容]    表示该角色私聊玩家发了消息\n';
+        
+        prefix += '\n【剧情中角色自发行动标记（不显示给玩家）】\n';
+        prefix += '[朋友圈:角色名|内容]  表示该角色发了一条朋友圈\n';
+        prefix += '[消息:角色名|内容]    表示该角色私聊玩家发了消息\n';
+        prefix += '\n【关于加好友】\n';
+        if (win.state.settings.enableMVU) {
+          prefix += '如果玩家在线下请求加某个角色好友，或某角色想主动加玩家好友，请根据该角色的 MVU 好感度和人设判断。好感度高或热情的人设更容易同意/主动。如果同意，请输出 [加好友:角色名] 。\n';
+        } else {
+          prefix += '如果玩家在线下请求加某个角色好友，或某角色想主动加玩家好友，请根据人设和记忆判断。热情的人设更容易同意/主动。如果同意，请输出 [加好友:角色名] 。\n';
+        }
+
         if(win.state.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
         return prefix+base;
       };

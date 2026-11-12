@@ -178,22 +178,18 @@ html,body{height:100%;width:100%;background:#111;overflow:hidden;color:var(--tex
 const PKEY='sft_phone_v1',MANIFEST_KEY='sft_phone_manifest_cache',BUILTIN_KEY='sft_phone_builtin_materials';
 const STORY_KEY=(id)=>'sft_phone_story_'+id;
 let P=loadPhone();
-function defaultPhone(){return{chats:{},moments:[],mode:'ai',activeStoryId:null,userProfile:{avatar:'',chatBg:'',momentsCover:''},materialOverrides:{},activeMeetup:null,pendingInvites:[],relations:{}};}
-function loadPhone(){try{const o=JSON.parse(localStorage.getItem(PKEY))||{};const base=defaultPhone();return Object.assign(base,o,{userProfile:Object.assign(base.userProfile,o.userProfile||{}),materialOverrides:o.materialOverrides||{},relations:o.relations||{},pendingInvites:o.pendingInvites||[],moments:o.moments||[],chats:o.chats||{}});}catch(e){return defaultPhone();}}
+function defaultPhone(){return{chats:{},moments:[],mode:'ai',activeStoryId:null,userProfile:{avatar:'',chatBg:'',momentsCover:''},materialOverrides:{},activeMeetup:null,pendingInvites:[],relations:{},contacts:[]};}
+function loadPhone(){try{const o=JSON.parse(localStorage.getItem(PKEY))||{};const base=defaultPhone();return Object.assign(base,o,{userProfile:Object.assign(base.userProfile,o.userProfile||{}),materialOverrides:o.materialOverrides||{},relations:o.relations||{},pendingInvites:o.pendingInvites||[],moments:o.moments||[],chats:o.chats||{},contacts:o.contacts||[]});}catch(e){return defaultPhone();}}
 function savePhone(){try{localStorage.setItem(PKEY,JSON.stringify(P));}catch(e){}}
 
 let MANIFEST=[],BUILTIN_MATS=[];
 async function loadManifest(){try{const c=JSON.parse(localStorage.getItem(MANIFEST_KEY)||'null');if(c)MANIFEST=c;}catch(e){}try{const r=await fetch('./stories/manifest.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();let arr=Array.isArray(j)?j:(j.stories||[]);arr=arr.map((s,i)=>typeof s==='string'?{id:'s'+(i+1),title:s,file:'./stories/'+s+'.txt'}:s);MANIFEST=arr;localStorage.setItem(MANIFEST_KEY,JSON.stringify(MANIFEST));}catch(e){console.warn('[phone] 剧本清单加载失败：',e);}}
 async function loadBuiltinMaterials(){try{const c=JSON.parse(localStorage.getItem(BUILTIN_KEY)||'null');if(c)BUILTIN_MATS=c;}catch(e){}try{const r=await fetch('./materials/builtin.json',{cache:'no-cache'});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();BUILTIN_MATS=Array.isArray(j)?j:(j.materials||[]);localStorage.setItem(BUILTIN_KEY,JSON.stringify(BUILTIN_MATS));}catch(e){console.warn('[phone] 内置素材加载失败：',e);}}
 
-/* =========================================================
- * 【核心修复】数据同步机制：不再依赖 window.parent
- * ========================================================= */
 let LOCAL_STATE = { characters:[], player:{}, api:{}, mvu:{}, settings:{} };
 window.receiveData = function(data) {
   LOCAL_STATE = data;
   applyTheme();
-  // 如果当前在消息页，刷新一下角色列表
   if(curTab === 'msg') renderMsgList();
 };
 
@@ -207,9 +203,6 @@ function applyTheme(){const theme=(LOCAL_STATE.settings&&LOCAL_STATE.settings.th
 function mvuCurrentDay(){const m=parentMvu();const d=(m['基础信息']&&m['基础信息']['日期'])||{};return (Number(d['年'])||3000)*360+(Number(d['月'])||1)*30+(Number(d['日'])||1);}
 function mvuCharFav(n){const m=parentMvu();const f=m['好感度']||{};return Number(f[n])||0;}
 
-/* =========================================================
- * 【核心修复】点击事件委托（解决 QQ 浏览器点不动的问题）
- * ========================================================= */
 document.addEventListener('click', e => {
   const target = e.target.closest('[data-action]');
   if(!target) return;
@@ -262,9 +255,6 @@ document.addEventListener('click', e => {
   }
 });
 
-/* =========================================================
- * 业务逻辑
- * ========================================================= */
 let curTab='msg';
 function switchTab(tab,el){
   curTab=tab;
@@ -289,8 +279,16 @@ function toast(msg){const el=document.createElement('div');el.style.cssText='pos
 
 function renderMsgList(){
   const chars=parentChars();const box=document.getElementById('p-msg');
-  if(!chars.length){box.innerHTML='<div class="empty">正在同步角色数据，或主界面暂无角色...</div>';return;}
-  box.innerHTML=chars.map(c=>{
+  // 只显示 contacts 里的角色，如果 contacts 为空但 P.chats 有数据，也可以兼容显示
+  const myContacts = P.contacts || [];
+  const validChars = chars.filter(c => myContacts.includes(String(c.id)) || (P.chats[c.id] && P.chats[c.id].length > 0));
+  
+  if(!validChars.length){
+    box.innerHTML='<div class="empty">还没有获得任何角色的联系方式...</div>';
+    return;
+  }
+  
+  box.innerHTML=validChars.map(c=>{
     const list=P.chats[c.id]||[];const last=list.length?list[list.length-1]:null;
     const sub=last?(last.c||'').slice(0,22):'还没有聊过';
     const hasPending=(P.pendingInvites||[]).find(inv=>String(inv.charId)===String(c.id)&&inv.from==='char');
@@ -519,7 +517,6 @@ function deleteRelation(a,b){if(P.relations[a])delete P.relations[a][b];if(P.rel
 function cancelMeetup(){P.activeMeetup=null;savePhone();renderMode();try{window.parent.onMeetupCancelled&&window.parent.onMeetupCancelled();}catch(e){}toast('已取消约见');}
 
 (async function init(){
-  // 初始加载时，尝试同步一次数据（以防万一）
   try {
     if(window.parent && window.parent.state) {
        window.receiveData(window.parent.state);
