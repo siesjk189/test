@@ -1592,7 +1592,35 @@ function stopDrag(){
  document.removeEventListener('touchmove', onDrag);
  document.removeEventListener('touchend', stopDrag);
 }
-function handleMapSpotClick(spot) {
+  function handleMapSpotClick(spot) {
+  // ★ 核心拦截：如果当前有约见，必须先去约定地点
+  const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
+  if (p.activeMeetup) {
+    const meetLoc = p.activeMeetup.location;
+    const spotName = spot.name;
+    
+    // 模糊匹配地点名，防止细节偏差
+    let isMatch = false;
+    if (spotName === meetLoc) isMatch = true;
+    else if (spotName === '学校' && ['教室','操场','学校寝室','学校道路','学校走廊','食堂'].includes(meetLoc)) isMatch = true;
+    else if (spotName === '居住区' && ['家','常去小区','其他小区','客厅','卧室'].includes(meetLoc)) isMatch = true;
+    else if (spotName.includes(meetLoc) || meetLoc.includes(spotName)) isMatch = true;
+    
+    if (!isMatch) {
+      // 如果不匹配，弹窗拦住！
+      showConfirm('有约在先', `你当前与 ${p.activeMeetup.charName} 约在「${meetLoc}」见面，还是先去那里吧。`, ()=>{});
+      return; // 终止执行，不关闭地图，不生成剧情
+    } else {
+      // 如果目的地对了，清除约见状态，顺利放行
+      p.activeMeetup = null;
+      localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+      if (typeof toast === 'function') toast(`已到达约定地点：${meetLoc}`);
+    }
+  }
+
+  // ==========================================
+  // 以下是原本的大地图点击逻辑（不用动它）
+  // ==========================================
   const name = spot.name;
   if(name === '学校') {
     showMapSubMenu('学校', [
@@ -1617,7 +1645,7 @@ function handleMapSpotClick(spot) {
       }
     }
   }
-}
+  }
 let currentSubPage = 0;
 function showMapSubMenu(title, options) {
   let html = `<div class="sub-menu-list">`;
