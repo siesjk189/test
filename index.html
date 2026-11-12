@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 V1.2 稳定版…</div>
 <script>
 'use strict';
 
@@ -93,6 +93,7 @@ function boot(win,doc){
           const phoneData = getPhoneData();
           const expectedLen = (phoneData.contacts || []).length;
           
+          // 发现联系人数量发生变化，强制重载 iframe 读取最新本地数据
           if (f.dataset.contactsLen !== String(expectedLen)) {
             f.dataset.contactsLen = String(expectedLen);
             try { f.contentWindow.location.reload(); } catch(err) { f.src = './phone.html?v=' + Date.now(); }
@@ -114,192 +115,10 @@ function boot(win,doc){
             player: win.state.player, 
             api: win.state.api, 
             mvu: win.state.mvu, 
-            settings: win.state.settings,
-            contacts: phoneData.contacts || [],
-            chats: phoneData.chats || {},
-            moments: phoneData.moments || [],
-            relations: phoneData.relations || {},
-            activeMeetup: phoneData.activeMeetup || null
+            settings: win.state.settings
           };
           
-          // ============ 核心注入代码：代理跨域、增加单角色设置功能 ============
-          const jsCode = `
-            try {
-              if (window.receiveData) window.receiveData(${JSON.stringify(payload)});
-              const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
-              if (window.state) {
-                window.state.contacts = p.contacts || [];
-                window.state.chats = p.chats || {};
-                window.state.moments = p.moments || [];
-              }
-              if (typeof window.renderChatList === 'function') window.renderChatList();
-              else if (typeof window.renderContacts === 'function') window.renderContacts();
-              else if (typeof window.render === 'function') window.render();
-              else if (typeof window.refresh === 'function') window.refresh();
-              else if (typeof window.updateUI === 'function') window.updateUI();
-
-              // 1. 解决 API 跨域发送无回复的问题：接管 iframe 内的 fetch
-              if (!window.__fetch_hooked) {
-                window.__fetch_hooked = true;
-                const rawFetch = window.fetch;
-                window.fetch = async function(url, opts) {
-                  if (typeof url === 'string' && (url.includes('/chat/completions') || url.includes('/v1/'))) {
-                    try {
-                      const res = await window.parent.proxyFetch(url, opts);
-                      return {
-                        ok: res.ok,
-                        status: res.status,
-                        json: async () => { const t = await res.text(); return JSON.parse(t); },
-                        text: async () => res.text()
-                      };
-                    } catch(e) {
-                      alert('发送失败(网络或被跨域拦截): ' + e.message + '\\n请检查接口地址和密钥是否正确。');
-                      throw e;
-                    }
-                  }
-                  return rawFetch.apply(this, arguments);
-                };
-              }
-
-              // 2. 动态注入设置按钮和自定义样式
-              if (!window.__settings_injected) {
-                window.__settings_injected = true;
-                window.__allChars = ${JSON.stringify(win.state.characters)};
-                
-                const injectStyle = document.createElement('style');
-                injectStyle.innerHTML = '.cp-settings-btn { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.05); border-radius: 50%; color: #333; font-size: 16px; cursor: pointer; z-index: 9999; } ' +
-                  '.cp-settings-modal { position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-family: sans-serif; } ' +
-                  '.cp-settings-content { background: #fff; border-radius: 12px; padding: 20px; width: 85%; max-width: 320px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.2); } ' +
-                  '.cp-settings-content h3 { margin: 0 0 15px; font-size: 16px; text-align: center; } ' +
-                  '.cp-settings-content label { display: block; margin: 10px 0 5px; font-size: 13px; color: #666; } ' +
-                  '.cp-settings-content input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; } ' +
-                  '.cp-settings-actions { display: flex; gap: 10px; margin-top: 20px; } ' +
-                  '.cp-settings-actions button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; } ' +
-                  '.cp-settings-actions .cp-save { background: #007bff; color: #fff; } ' +
-                  '.cp-settings-actions .cp-cancel { background: #eee; color: #333; }';
-                document.head.appendChild(injectStyle);
-
-                window.getActiveChar = function() {
-                  const bodyText = document.body.innerText;
-                  for (let c of window.__allChars) {
-                    if (bodyText.includes(c.name) && (document.querySelector('textarea') || document.querySelector('input'))) {
-                      return c;
-                    }
-                  }
-                  return null;
-                };
-
-                window.applyCpSettings = function(charId) {
-                  const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
-                  const settings = (p.chatSettings || {})[charId] || {};
-                  
-                  let bgStyle = document.getElementById('cp-custom-bg-style');
-                  if (settings.bg) {
-                    if (!bgStyle) {
-                      bgStyle = document.createElement('style');
-                      bgStyle.id = 'cp-custom-bg-style';
-                      document.head.appendChild(bgStyle);
-                    }
-                    // 利用 !important 提高层级，覆盖原有的全局背景
-                    bgStyle.innerHTML = "body, #app, .phone-container, .chat-bg, .chat-container, .message-list { background-image: url(" + settings.bg + ") !important; background-size: cover !important; background-position: center !important; background-color: transparent !important; }";
-                  } else {
-                    if (bgStyle) bgStyle.remove(); // 移除后恢复系统原本的全局背景
-                  }
-                  
-                  if (settings.avatar) {
-                    const header = document.querySelector('header') || document.querySelector('.header') || document.querySelector('.chat-header');
-                    if (header) {
-                      const imgs = header.querySelectorAll('img');
-                      for (let img of imgs) img.src = settings.avatar;
-                    }
-                    const msgImgs = document.querySelectorAll('.message-list img, .chat-item img');
-                    for (let img of msgImgs) img.src = settings.avatar;
-                  }
-                };
-
-                window.openCpSettings = function(charId) {
-                  const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
-                  const char = window.__allChars.find(c => String(c.id) === String(charId)) || { name: '未知角色' };
-                  const current = (p.chatSettings || {})[charId] || { avatar: '', bg: '' };
-                  
-                  const modal = document.createElement('div');
-                  modal.className = 'cp-settings-modal';
-                  modal.innerHTML = '<div class="cp-settings-content">' +
-                    '<h3>设置：' + char.name + '</h3>' +
-                    '<label>自定义头像 URL (留空恢复默认)</label>' +
-                    '<input type="text" id="cp-input-avatar" value="' + (current.avatar || '') + '" placeholder="https://...">' +
-                    '<label>自定义聊天背景 URL (留空使用全局背景)</label>' +
-                    '<input type="text" id="cp-input-bg" value="' + (current.bg || '') + '" placeholder="https://...">' +
-                    '<div class="cp-settings-actions">' +
-                      '<button class="cp-cancel" id="cp-cancel-btn">取消</button>' +
-                      '<button class="cp-save" id="cp-save-btn">保存并应用</button>' +
-                    '</div>' +
-                  '</div>';
-                  document.body.appendChild(modal);
-                  
-                  modal.querySelector('#cp-cancel-btn').onclick = function() { modal.remove(); };
-                  modal.querySelector('#cp-save-btn').onclick = function() {
-                    const newAvatar = modal.querySelector('#cp-input-avatar').value.trim();
-                    const newBg = modal.querySelector('#cp-input-bg').value.trim();
-                    
-                    const data = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
-                    if (!data.chatSettings) data.chatSettings = {};
-                    data.chatSettings[charId] = { avatar: newAvatar, bg: newBg };
-                    localStorage.setItem('sft_phone_v1', JSON.stringify(data));
-                    
-                    modal.remove();
-                    window.applyCpSettings(charId);
-                  };
-                };
-
-                setInterval(function() {
-                  const char = window.getActiveChar();
-                  if (!char) {
-                    const oldBtn = document.getElementById('cp-settings-btn');
-                    if (oldBtn) oldBtn.remove();
-                    return;
-                  }
-                  
-                  window.applyCpSettings(char.id);
-                  
-                  if (document.getElementById('cp-settings-btn')) return;
-                  
-                  // 寻找含有“约见”的节点，或者找顶部栏
-                  let targetParent = null;
-                  const allElements = document.querySelectorAll('div, span, p, header, h1, h2');
-                  for (let el of allElements) {
-                    if (el.children.length === 0 && el.textContent.includes('约见')) {
-                      targetParent = el.parentNode;
-                      break;
-                    }
-                  }
-                  if (!targetParent) {
-                    targetParent = document.querySelector('header') || document.querySelector('.header') || document.querySelector('.chat-header');
-                  }
-                  
-                  const btn = document.createElement('div');
-                  btn.id = 'cp-settings-btn';
-                  btn.className = 'cp-settings-btn';
-                  btn.innerHTML = '⚙️';
-                  btn.title = '修改该角色头像/背景';
-                  btn.onclick = function(e) { e.stopPropagation(); window.openCpSettings(char.id); };
-                  
-                  if (targetParent) {
-                    const pos = getComputedStyle(targetParent).position;
-                    if (pos !== 'absolute' && pos !== 'relative' && pos !== 'fixed') targetParent.style.position = 'relative';
-                    targetParent.appendChild(btn);
-                  } else {
-                    // 兜底：直接在右上角悬浮
-                    btn.style.position = 'fixed';
-                    btn.style.top = '15px';
-                    btn.style.right = '15px';
-                    document.body.appendChild(btn);
-                  }
-                }, 800);
-              }
-            } catch(e) { console.warn('同步数据异常', e); }
-          `;
-          f.contentWindow.eval(jsCode);
+          f.contentWindow.eval(`if (window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
         } catch(err) { console.warn('同步失败', err); }
       }
       return;

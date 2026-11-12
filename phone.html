@@ -156,7 +156,11 @@ html,body{height:100%;width:100%;background:#111;overflow:hidden;color:var(--tex
   <div id="chat-nav">
     <div class="back" onclick="closeChat()">‹</div>
     <div class="title" id="chat-title">聊天</div>
-    <div class="actions"><button onclick="openInviteDialog()">约见</button></div>
+    <div class="actions">
+      <button onclick="openInviteDialog()">约见</button>
+      <!-- 新增的齿轮设置按钮 -->
+      <button onclick="openCharSettings()" style="padding:6px 8px;" title="单独设置角色头像与背景">⚙️</button>
+    </div>
   </div>
   <div id="chat-area"></div>
   <div id="chat-bar">
@@ -178,8 +182,27 @@ html,body{height:100%;width:100%;background:#111;overflow:hidden;color:var(--tex
 const PKEY='sft_phone_v1',MANIFEST_KEY='sft_phone_manifest_cache',BUILTIN_KEY='sft_phone_builtin_materials';
 const STORY_KEY=(id)=>'sft_phone_story_'+id;
 let P=loadPhone();
-function defaultPhone(){return{chats:{},moments:[],mode:'ai',activeStoryId:null,userProfile:{avatar:'',chatBg:'',momentsCover:''},materialOverrides:{},activeMeetup:null,pendingInvites:[],relations:{},contacts:[]};}
-function loadPhone(){try{const o=JSON.parse(localStorage.getItem(PKEY))||{};const base=defaultPhone();return Object.assign(base,o,{userProfile:Object.assign(base.userProfile,o.userProfile||{}),materialOverrides:o.materialOverrides||{},relations:o.relations||{},pendingInvites:o.pendingInvites||[],moments:o.moments||[],chats:o.chats||{},contacts:o.contacts||[]});}catch(e){return defaultPhone();}}
+
+function defaultPhone(){
+  return{
+    chats:{},moments:[],mode:'ai',activeStoryId:null,
+    userProfile:{avatar:'',chatBg:'',momentsCover:''},
+    charSettings:{}, // 新增：单角色独立设置
+    materialOverrides:{},activeMeetup:null,pendingInvites:[],relations:{},contacts:[]
+  };
+}
+function loadPhone(){
+  try{
+    const o=JSON.parse(localStorage.getItem(PKEY))||{};
+    const base=defaultPhone();
+    return Object.assign(base,o,{
+      userProfile:Object.assign(base.userProfile,o.userProfile||{}),
+      charSettings:o.charSettings||{}, // 合并单角色设置
+      materialOverrides:o.materialOverrides||{},
+      relations:o.relations||{},pendingInvites:o.pendingInvites||[],moments:o.moments||[],chats:o.chats||{},contacts:o.contacts||[]
+    });
+  }catch(e){return defaultPhone();}
+}
 function savePhone(){try{localStorage.setItem(PKEY,JSON.stringify(P));}catch(e){}}
 
 let MANIFEST=[],BUILTIN_MATS=[];
@@ -208,51 +231,25 @@ document.addEventListener('click', e => {
   if(!target) return;
   const action = target.getAttribute('data-action');
   
-  if(action === 'switch-tab') {
-    switchTab(target.getAttribute('data-tab'), target);
-  }
-  else if(action === 'pick-story') {
-    pickStory(target.getAttribute('data-id'));
-  }
-  else if(action === 'open-chat') {
-    openChat(target.getAttribute('data-id'));
-  }
-  else if(action === 'set-mat-mode') {
-    setMatMode(target.getAttribute('data-key'), target.getAttribute('data-mode'));
-  }
-  else if(action === 'del-relation') {
-    deleteRelation(target.getAttribute('data-a'), target.getAttribute('data-b'));
-  }
-  else if(action === 'respond-invite') {
-    respondInvite(target.getAttribute('data-id'), target.getAttribute('data-agree')==='true');
-  }
-  else if(action === 'del-moment') {
-    doDeleteMoment(target.getAttribute('data-id'));
-  }
-  else if(action === 'reply-moment') {
-    momentReply(target.getAttribute('data-id'));
-  }
-  else if(action === 'cancel-meetup') {
-    cancelMeetup();
-  }
+  if(action === 'switch-tab') { switchTab(target.getAttribute('data-tab'), target); }
+  else if(action === 'pick-story') { pickStory(target.getAttribute('data-id')); }
+  else if(action === 'open-chat') { openChat(target.getAttribute('data-id')); }
+  else if(action === 'set-mat-mode') { setMatMode(target.getAttribute('data-key'), target.getAttribute('data-mode')); }
+  else if(action === 'del-relation') { deleteRelation(target.getAttribute('data-a'), target.getAttribute('data-b')); }
+  else if(action === 'respond-invite') { respondInvite(target.getAttribute('data-id'), target.getAttribute('data-agree')==='true'); }
+  else if(action === 'del-moment') { doDeleteMoment(target.getAttribute('data-id')); }
+  else if(action === 'reply-moment') { momentReply(target.getAttribute('data-id')); }
+  else if(action === 'cancel-meetup') { cancelMeetup(); }
   else if(action === 'open-modal') {
     const type = target.getAttribute('data-type');
     if(type === 'add-relation') addRelationDialog();
     if(type === 'post-moment') postMoment();
     if(type === 'close-modal') closeModal();
   }
-  else if(action === 'submit-invite') {
-    submitInvite();
-  }
-  else if(action === 'submit-relation') {
-    submitRelation();
-  }
-  else if(action === 'submit-moment') {
-    submitMoment();
-  }
-  else if(action === 'submit-comment') {
-    submitComment(target.getAttribute('data-id'));
-  }
+  else if(action === 'submit-invite') { submitInvite(); }
+  else if(action === 'submit-relation') { submitRelation(); }
+  else if(action === 'submit-moment') { submitMoment(); }
+  else if(action === 'submit-comment') { submitComment(target.getAttribute('data-id')); }
 });
 
 let curTab='msg';
@@ -279,7 +276,6 @@ function toast(msg){const el=document.createElement('div');el.style.cssText='pos
 
 function renderMsgList(){
   const chars=parentChars();const box=document.getElementById('p-msg');
-  // 只显示 contacts 里的角色，如果 contacts 为空但 P.chats 有数据，也可以兼容显示
   const myContacts = P.contacts || [];
   const validChars = chars.filter(c => myContacts.includes(String(c.id)) || (P.chats[c.id] && P.chats[c.id].length > 0));
   
@@ -293,7 +289,11 @@ function renderMsgList(){
     const sub=last?(last.c||'').slice(0,22):'还没有聊过';
     const hasPending=(P.pendingInvites||[]).find(inv=>String(inv.charId)===String(c.id)&&inv.from==='char');
     const badge=hasPending?' <span class="tag">约见</span>':'';
-    return `<div class="cell" data-action="open-chat" data-id="${c.id}"><img class="avatar" src="${escAttr(c.portraitUrl||c.a||'')}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="cell-body"><div class="cell-name">${escHtml(c.name||'')}${badge}</div><div class="cell-sub">${escHtml(sub)}</div></div></div>`;
+    
+    // 优先使用单角色头像
+    const charAvatar = (P.charSettings[c.id] && P.charSettings[c.id].avatar) || c.portraitUrl || c.a || '';
+    
+    return `<div class="cell" data-action="open-chat" data-id="${c.id}"><img class="avatar" src="${escAttr(charAvatar)}" onerror="this.style.background='var(--surface-2)';this.removeAttribute('src')"><div class="cell-body"><div class="cell-name">${escHtml(c.name||'')}${badge}</div><div class="cell-sub">${escHtml(sub)}</div></div></div>`;
   }).join('');
 }
 
@@ -302,7 +302,12 @@ function openChat(id){
   curChatId=id;const c=parentChars().find(x=>String(x.id)===String(id));
   document.getElementById('chat-title').textContent=c?(c.name||''):'聊天';
   const chatEl=document.getElementById('chat');
-  chatEl.style.backgroundImage=P.userProfile.chatBg?`url('${escAttr(P.userProfile.chatBg)}')`:'none';
+  
+  // 优先使用单角色自定义背景，如果没有则使用全局聊天背景
+  const charBg = P.charSettings && P.charSettings[id] ? P.charSettings[id].bg : '';
+  const bgUrl = charBg || P.userProfile.chatBg;
+  chatEl.style.backgroundImage = bgUrl ? `url('${escAttr(bgUrl)}')` : 'none';
+  
   chatEl.style.display='flex';renderChat();
 }
 function closeChat(){document.getElementById('chat').style.display='none';curChatId=null;}
@@ -310,7 +315,12 @@ function closeChat(){document.getElementById('chat').style.display='none';curCha
 function renderChat(){
   const box=document.getElementById('chat-area');const list=P.chats[curChatId]||[];
   const c=parentChars().find(x=>String(x.id)===String(curChatId));
-  const avatarC=c?(c.portraitUrl||c.a||''):'';const avatarMe=P.userProfile.avatar||'';
+  
+  // 优先使用单角色自定义头像
+  const charAvatar = (P.charSettings[curChatId] && P.charSettings[curChatId].avatar) || (c ? (c.portraitUrl||c.a||'') : '');
+  const avatarC = charAvatar;
+  const avatarMe = P.userProfile.avatar||'';
+  
   let invitesHtml='';
   const pendingForThis=(P.pendingInvites||[]).filter(inv=>String(inv.charId)===String(curChatId)&&inv.from==='char');
   for(const inv of pendingForThis){
@@ -331,6 +341,39 @@ async function sendChat(){
   await callAI();
 }
 
+// 齿轮设置相关逻辑
+function openCharSettings(){
+  if(!curChatId)return;
+  const c=parentChars().find(x=>String(x.id)===String(curChatId))||{};
+  const settings=(P.charSettings && P.charSettings[curChatId]) || {avatar:'',bg:''};
+  
+  const html = `
+    <div class="field"><label>自定义头像 URL (留空恢复默认)</label><input id="cs-avatar" value="${escAttr(settings.avatar)}" placeholder="https://..."></div>
+    <div class="field"><label>自定义聊天背景 URL (留空使用全局背景)</label><input id="cs-bg" value="${escAttr(settings.bg)}" placeholder="https://..."></div>
+  `;
+  const footer = `
+    <button class="secondary" data-action="open-modal" data-type="close-modal">取消</button>
+    <button class="primary" onclick="saveCharSettings()">保存并应用</button>
+  `;
+  openModal(`单独设置：${c.name||''}`, html, footer);
+}
+
+function saveCharSettings(){
+  if(!curChatId)return;
+  const avatar = document.getElementById('cs-avatar').value.trim();
+  const bg = document.getElementById('cs-bg').value.trim();
+  
+  if(!P.charSettings) P.charSettings={};
+  P.charSettings[curChatId] = { avatar, bg };
+  savePhone();
+  closeModal();
+  toast('已保存设置');
+  
+  // 立即重新渲染聊天以更新头像背景
+  openChat(curChatId); 
+}
+
+// 核心请求逻辑优化：支持父级代理，明确报错
 async function callAI(){
   const api=parentApi();
   if(!api.endpoint||!api.key){(P.chats[curChatId]=P.chats[curChatId]||[]).push({r:'sys',c:'（尚未配置 API）',t:Date.now()});savePhone();renderChat();return;}
@@ -352,7 +395,27 @@ ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location
 
   try{
     const base=api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');
-    const res=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},body:JSON.stringify({model:api.model||'gpt-4o-mini',messages:[{role:'system',content:sys},...hist]})});
+    const url=base+'/chat/completions';
+    const opts={
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},
+      body:JSON.stringify({model:api.model||'gpt-4o-mini',messages:[{role:'system',content:sys},...hist]})
+    };
+    
+    let res;
+    // 智能判断：如果存在父页面代理服务，则走代理，彻底解决跨域
+    if (window.parent && typeof window.parent.proxyFetch === 'function') {
+      res = await window.parent.proxyFetch(url, opts);
+    } else {
+      res = await fetch(url, opts);
+    }
+    
+    if (!res.ok) {
+       let errMsg = res.status;
+       try { const errData = await res.json(); errMsg = errData.error?.message || errData.message || errMsg; } catch(e){}
+       throw new Error('接口报错 ' + errMsg);
+    }
+
     const data=await res.json();
     const reply=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
     const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');
@@ -365,7 +428,7 @@ ${P.activeMeetup?`【当前约见】你和玩家约在 ${P.activeMeetup.location
   }catch(e){
     const idx=P.chats[curChatId].findIndex(m=>m.r==='sys'&&m.c==='（对方正在输入…）');
     if(idx>=0)P.chats[curChatId].splice(idx,1);
-    P.chats[curChatId].push({r:'sys',c:'（回复失败：'+e.message+'）',t:Date.now()});
+    P.chats[curChatId].push({r:'sys',c:'（回复失败：'+(e.message||'网络异常')+'）',t:Date.now()});
     savePhone();renderChat();
   }
 }
