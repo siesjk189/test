@@ -1,0 +1,6 @@
+{
+  "stories": [
+    { "id": "world1", "title": "平行世界一", "file": "./stories/world1.txt" },
+    { "id": "world2", "title": "平行世界二", "file": "./stories/world2.txt" }
+  ]
+}
