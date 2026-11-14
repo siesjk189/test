@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 V1.2 稳定版…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -104,6 +104,7 @@ function boot(win,doc){
     if (!s) return;
     if (!s.mvu || typeof s.mvu !== 'object') s.mvu = {};
     
+    // 确保时间数据结构存在并且格式正确
     if (!s.mvu['时间']) s.mvu['时间'] = { "年": 2026, "月": 1, "日": 1, "时": 8, "分": 0 };
     else {
       s.mvu['时间'] = { 
@@ -127,6 +128,7 @@ function boot(win,doc){
       }
     });
 
+    // 清理掉不属于当前角色的好感度
     Object.keys(s.mvu['好感度']).forEach(name => {
       if (!chars.some(c => c.name === name)) delete s.mvu['好感度'][name];
     });
@@ -134,6 +136,7 @@ function boot(win,doc){
     if (!s.mvu['任务'] || !Array.isArray(s.mvu['任务'])) s.mvu['任务'] = [];
     if (!s.mvu['特殊剧情点'] || !Array.isArray(s.mvu['特殊剧情点'])) s.mvu['特殊剧情点'] = [];
     
+    // 彻底清除旧垃圾
     const allowedKeys = ['时间', '好感度', '任务', '特殊剧情点'];
     Object.keys(s.mvu).forEach(k => {
       if (!allowedKeys.includes(k)) delete s.mvu[k];
@@ -320,112 +323,37 @@ ${friendsInfo}
     }
   }
 
+  // ★ 核心：完全尊重原版解析，只在外面套“防偷懒”和“防群加”
   function hookAPI(){
-    if(typeof win.buildSystem==='function'){
-      const origBuild=win.buildSystem;
-      win.buildSystem=function(){
-        const s = getState();
-        cleanAndInitMvu();
-        
-        let base = origBuild.call(this);
-        
-        if (s.settings && s.settings.enableMVU) {
-          const timeInfo = s.mvu['时间'] || {年:2026, 月:1, 日:1, 时:8, 分:0};
-          const aff = s.mvu['好感度'] || {};
-          const quests = s.mvu['任务'] || [];
-          const events = s.mvu['特殊剧情点'] || [];
-          
-          const mvuPrompt = `
-\n【极其重要的世界变量系统 (MVU)】
-你是一个互动小说，并负责维护后台数据。你**必须**在每次输出正文后，严格附带最新状态的变量！
-【当前世界状态】
-- 时间：${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}
-- 骆云影入学时间：2026年1月7日
-- 角色好感度：${JSON.stringify(aff)}
-- 当前任务：${JSON.stringify(quests)}
-- 特殊剧情点：${JSON.stringify(events)}
-
-【强制推演规则（必须执行）】
-1. **时间流逝**：每次生成剧情，你必须在脑海中模拟时间流逝（过了几分钟？几小时？或者过夜了？）。然后在 <UpdateVariable> 里更新最新的“年、月、日、时、分”。哪怕只过去2分钟，也要更新！
-2. **好感度变动**：如果角色因为玩家的话感到高兴、感动、脸红、或者主动帮忙，你**必须**增加对应角色的好感度（增加 1~5 点）！如果让角色生气，则扣减！绝对不能让好感度一直不变！
-3. **任务规则**：如果剧情中提到了作业、约定，你**必须**将其加入“任务”数组中（如："完成作业"）。
-4. **加好友**：如果玩家在线下和角色互加了微信，你除了在文本里写，必须输出 \`[加好友:角色名]\`，每次只输出当前正在聊天的角色！
-
-【严格输出格式（不要漏）】
-在你输出完所有正文剧情后，**必须另起一行**，使用如下格式输出改变（只输出变化的项）：
-<UpdateVariable>
-{
-  "时间": { "年": 2026, "月": 1, "日": 2, "时": 14, "分": 30 },
-  "好感度": { "秦梧": 20 },
-  "任务": ["完成高一三班作业"],
-  "特殊剧情点": []
-}
-</UpdateVariable>
-`;
-          return base + mvuPrompt + '\n\n请严格续写剧情，并务必在结尾带上 <UpdateVariable> 块：';
-        }
-        return base;
-      };
-    }
-
     if(typeof win.callChat==='function'){
       const origChat=win.callChat;
       win.callChat=async function(messages){
         const s = getState();
-        let finalMessages = messages;
-
-        if (s.settings && s.settings.enableMVU) {
-          const lastUserMsg = messages[messages.length - 1];
-          if (lastUserMsg && lastUserMsg.role === 'user') {
-             const userText = lastUserMsg.content;
-             finalMessages = [
-               ...messages.slice(0, -1),
-               { role: 'system', content: `【系统强制判定】玩家刚刚输入：“${userText}”。请务必在结尾更新 <UpdateVariable>！检查：过去了几分钟/几小时？玩家的话让谁高兴了，必须要加好感度！如果这涉及到互加好友，请务必输出 [加好友:角色名]！` },
-               lastUserMsg
-             ];
-          }
+        
+        // 1. 记录旧时间
+        let oldTime = null;
+        if (s.settings && s.settings.enableMVU && s.mvu && s.mvu['时间']) {
+           oldTime = JSON.parse(JSON.stringify(s.mvu['时间']));
         }
 
-        const reply=await origChat.call(this, finalMessages);
+        // 2. 调用原版（原版内部会把正则解析和 mvu.js 的修改全做完）
+        const reply=await origChat.call(this, messages);
         let out=reply;
         
-        if(s.settings && s.settings.enableMVU && typeof win.mvuParseFromReply==='function' && typeof win.mvuApplyPatch==='function'){
-          try {
-            const oldTasks = JSON.parse(JSON.stringify(s.mvu['任务'] || []));
-            
-            // 备份旧时间，用于对比
-            const oldTime = JSON.parse(JSON.stringify(s.mvu['时间'] || {}));
-            
-            const patches=win.mvuParseFromReply(out);
-            if(patches && patches.length) {
-              win.mvuApplyPatch(patches);
-            }
-            if(typeof win.mvuStripVariableBlocks==='function'){
-              out=win.mvuStripVariableBlocks(out);
-            }
-            
-            const newTasks = s.mvu['任务'] || [];
-            const addedTasks = newTasks.filter(t => !oldTasks.includes(t));
-            if (addedTasks.length > 0 && typeof win.toast === 'function') {
-              addedTasks.forEach(t => win.toast(`📜 获得新任务：${t}`));
-            }
-            
-            // ★ 绝对兜底：如果 AI 没动时间，代码强制推进
+        // 3. 强制推进时间（如果原版没推进）
+        if(s.settings && s.settings.enableMVU && oldTime && s.mvu && s.mvu['时间']){
+            const newTime = s.mvu['时间'];
             let timeChanged = false;
-            const newTime = s.mvu['时间'] || {};
             if (oldTime.日 !== newTime.日 || oldTime.时 !== newTime.时 || oldTime.分 !== newTime.分) {
                timeChanged = true;
             }
             
             const lastUserText = messages[messages.length-1]?.content || '';
             
-            // 如果玩家明确说了“第二天”，强制加一天
             if (/第二天|次日|过了一天|明天/.test(lastUserText)) {
                newTime.日 = (Number(newTime.日)||1) + 1;
                timeChanged = true;
-            } 
-            // 如果 AI 没推演，强制加 2 分钟
-            else if (!timeChanged) {
+            } else if (!timeChanged) {
                newTime.分 = (Number(newTime.分)||0) + 2;
                if (newTime.分 >= 60) {
                    newTime.分 -= 60;
@@ -433,25 +361,16 @@ ${friendsInfo}
                }
             }
             s.mvu['时间'] = newTime;
-            
             if (typeof win.persist === 'function') win.persist();
-            
-          } catch(e) { console.warn('[MVU] 解析失败', e); }
         }
         
-        out = out.replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '').trim();
-        
-        const {clean,actions} = parseSpecialMarkers(out);
-        if(actions.length) executeMarkerActions(actions);
-        
-        // 语义兜底：检测文本里有没有“加微信/加好友”等字眼
+        // 4. 语义兜底：如果 AI 提到了加微信，但没发指令，补上！
         const p = getPhoneData();
         p.contacts = p.contacts || [];
         let changed = false;
-        const keywords = /加好友|加微信|加个微信|联系方式|名片|扫一扫|加一下好友|同意下好友|扫码/;
+        const keywords = /加好友|加微信|加个微信|联系方式|名片|扫一扫|加一下好友|同意下好友/;
         
         if (keywords.test(out)) {
-             // 查找上下文出现的角色，默认只找 AI 说话的 speaker
              const currentSpeaker = out.match(/^([^：:\n]{1,30})[：:]/m);
              let targetChar = null;
              
@@ -459,7 +378,6 @@ ${friendsInfo}
                  targetChar = s.characters.find(c => c.name === currentSpeaker[1].trim());
              }
              
-             // 如果没找到 speaker，就找玩家上一句提到的名字
              if (!targetChar) {
                 const lastUserMsg = messages.slice(-1)[0]?.content || '';
                 targetChar = s.characters.find(c => lastUserMsg.includes(c.name) || out.includes(c.name));
@@ -476,7 +394,7 @@ ${friendsInfo}
             localStorage.setItem('sft_phone_v1', JSON.stringify(p));
         }
 
-        return clean;
+        return out;
       };
     }
   }
@@ -659,7 +577,7 @@ ${friendsInfo}
     const s=getState();const chars=s.characters||[];
     for(const act of actions){
       if(act.type==='加好友'){
-        // 只取第一个名字，防止群加
+        // ★ 精准狙击：不管 AI 输出了多少人，强行按逗号分割，只取第一个！
         const charName=act.parts[0].split(/[，,、]/)[0].trim(); 
         const c=chars.find(x=>x.name===charName);
         if(c){
