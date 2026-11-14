@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 V3.2 …</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -110,25 +110,36 @@ function boot(win,doc){
     observer.observe(doc.body, { childList: true, subtree: true });
   }
 
-  // ★ 严格按照原版结构重构：基础信息 -> 日期
+  // ★ 极简干净的时间初始化：只处理有没有数据。如果带有 3000 的脏数据，直接干掉！
   function cleanAndInitMvu() {
     const s = getState();
     if (!s) return;
     if (!s.mvu || typeof s.mvu !== 'object') s.mvu = {};
     
-    // 兼容原版读取 mvu['基础信息']['日期']
     if (!s.mvu['基础信息']) s.mvu['基础信息'] = {};
+    
+    // 如果日期不存在，直接给 2026
     if (!s.mvu['基础信息']['日期']) {
       s.mvu['基础信息']['日期'] = { "年": 2026, "月": 1, "日": 1, "时": 8, "分": 0 };
     } else {
       const d = s.mvu['基础信息']['日期'];
+      let y = Number(d['年']);
+      // 如果年份异常（比如旧代码写死的3000），强制重置为 2026
+      if (isNaN(y) || y > 2050 || y < 2000) y = 2026;
+      
       s.mvu['基础信息']['日期'] = { 
-        "年": Number(d['年']) || 2026, 
+        "年": y, 
         "月": Number(d['月']) || 1, 
         "日": Number(d['日']) || 1,
         "时": d['时'] !== undefined ? Number(d['时']) : 8,
         "分": d['分'] !== undefined ? Number(d['分']) : 0
       };
+    }
+
+    // 清洗基础信息里可能混入的其他垃圾
+    if (s.mvu['基础信息']) {
+      const dateObj = s.mvu['基础信息']['日期'];
+      s.mvu['基础信息'] = { "日期": dateObj };
     }
 
     if (!s.mvu['好感度'] || typeof s.mvu['好感度'] !== 'object') s.mvu['好感度'] = {};
@@ -156,6 +167,7 @@ function boot(win,doc){
       };
     }
     
+    // 顶层严格清洗
     const allowedKeys = ['基础信息', '好感度', '任务', '特殊剧情点', '固定日程'];
     Object.keys(s.mvu).forEach(k => {
       if (!allowedKeys.includes(k)) delete s.mvu[k];
@@ -165,11 +177,11 @@ function boot(win,doc){
   async function recalculateMVU() {
     const s = getState();
     if (!s.api.endpoint || !s.api.key) { 
-      if(typeof win.toast === 'function') win.toast('请先配置 API', 'error'); 
+      alert('请先在 API 配置中填写接口和密钥');
       return; 
     }
     if (!s.story || s.story.length === 0) { 
-      if(typeof win.toast === 'function') win.toast('没有剧情可以修正', 'error');
+      alert('没有剧情可以修正');
       return; 
     }
 
@@ -200,7 +212,7 @@ ${recentStory}
 【修正规则】
 1. 【时间推演】：当前系统时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${timeInfo.分}。请结合最新剧情的时间跨度，推演出当前该有的准确时间。如果剧情明显已经到了下午或晚上，时间必须更新。
 2. 【任务生命周期】：检查现有的“任务”。如果时间跨度已经很大（比如早上接的去食堂任务，现在已经是下午），或者剧情里已经做完了，必须将其从“任务”数组中删除，放入“特殊剧情点”作为记录。
-3. 【固定日程触发】：检查“固定日程”。如果当前时间已经到达或超过了日程里的日期（比如到达了1月7日），必须把该日程事件加入到“任务”中。
+3. 【固定日程触发】：检查“固定日程”。如果当前时间已经到达或超过了日程里的日期，必须把该日程事件加入到“任务”中。
 
 【输出格式】
 请先输出你的思考过程，然后输出修正后的完整变量（只包含要修改的项，请严格输出）：
@@ -251,7 +263,7 @@ ${recentStory}
           const patches = win.mvuParseFromReply(replyText);
           if (patches && patches.length) win.mvuApplyPatch(patches);
           
-          if(typeof win.toast === 'function') win.toast(`变量修正完成！`);
+          alert('变量修正完成！');
           
           const body = doc.getElementById('mvuDataBody');
           if (body && body.style.display === 'block') {
@@ -260,7 +272,7 @@ ${recentStory}
       }
     } catch(e) {
       if (logDiv) logDiv.textContent = '修正失败：' + e.message;
-      if(typeof win.toast === 'function') win.toast('修正失败：' + e.message, 'error');
+      alert('修正失败：' + e.message);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '一键根据剧情修正变量'; }
     }
@@ -310,7 +322,7 @@ ${recentStory}
                 <label>读取最近剧情条数</label>
                 <input type="number" id="mvuHistoryLimit" value="200">
               </div>
-              <button id="mvuRecalcBtn" class="primary-btn" style="margin-top:8px;" onclick="window.recalcMVUWrapper()">一键根据剧情修正变量</button>
+              <button id="mvuRecalcBtn" class="primary-btn" style="margin-top:8px;">一键根据剧情修正变量</button>
               
               <div id="mvuThoughtLog" style="display:none; margin-top:12px; padding:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); font-size:13px; color:var(--muted); line-height:1.6; max-height:200px; overflow-y:auto;"></div>
             </div>
@@ -319,7 +331,17 @@ ${recentStory}
       `;
       
       actionsDiv.parentNode.insertBefore(row, actionsDiv);
-      window.recalcMVUWrapper = recalculateMVU;
+      
+      const recalcBtn = doc.getElementById('mvuRecalcBtn');
+      if (recalcBtn) {
+        // 移除所有原有的 onclick，重新绑定，确保在父窗口执行
+        recalcBtn.onclick = null;
+        recalcBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          recalculateMVU();
+        });
+      }
       
       const checkbox = doc.getElementById('mvuCheckbox');
       const header = doc.getElementById('mvuDataHeader');
