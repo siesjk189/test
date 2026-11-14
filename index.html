@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V1.3…</div>
+<div id="boot">正在加载 V3.2 稳定版…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -46,103 +46,111 @@ function boot(win,doc){
   const ready=()=>typeof win.renderScene==='function';
   const whenReady=(fn)=>{if(ready())return fn();let n=0;const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);};
 
-  // ★ 核心：向 API 面板注入 MVU 开关与变量折叠栏
-  function injectMVUToggle(){
-    const status = doc.getElementById('apiStatus');
-    if (!status || doc.getElementById('mvuToggleRow')) return;
-    
-    const actionsDiv = status.parentElement;
-    if (!actionsDiv || !actionsDiv.parentNode) return;
-    
-    const isEnabled = win.state.settings.enableMVU;
-    const checked = isEnabled ? 'checked' : '';
-    
-    const row = doc.createElement('div');
-    row.id = 'mvuToggleRow';
-    
-    // 采用随主题变化的颜色和样式
-    row.innerHTML = `
-      <div class="switch-row" style="margin-top:8px;">
-        <div class="switch-copy">
-          <strong>启用 MVU 变量同步</strong>
-          <small>开启后生成剧情会附带当前世界变量，并解析 AI 输出的 UpdateVariable 来推进数值</small>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="mvuCheckbox" ${checked}>
-          <span class="switch-ui"></span>
-        </label>
-      </div>
-      <div id="mvuDataContainer" style="margin-top:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; transition:all 0.2s;">
-        <div id="mvuDataHeader" style="padding:14px 16px; cursor:${isEnabled ? 'pointer' : 'not-allowed'}; display:flex; justify-content:space-between; align-items:center; font-weight:600; color:${isEnabled ? 'var(--accent)' : 'var(--muted)'};">
-          <span>点击查看当前变量</span>
-          <span id="mvuArrow" style="transition:transform 0.2s; font-size:12px; transform:rotate(${isEnabled ? '0deg' : '-90deg'}); opacity:${isEnabled ? '1' : '0.4'};">▼</span>
-        </div>
-        <div id="mvuDataBody" style="display:none; padding:12px; border-top:1px solid var(--line); background:var(--surface);">
-          <pre id="mvuPreContent" style="margin:0; white-space:pre-wrap; font-size:12px; color:var(--text); max-height:300px; overflow-y:auto; font-family:monospace;"></pre>
-        </div>
-      </div>
-    `;
-    
-    actionsDiv.parentNode.insertBefore(row, actionsDiv);
-    
-    const checkbox = doc.getElementById('mvuCheckbox');
-    const header = doc.getElementById('mvuDataHeader');
-    const body = doc.getElementById('mvuDataBody');
-    const arrow = doc.getElementById('mvuArrow');
-    
-    // 开关事件
-    checkbox.addEventListener('change', function(e) {
-      win.state.settings.enableMVU = e.target.checked;
-      win.persist();
-      
-      if (e.target.checked) {
-        header.style.cursor = 'pointer';
-        header.style.color = 'var(--accent)';
-        arrow.style.transform = 'rotate(0deg)';
-        arrow.style.opacity = '1';
-      } else {
-        header.style.cursor = 'not-allowed';
-        header.style.color = 'var(--muted)';
-        arrow.style.transform = 'rotate(-90deg)';
-        arrow.style.opacity = '0.4';
-        body.style.display = 'none'; // 关闭时自动折叠
-      }
-    });
-    
-    // 折叠栏点击事件
-    header.addEventListener('click', () => {
-      if (!win.state.settings.enableMVU) {
-        if(typeof win.toast === 'function') win.toast('请先开启上方 MVU 变量同步开关', 'error');
-        return;
-      }
-      
-      // 切换展开/折叠
-      const isHidden = body.style.display === 'none' || body.style.display === '';
-      if (isHidden) {
-        // 实时拉取最新的 MVU 变量
-        const mvuData = win.state.mvu || {};
-        const isEmpty = Object.keys(mvuData).length === 0;
-        const jsonText = isEmpty ? '（暂无数据，请生成一次剧情后查看）' : JSON.stringify(mvuData, null, 2);
-        doc.getElementById('mvuPreContent').textContent = jsonText;
-        
-        body.style.display = 'block';
-        arrow.style.transform = 'rotate(180deg)';
-      } else {
-        body.style.display = 'none';
-        arrow.style.transform = 'rotate(0deg)';
-      }
-    });
+  // ★ 核心修复：绕过 win.state 报错，直接去内部抓取 state
+  function getState() {
+    try { return win.eval('state'); } catch(e) { return win.state || {}; }
   }
 
-  // 劫持 renderPanel 来注入
+  // ★ 核心修复：注入 MVU 开关与折叠栏
+  function injectMVUToggle(){
+    try {
+      // 用“测试连接”按钮作为锚点，绝对能找到
+      const testBtn = doc.querySelector('button[data-action="test-api"]');
+      if (!testBtn) return;
+      if (doc.getElementById('mvuToggleRow')) return;
+
+      const actionsDiv = testBtn.parentElement;
+      if (!actionsDiv || !actionsDiv.parentNode) return;
+
+      const stateObj = getState();
+      const settings = stateObj.settings || {};
+      const isEnabled = settings.enableMVU || false;
+      const checked = isEnabled ? 'checked' : '';
+      
+      const row = doc.createElement('div');
+      row.id = 'mvuToggleRow';
+      
+      row.innerHTML = `
+        <div class="switch-row" style="margin-top:12px;">
+          <div class="switch-copy">
+            <strong>启用 MVU 变量同步</strong>
+            <small>开启后生成剧情会附带当前世界变量，并解析 AI 输出的 UpdateVariable 来推进数值</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="mvuCheckbox" ${checked}>
+            <span class="switch-ui"></span>
+          </label>
+        </div>
+        <div id="mvuDataContainer" style="margin-top:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; transition:all 0.2s;">
+          <div id="mvuDataHeader" style="padding:14px 16px; cursor:${isEnabled ? 'pointer' : 'not-allowed'}; display:flex; justify-content:space-between; align-items:center; font-weight:600; color:${isEnabled ? 'var(--accent)' : 'var(--muted)'};">
+            <span>点击查看当前变量</span>
+            <span id="mvuArrow" style="transition:transform 0.2s; font-size:12px; transform:rotate(${isEnabled ? '0deg' : '-90deg'}); opacity:${isEnabled ? '1' : '0.4'};">▼</span>
+          </div>
+          <div id="mvuDataBody" style="display:none; padding:12px; border-top:1px solid var(--line); background:var(--surface);">
+            <pre id="mvuPreContent" style="margin:0; white-space:pre-wrap; font-size:12px; color:var(--text); max-height:300px; overflow-y:auto; font-family:monospace;"></pre>
+          </div>
+        </div>
+      `;
+      
+      actionsDiv.parentNode.insertBefore(row, actionsDiv);
+      
+      const checkbox = doc.getElementById('mvuCheckbox');
+      const header = doc.getElementById('mvuDataHeader');
+      const body = doc.getElementById('mvuDataBody');
+      const arrow = doc.getElementById('mvuArrow');
+      
+      checkbox.addEventListener('change', function(e) {
+        const s = getState();
+        if (s && s.settings) {
+          s.settings.enableMVU = e.target.checked;
+          if (typeof win.persist === 'function') win.persist();
+        }
+        
+        if (e.target.checked) {
+          header.style.cursor = 'pointer';
+          header.style.color = 'var(--accent)';
+          arrow.style.transform = 'rotate(0deg)';
+          arrow.style.opacity = '1';
+        } else {
+          header.style.cursor = 'not-allowed';
+          header.style.color = 'var(--muted)';
+          arrow.style.transform = 'rotate(-90deg)';
+          arrow.style.opacity = '0.4';
+          body.style.display = 'none';
+        }
+      });
+      
+      header.addEventListener('click', () => {
+        const s = getState();
+        const enabled = s && s.settings && s.settings.enableMVU;
+        if (!enabled) {
+          if(typeof win.toast === 'function') win.toast('请先开启上方 MVU 变量同步开关', 'error');
+          return;
+        }
+        
+        const isHidden = body.style.display === 'none' || body.style.display === '';
+        if (isHidden) {
+          const mvuData = s.mvu || {};
+          const isEmpty = Object.keys(mvuData).length === 0;
+          const jsonText = isEmpty ? '（暂无数据，请生成一次剧情后查看）' : JSON.stringify(mvuData, null, 2);
+          doc.getElementById('mvuPreContent').textContent = jsonText;
+          
+          body.style.display = 'block';
+          arrow.style.transform = 'rotate(180deg)';
+        } else {
+          body.style.display = 'none';
+          arrow.style.transform = 'rotate(0deg)';
+        }
+      });
+    } catch(e) { console.warn('注入MVU失败', e); }
+  }
+
+  // 劫持 renderPanel，每次切换页面都尝试注入一次
   function setupPanelHook() {
     const origRenderPanel = win.renderPanel;
     win.renderPanel = function() {
       origRenderPanel.call(this);
-      // 当面板是 API 配置时，尝试注入
-      if (win.panel === 'api') {
-        setTimeout(injectMVUToggle, 20);
-      }
+      setTimeout(injectMVUToggle, 50);
     };
   }
 
@@ -173,8 +181,9 @@ function boot(win,doc){
             return; 
           }
 
-          const imgs = win.state.images || [];
-          (win.state.characters || []).forEach(c => {
+          const s = getState();
+          const imgs = s.images || [];
+          (s.characters || []).forEach(c => {
             if(!c.portraitUrl) {
               let url = '';
               if(c.portraitId) { const img = imgs.find(i=>i.id===c.portraitId); if(img) url = img.url; }
@@ -183,18 +192,18 @@ function boot(win,doc){
             }
           });
           
-          const recentStory = (win.state.story || []).slice(-15).map(s => `${s.speaker}：${s.text}`).join('\n');
-          const memoryContext = (win.state.memory && win.state.memory.summaries) ? win.state.memory.summaries.slice(-2).map(m => m.content).join('\n') : '';
+          const recentStory = (s.story || []).slice(-15).map(x => `${x.speaker}：${x.text}`).join('\n');
+          const memoryContext = (s.memory && s.memory.summaries) ? s.memory.summaries.slice(-2).map(m => m.content).join('\n') : '';
           
           const payload = { 
-            characters: win.state.characters, 
-            player: win.state.player, 
-            api: win.state.api, 
-            mvu: win.state.mvu, 
-            settings: win.state.settings, 
+            characters: s.characters || [], 
+            player: s.player || {}, 
+            api: s.api || {}, 
+            mvu: s.mvu || {}, 
+            settings: s.settings || {}, 
             recentStory, 
             memoryContext,
-            mapSpots: win.state.mapSpots || [] 
+            mapSpots: s.mapSpots || [] 
           };
           f.contentWindow.eval(`if (window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
         } catch(err) { console.warn('同步失败', err); }
@@ -234,17 +243,18 @@ function boot(win,doc){
   function hookScene(){
     const origRenderScene = win.renderScene;
     win.renderScene = function() {
-      if(win.state && win.state.characters){
+      const s = getState();
+      if(s && s.characters){
         const femaleIds = ['zhongyueru', 'yuanbao', 'miju'];
         const maleIds = ['qinwu', 'luoyunying', 'linyan', 'tangjiawei'];
-        win.state.characters.forEach(c=>{
+        s.characters.forEach(c=>{
           if(femaleIds.includes(c.id)||femaleIds.includes(c.name)) c.gender='女';
           if(maleIds.includes(c.id)||maleIds.includes(c.name)) c.gender='男';
         });
       }
 
-      if(win.state && win.state.story && win.state.story.length > 0) {
-        const current = win.state.story[win.state.cursor];
+      if(s && s.story && s.story.length > 0) {
+        const current = s.story[s.cursor];
         if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
           const p = getPhoneData();
           p.contacts = p.contacts || [];
@@ -252,8 +262,8 @@ function boot(win,doc){
             p.contacts.push('qinwu');
             localStorage.setItem('sft_phone_v1', JSON.stringify(p));
             if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
-            if (!win.state.story.some(s => s.id === 'notify_qinwu_contact')) {
-              win.state.story.splice(win.state.cursor + 1, 0, { id: 'notify_qinwu_contact', speaker: '旁白', text: '【获得秦梧的联系方式】' });
+            if (!s.story.some(x => x.id === 'notify_qinwu_contact')) {
+              s.story.splice(s.cursor + 1, 0, { id: 'notify_qinwu_contact', speaker: '旁白', text: '【获得秦梧的联系方式】' });
               if (typeof win.persist === 'function') win.persist();
             }
           }
@@ -268,7 +278,7 @@ function boot(win,doc){
 
   function buildPhoneContext(){
     try{
-      const p=getPhoneData();const chars=win.state.characters||[];const lines=[];lines.push('【手机私聊最近消息】');const chatLines=[];
+      const p=getPhoneData();const s=getState();const chars=s.characters||[];const lines=[];lines.push('【手机私聊最近消息】');const chatLines=[];
       for(const cid in (p.chats||{})){
         const c=chars.find(x=>String(x.id)===String(cid));if(!c)continue;
         const list=(p.chats[cid]||[]).filter(m=>m.r!=='sys').slice(-5);if(!list.length)continue;
@@ -304,7 +314,7 @@ function boot(win,doc){
 
   function executeMarkerActions(actions){
     const p=getPhoneData();
-    const chars=win.state.characters||[];
+    const s=getState();const chars=s.characters||[];
     for(const act of actions){
       if(act.type==='加好友'){
         const charName=act.parts[0];
@@ -351,7 +361,8 @@ function boot(win,doc){
         prefix += '你不仅是在生成文字剧情，你还在操控角色们的“手机系统”。如果发生了特殊事件、角色内心产生波动，请务必使用以下指令（绝对不要在正文中显示）：\n';
         prefix += '[朋友圈:角色名|内容] 发朋友圈\n[消息:角色名|内容] 发私聊消息\n[加好友:角色名] 加好友\n';
         prefix += '【警告】必须使用半角英文方括号 `[]`。\n';
-        if(win.state.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
+        const s=getState();
+        if(s.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
         return prefix+base;
       };
     }
@@ -360,11 +371,11 @@ function boot(win,doc){
       win.callChat=async function(messages){
         const reply=await origChat.call(this,messages);let out=reply;
         
-        // 过滤掉 AI 乱输出的系统标签块
         out = out.replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '');
         out = out.replace(/```[a-zA-Z]*\n[\s\S]*?```/g, ''); 
         
-        if(win.state.settings.enableMVU&&typeof win.mvuParseFromReply==='function'&&typeof win.mvuApplyPatch==='function'){
+        const s=getState();
+        if(s.settings.enableMVU&&typeof win.mvuParseFromReply==='function'&&typeof win.mvuApplyPatch==='function'){
           try{const patches=win.mvuParseFromReply(reply);if(patches&&patches.length)win.mvuApplyPatch(patches);if(typeof win.mvuStripVariableBlocks==='function')out=win.mvuStripVariableBlocks(out);}catch(e){}
         }
         
@@ -386,7 +397,7 @@ function boot(win,doc){
   whenReady(()=>{
     hookScene();
     hookAPI();
-    setupPanelHook(); // 劫持面板渲染，注入变量查看器
+    setupPanelHook();
     injectScript('./story-engine.js');
     injectScript('./js/mvu.js');
   });
