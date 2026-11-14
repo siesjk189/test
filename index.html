@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2…</div>
+<div id="boot">正在加载 V3.2 稳定版…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -26,10 +26,21 @@ window.proxyFetch = async function(url, opts) {
     try {
       let fetchUrl = url;
       if (p) fetchUrl = p.includes('?') || p.includes('=') ? p + encodeURIComponent(url) : p + '?url=' + encodeURIComponent(url);
-      const res = await fetch(fetchUrl, opts);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
+      const res = await fetch(fetchUrl, { ...opts, signal: controller.signal });
+      clearTimeout(timeoutId);
+      
       if (!res.ok && p !== "") continue;
       const text = await res.text();
-      return { ok: res.ok, status: res.status, json: async () => JSON.parse(text), text: async () => text };
+      return {
+         ok: res.ok,
+         status: res.status,
+         json: async () => JSON.parse(text),
+         text: async () => text
+      };
     } catch (e) { lastErr = e; }
   }
   throw lastErr;
@@ -69,15 +80,15 @@ function boot(win,doc){
         
         const row = doc.createElement('div');
         row.id = 'setupMvuRow';
-        row.style.cssText = 'margin-top: 24px; padding: 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius);';
+        row.className = 'switch-row';
+        row.style.marginTop = '20px';
+        
         row.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <strong style="font-size:15px;">启用 MVU 变量系统（推荐）</strong>
-              <div style="font-size:12px; color:var(--muted); margin-top:4px; line-height:1.5;">开启后，AI 会自动推演时间、好感度，并在触发任务时弹出提示。</div>
-            </div>
-            <label class="switch"><input type="checkbox" id="setupMvuCheckbox" ${isMvuOn ? 'checked' : ''}><span class="switch-ui"></span></label>
+          <div class="switch-copy">
+            <strong>启用 MVU 变量系统</strong>
+            <small>开启后，AI 会自动推演时间、好感度，并触发任务。</small>
           </div>
+          <label class="switch"><input type="checkbox" id="setupMvuCheckbox" ${isMvuOn ? 'checked' : ''}><span class="switch-ui"></span></label>
         `;
         
         const actionsDiv = setupApiContent.querySelector('.actions');
@@ -99,19 +110,24 @@ function boot(win,doc){
     observer.observe(doc.body, { childList: true, subtree: true });
   }
 
+  // ★ 严格按照原版结构重构：基础信息 -> 日期
   function cleanAndInitMvu() {
     const s = getState();
     if (!s) return;
     if (!s.mvu || typeof s.mvu !== 'object') s.mvu = {};
     
-    if (!s.mvu['时间']) s.mvu['时间'] = { "年": 2026, "月": 1, "日": 1, "时": 8, "分": 0 };
-    else {
-      s.mvu['时间'] = { 
-        "年": Number(s.mvu['时间']['年']) || 2026, 
-        "月": Number(s.mvu['时间']['月']) || 1, 
-        "日": Number(s.mvu['时间']['日']) || 1,
-        "时": s.mvu['时间']['时'] !== undefined ? Number(s.mvu['时间']['时']) : 8,
-        "分": s.mvu['时间']['分'] !== undefined ? Number(s.mvu['时间']['分']) : 0
+    // 兼容原版读取 mvu['基础信息']['日期']
+    if (!s.mvu['基础信息']) s.mvu['基础信息'] = {};
+    if (!s.mvu['基础信息']['日期']) {
+      s.mvu['基础信息']['日期'] = { "年": 2026, "月": 1, "日": 1, "时": 8, "分": 0 };
+    } else {
+      const d = s.mvu['基础信息']['日期'];
+      s.mvu['基础信息']['日期'] = { 
+        "年": Number(d['年']) || 2026, 
+        "月": Number(d['月']) || 1, 
+        "日": Number(d['日']) || 1,
+        "时": d['时'] !== undefined ? Number(d['时']) : 8,
+        "分": d['分'] !== undefined ? Number(d['分']) : 0
       };
     }
 
@@ -134,7 +150,13 @@ function boot(win,doc){
     if (!s.mvu['任务'] || !Array.isArray(s.mvu['任务'])) s.mvu['任务'] = [];
     if (!s.mvu['特殊剧情点'] || !Array.isArray(s.mvu['特殊剧情点'])) s.mvu['特殊剧情点'] = [];
     
-    const allowedKeys = ['时间', '好感度', '任务', '特殊剧情点'];
+    if (!s.mvu['固定日程'] || typeof s.mvu['固定日程'] !== 'object') {
+      s.mvu['固定日程'] = {
+        "2026-01-07": "骆云影转学来到高一三班"
+      };
+    }
+    
+    const allowedKeys = ['基础信息', '好感度', '任务', '特殊剧情点', '固定日程'];
     Object.keys(s.mvu).forEach(k => {
       if (!allowedKeys.includes(k)) delete s.mvu[k];
     });
@@ -142,8 +164,14 @@ function boot(win,doc){
 
   async function recalculateMVU() {
     const s = getState();
-    if (!s.api.endpoint || !s.api.key) { win.toast('请先配置 API', 'error'); return; }
-    if (!s.story || s.story.length === 0) { win.toast('没有剧情可以修正', 'error'); return; }
+    if (!s.api.endpoint || !s.api.key) { 
+      if(typeof win.toast === 'function') win.toast('请先配置 API', 'error'); 
+      return; 
+    }
+    if (!s.story || s.story.length === 0) { 
+      if(typeof win.toast === 'function') win.toast('没有剧情可以修正', 'error');
+      return; 
+    }
 
     const limitInput = doc.getElementById('mvuHistoryLimit');
     const limit = limitInput ? parseInt(limitInput.value) || 200 : 200;
@@ -151,37 +179,42 @@ function boot(win,doc){
     const btn = doc.getElementById('mvuRecalcBtn');
     const logDiv = doc.getElementById('mvuThoughtLog');
     
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ 正在深度分析剧情...'; }
-    if (logDiv) { logDiv.style.display = 'block'; logDiv.textContent = 'AI 正在翻阅这 ' + limit + ' 条剧情，推算时间与任务，请稍候...'; }
+    if (btn) { btn.disabled = true; btn.textContent = '正在分析中...'; }
+    if (logDiv) { 
+      logDiv.style.display = 'block'; 
+      logDiv.textContent = '正在向 AI 发送最近 ' + limit + ' 条剧情数据，请等待（最长60秒）...'; 
+    }
 
     const recentStory = s.story.slice(-limit).map(x => `${x.speaker}：${x.text}`).join('\n');
     const currentMvu = JSON.stringify(s.mvu, null, 2);
-    const timeInfo = s.mvu['时间'];
+    const timeInfo = s.mvu['基础信息']['日期'];
 
     const prompt = `你是一个专业的互动小说逻辑审查员，现在请根据最近的【大量剧情】，检查并修正后台变量。
 
-【当前真实的系统变量（请严格基于这个时间点往后推）】
+【当前真实的系统变量】
 ${currentMvu}
 
 【最近剧情（读取了最近 ${limit} 条，最底部是最新发生的剧情）】
 ${recentStory}
 
 【修正规则】
-1. 【最高优先级时间】：当前系统时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${timeInfo.分}。仔细看最新的剧情，根据剧情里流逝的时间，把你认为正确的最新时间写在变量里。比如剧情里已经“放学”、“天黑”，时间必须推演到正确的时间（晚上）。
-2. 【检查任务】：如果任务在最新剧情中已经完成了，必须将它从“任务”数组中删除，并加入到“特殊剧情点”中记录。
-3. 【检查好感度】：剧情中是否有让角色感到开心、感动或生气的事？适当增减1-3点好感度。
+1. 【时间推演】：当前系统时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${timeInfo.分}。请结合最新剧情的时间跨度，推演出当前该有的准确时间。如果剧情明显已经到了下午或晚上，时间必须更新。
+2. 【任务生命周期】：检查现有的“任务”。如果时间跨度已经很大（比如早上接的去食堂任务，现在已经是下午），或者剧情里已经做完了，必须将其从“任务”数组中删除，放入“特殊剧情点”作为记录。
+3. 【固定日程触发】：检查“固定日程”。如果当前时间已经到达或超过了日程里的日期（比如到达了1月7日），必须把该日程事件加入到“任务”中。
 
 【输出格式】
 请先输出你的思考过程，然后输出修正后的完整变量（只包含要修改的项，请严格输出）：
 <Thought>
-在这里写你的分析过程。比如：当前时间是8:00，要在12:00去食堂。但最新剧情已经放学了，所以时间必须修改为下课的时间，如 17:30。此外，去食堂的任务已经完成，将其删除。
+（在这里写你的分析过程。例如：玩家进行了一下午的剧情，现在时间应该是 17:00。早上接的去食堂任务已经因为时间过期而失效，应当删除。同时检查日历发现今天还没到1月7日，日程暂不触发。）
 </Thought>
 <UpdateVariable>
 {
-  "时间": { "年": 2026, "月": 1, "日": 1, "时": 17, "分": 30 },
-  "好感度": { "秦梧": 20 },
+  "基础信息": {
+    "日期": { "年": ${timeInfo.年}, "月": ${timeInfo.月}, "日": ${timeInfo.日}, "时": 17, "分": 0 }
+  },
+  "好感度": { "秦梧": 22 },
   "任务": [], 
-  "特殊剧情点": ["放学了"]
+  "特殊剧情点": ["去食堂吃饭"]
 }
 </UpdateVariable>`;
 
@@ -198,13 +231,17 @@ ${recentStory}
       if (window.parent && typeof window.parent.proxyFetch === 'function') {
         res = await window.parent.proxyFetch(url, opts);
       } else {
-        res = await fetch(url, opts);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        res = await fetch(url, {...opts, signal: controller.signal});
+        clearTimeout(timeoutId);
       }
+      
+      if (!res.ok) throw new Error(`接口报错 HTTP ${res.status}`);
       
       const data = await res.json();
       const replyText = data.choices[0].message.content;
       
-      // 提取思考过程展示给用户
       const thoughtMatch = replyText.match(/<Thought>([\s\S]*?)<\/Thought>/i);
       if (logDiv) {
         logDiv.textContent = thoughtMatch ? thoughtMatch[1].trim() : 'AI 没有输出思考过程，已直接执行修正。';
@@ -214,7 +251,7 @@ ${recentStory}
           const patches = win.mvuParseFromReply(replyText);
           if (patches && patches.length) win.mvuApplyPatch(patches);
           
-          win.toast(`✅ 变量修正完成！`);
+          if(typeof win.toast === 'function') win.toast(`变量修正完成！`);
           
           const body = doc.getElementById('mvuDataBody');
           if (body && body.style.display === 'block') {
@@ -223,9 +260,9 @@ ${recentStory}
       }
     } catch(e) {
       if (logDiv) logDiv.textContent = '修正失败：' + e.message;
-      win.toast('修正失败：' + e.message, 'error');
+      if(typeof win.toast === 'function') win.toast('修正失败：' + e.message, 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '🔄 一键根据剧情修正变量'; }
+      if (btn) { btn.disabled = false; btn.textContent = '一键根据剧情修正变量'; }
     }
   }
 
@@ -249,7 +286,7 @@ ${recentStory}
       row.id = 'mvuToggleRow';
       
       row.innerHTML = `
-        <div class="switch-row" style="margin-top:12px;">
+        <div class="switch-row" style="margin-top:20px;">
           <div class="switch-copy">
             <strong>启用 MVU 变量同步</strong>
             <small>开启后生成剧情会附带当前世界变量，并解析 AI 输出的 UpdateVariable 来推进数值</small>
@@ -259,37 +296,34 @@ ${recentStory}
             <span class="switch-ui"></span>
           </label>
         </div>
-        <div id="mvuDataContainer" style="margin-top:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; transition:all 0.2s;">
-          <div id="mvuDataHeader" style="padding:14px 16px; cursor:${isEnabled ? 'pointer' : 'not-allowed'}; display:flex; justify-content:space-between; align-items:center; font-weight:600; color:${isEnabled ? 'var(--accent)' : 'var(--muted)'};">
-            <span>点击查看当前变量</span>
-            <span id="mvuArrow" style="transition:transform 0.2s; font-size:12px; transform:rotate(${isEnabled ? '0deg' : '-90deg'}); opacity:${isEnabled ? '1' : '0.4'};">▼</span>
-          </div>
-          <div id="mvuDataBody" style="display:none; padding:12px; border-top:1px solid var(--line); background:var(--surface);">
-            <pre id="mvuPreContent" style="margin:0 0 12px 0; white-space:pre-wrap; font-size:12px; color:var(--text); max-height:300px; overflow-y:auto; font-family:monospace;"></pre>
+        
+        <div id="mvuDataContainer" style="margin-top:16px;">
+          <button id="mvuDataHeader" class="secondary-btn" style="width:100%; border:1px solid var(--line); background:var(--surface-2); color:${isEnabled ? 'var(--accent)' : 'var(--muted)'}; cursor:${isEnabled ? 'pointer' : 'not-allowed'};">
+            点击查看当前变量
+          </button>
+          
+          <div id="mvuDataBody" style="display:none; margin-top:12px;">
+            <pre id="mvuPreContent" style="margin:0; padding:12px; white-space:pre-wrap; font-size:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); color:var(--text); max-height:300px; overflow-y:auto; font-family:monospace;"></pre>
             
-            <div style="padding-top:12px; border-top:1px dashed var(--line);">
-              <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                <span style="font-size:13px; color:var(--muted);">读取最近</span>
-                <input type="number" id="mvuHistoryLimit" value="200" style="width:70px; height:32px; text-align:center; padding:0 4px; border:1px solid var(--line); border-radius:4px; background:var(--bg); color:var(--text); font-size:13px;">
-                <span style="font-size:13px; color:var(--muted);">条剧情修正</span>
+            <div class="form-grid" style="margin-top:16px; grid-template-columns: 1fr;">
+              <div class="field">
+                <label>读取最近剧情条数</label>
+                <input type="number" id="mvuHistoryLimit" value="200">
               </div>
-              <button id="mvuRecalcBtn" class="primary-btn" style="width:100%; height:36px; font-size:13px; border-radius:4px;" onclick="window.recalcMVUWrapper()">🔄 一键根据剧情修正变量</button>
+              <button id="mvuRecalcBtn" class="primary-btn" style="margin-top:8px;" onclick="window.recalcMVUWrapper()">一键根据剧情修正变量</button>
               
-              <!-- 思考过程展示区 -->
-              <div id="mvuThoughtLog" style="display:none; margin-top:12px; padding:10px; background:var(--bg); border:1px solid var(--line); border-radius:4px; font-size:12px; color:var(--muted); line-height:1.6; max-height:150px; overflow-y:auto;"></div>
+              <div id="mvuThoughtLog" style="display:none; margin-top:12px; padding:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); font-size:13px; color:var(--muted); line-height:1.6; max-height:200px; overflow-y:auto;"></div>
             </div>
           </div>
         </div>
       `;
       
       actionsDiv.parentNode.insertBefore(row, actionsDiv);
-      
       window.recalcMVUWrapper = recalculateMVU;
       
       const checkbox = doc.getElementById('mvuCheckbox');
       const header = doc.getElementById('mvuDataHeader');
       const body = doc.getElementById('mvuDataBody');
-      const arrow = doc.getElementById('mvuArrow');
       
       checkbox.addEventListener('change', function(e) {
         const s = getState();
@@ -301,13 +335,9 @@ ${recentStory}
         if (e.target.checked) {
           header.style.cursor = 'pointer';
           header.style.color = 'var(--accent)';
-          arrow.style.transform = 'rotate(0deg)';
-          arrow.style.opacity = '1';
         } else {
           header.style.cursor = 'not-allowed';
           header.style.color = 'var(--muted)';
-          arrow.style.transform = 'rotate(-90deg)';
-          arrow.style.opacity = '0.4';
           body.style.display = 'none';
         }
       });
@@ -323,13 +353,10 @@ ${recentStory}
         const isHidden = body.style.display === 'none' || body.style.display === '';
         if (isHidden) {
           cleanAndInitMvu();
-          const mvuData = s.mvu || {};
-          doc.getElementById('mvuPreContent').textContent = JSON.stringify(mvuData, null, 2);
+          doc.getElementById('mvuPreContent').textContent = JSON.stringify(s.mvu || {}, null, 2);
           body.style.display = 'block';
-          arrow.style.transform = 'rotate(180deg)';
         } else {
           body.style.display = 'none';
-          arrow.style.transform = 'rotate(0deg)';
         }
       });
     } catch(e) { console.warn('注入MVU失败', e); }
@@ -414,7 +441,7 @@ ${friendsInfo}
               });
             });
             localStorage.setItem('sft_phone_v1', JSON.stringify(latestP));
-            if (typeof win.toast === 'function') win.toast(`（朋友圈收到了 ${parsed.comments.length} 条回复）`);
+            if (typeof win.toast === 'function') win.toast(`朋友圈收到了 ${parsed.comments.length} 条回复`);
           }
         }
       }
@@ -433,31 +460,49 @@ ${friendsInfo}
         let base = origBuild.call(this);
         
         if (s.settings && s.settings.enableMVU) {
-          const timeInfo = s.mvu['时间'];
+          const timeInfo = s.mvu['基础信息']['日期'];
           
-          const cotPrompt = `
-\n【极其重要的系统指令：思维链与变量更新】
-你是一个严谨的互动小说引擎。在输出正文之前，你必须先在一对 <Thought> 标签中，严格按照以下格式推演当前状态：
+          const currentDateStr = `${timeInfo.年}-${String(timeInfo.月).padStart(2,'0')}-${String(timeInfo.日).padStart(2,'0')}`;
+          let forcedEventPrompt = '';
+          if (s.mvu['固定日程'] && s.mvu['固定日程'][currentDateStr]) {
+             forcedEventPrompt = `\n【突发事件警告】：今天是 ${currentDateStr}，根据固定日程，今天必定发生：【${s.mvu['固定日程'][currentDateStr]}】。请务必在本次生成的剧情中自然引出这件事！`;
+          }
+          
+          const mvuInstruction = `
+\n【MVU 变量系统指令】
+在输出正文之前，你必须先在一对 <Thought> 标签中推演时间与状态。
+输出完正文后，必须另起一行输出系统变量更新。
+
+【变量说明】
+- 基础信息.日期：记录年、月、日、时、分。时间会随着剧情推进而流逝。
+- 好感度：角色对玩家的好感程度（0-100）。互动好会增加，惹人生气会减少。
+- 任务：当前未完成的目标（如：去食堂吃饭，完成作业）。
+- 特殊剧情点：已经发生的重要事件记录。
+- 固定日程：在特定日期必定触发的事件。
+
+【更新规则】
+1. 时间推演：当前时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}。请结合玩家的话，推断过了多久。哪怕聊了几句话，也要加几分钟；如果下课了或者过夜了，必须大幅推进时间。
+2. 任务生命周期：任务有保质期。如果早上接的“去食堂”任务，到了下午还没去，必须自动删除，说明已经过期。
+3. 固定日程触发：到了日历上标记的日期，必须把日程内容加进“任务”中。
 
 <Thought>
-1. 时间推算：当前的真实时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}。请**基于这个时间**，结合玩家刚刚说的话/做的动作，推演现在剧情过去了多久？（比如说了几句话过去2分钟，或者放学了到下午5点）。算出新的准确时间。
-2. 好感度计算：刚才的互动中，角色高兴/感动了吗？好感度应该加多少？
-3. 任务/剧情：是否产生了新任务或完成了任务？
+（在这里进行思考推算，例如：当前是早上8点，玩家说“走吧去吃饭”，说明到了中午，时间更新为12:00。接着检查任务列表...）
 </Thought>
 
-（写完后，在这里正常输出剧情正文...）
+（正常输出剧情正文...）
 
-剧情正文写完后，**必须另起一行**，输出系统变量：
 <UpdateVariable>
 {
-  "时间": { "年": ${timeInfo.年}, "月": ${timeInfo.月}, "日": ${timeInfo.日}, "时": 14, "分": 30 },
+  "基础信息": {
+    "日期": { "年": ${timeInfo.年}, "月": ${timeInfo.月}, "日": ${timeInfo.日}, "时": 12, "分": 0 }
+  },
   "好感度": { "秦梧": 20 },
-  "任务": ["完成高一三班作业"],
+  "任务": ["去食堂吃饭"],
   "特殊剧情点": []
 }
 </UpdateVariable>
 `;
-          return base + cotPrompt + '\n\n请严格根据上述要求推演并生成：';
+          return base + mvuInstruction + '\n\n请严格根据上述要求推演并生成：';
         }
         return base;
       };
@@ -471,12 +516,8 @@ ${friendsInfo}
         const reply=await origChat.call(this, messages);
         let out=reply;
         
-        // 删掉 AI 思考过程防止显示在屏幕
         out = out.replace(/<Thought>[\s\S]*?<\/Thought>/gi, '').trim();
         
-        // 这里的“强行加时间”逻辑已经完全删除。时间推演完全交由 AI 在 <Thought> 和 <UpdateVariable> 中处理。
-        
-        // 语义兜底：检测文本里有没有“加微信/加好友”等字眼
         const p = getPhoneData();
         p.contacts = p.contacts || [];
         let changed = false;
@@ -498,7 +539,7 @@ ${friendsInfo}
              if (targetChar && !p.contacts.includes(String(targetChar.id))) {
                  p.contacts.push(String(targetChar.id));
                  changed = true;
-                 if(typeof win.toast==='function') win.toast(`（成功添加 ${targetChar.name} 为好友）`);
+                 if(typeof win.toast==='function') win.toast(`成功添加 ${targetChar.name} 为好友`);
              }
         }
         
@@ -545,7 +586,7 @@ ${friendsInfo}
             if (!s.mvu['任务'].includes('认识新同学')) {
               s.mvu['任务'].push('认识新同学');
               changed = true;
-              setTimeout(() => { if(typeof win.toast === 'function') win.toast('📜 获得新任务：认识新同学'); }, 500);
+              setTimeout(() => { if(typeof win.toast === 'function') win.toast('获得新任务：认识新同学'); }, 500);
             }
           }
 
