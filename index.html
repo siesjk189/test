@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 v1.2…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -46,15 +46,58 @@ function boot(win,doc){
   const ready=()=>typeof win.renderScene==='function';
   const whenReady=(fn)=>{if(ready())return fn();let n=0;const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);};
 
-  // ★ 核心修复：绕过 win.state 报错，直接去内部抓取 state
   function getState() {
     try { return win.eval('state'); } catch(e) { return win.state || {}; }
   }
 
-  // ★ 核心修复：注入 MVU 开关与折叠栏
+  // ★ 核心：清洗旧存档，初始化正确的 MVU 数据结构
+  function cleanAndInitMvu() {
+    const s = getState();
+    if (!s) return;
+    if (!s.mvu || typeof s.mvu !== 'object') s.mvu = {};
+    
+    // 强制重置时间
+    if (!s.mvu['时间']) s.mvu['时间'] = { "年": 2026, "月": 1, "日": 1 };
+    else {
+      s.mvu['时间'] = { 
+        "年": Number(s.mvu['时间']['年']) || 2026, 
+        "月": Number(s.mvu['时间']['月']) || 1, 
+        "日": Number(s.mvu['时间']['日']) || 1 
+      };
+    }
+
+    // 强制重置好感度并补齐所有角色
+    if (!s.mvu['好感度'] || typeof s.mvu['好感度'] !== 'object') s.mvu['好感度'] = {};
+    const chars = s.characters || [];
+    chars.forEach(c => {
+      if (s.mvu['好感度'][c.name] === undefined) {
+        // 根据关系给初始值
+        let initFav = 10;
+        if (c.relation && (c.relation.includes('同学') || c.relation.includes('兄弟'))) initFav = 10;
+        if (c.relation && c.relation.includes('朋友')) initFav = 20;
+        if (c.id === 'qinwu') initFav = 10;
+        s.mvu['好感度'][c.name] = initFav;
+      }
+    });
+
+    // 清理掉不属于当前角色的好感度（比如“花粉机制”）
+    Object.keys(s.mvu['好感度']).forEach(name => {
+      if (!chars.some(c => c.name === name)) delete s.mvu['好感度'][name];
+    });
+
+    // 任务与剧情点
+    if (!s.mvu['任务'] || !Array.isArray(s.mvu['任务'])) s.mvu['任务'] = [];
+    if (!s.mvu['特殊剧情点'] || !Array.isArray(s.mvu['特殊剧情点'])) s.mvu['特殊剧情点'] = [];
+    
+    // 删除所有旧版的垃圾变量（除了上面保留下来的）
+    const allowedKeys = ['时间', '好感度', '任务', '特殊剧情点'];
+    Object.keys(s.mvu).forEach(k => {
+      if (!allowedKeys.includes(k)) delete s.mvu[k];
+    });
+  }
+
   function injectMVUToggle(){
     try {
-      // 用“测试连接”按钮作为锚点，绝对能找到
       const testBtn = doc.querySelector('button[data-action="test-api"]');
       if (!testBtn) return;
       if (doc.getElementById('mvuToggleRow')) return;
@@ -63,6 +106,8 @@ function boot(win,doc){
       if (!actionsDiv || !actionsDiv.parentNode) return;
 
       const stateObj = getState();
+      cleanAndInitMvu(); // 每次渲染面板都清洗一次
+      
       const settings = stateObj.settings || {};
       const isEnabled = settings.enableMVU || false;
       const checked = isEnabled ? 'checked' : '';
@@ -130,11 +175,9 @@ function boot(win,doc){
         
         const isHidden = body.style.display === 'none' || body.style.display === '';
         if (isHidden) {
+          cleanAndInitMvu();
           const mvuData = s.mvu || {};
-          const isEmpty = Object.keys(mvuData).length === 0;
-          const jsonText = isEmpty ? '（暂无数据，请生成一次剧情后查看）' : JSON.stringify(mvuData, null, 2);
-          doc.getElementById('mvuPreContent').textContent = jsonText;
-          
+          doc.getElementById('mvuPreContent').textContent = JSON.stringify(mvuData, null, 2);
           body.style.display = 'block';
           arrow.style.transform = 'rotate(180deg)';
         } else {
@@ -145,12 +188,153 @@ function boot(win,doc){
     } catch(e) { console.warn('注入MVU失败', e); }
   }
 
-  // 劫持 renderPanel，每次切换页面都尝试注入一次
   function setupPanelHook() {
     const origRenderPanel = win.renderPanel;
     win.renderPanel = function() {
       origRenderPanel.call(this);
       setTimeout(injectMVUToggle, 50);
+    };
+  }
+
+  // ★ 核心：改写系统提示词，规范 MVU 格式，只推演任务和好感
+  function hookAPI(){
+    if(typeof win.buildSystem==='function'){
+      const origBuild=win.buildSystem;
+      win.buildSystem=function(){
+        const s = getState();
+        cleanAndInitMvu();
+        
+        let base = origBuild.call(this);
+        
+        if (s.settings && s.settings.enableMVU) {
+          const timeInfo = s.mvu['时间'] || {年:2026, 月:1, 日:1};
+          const aff = s.mvu['好感度'] || {};
+          const quests = s.mvu['任务'] || [];
+          const events = s.mvu['特殊剧情点'] || [];
+          
+          const mvuPrompt = `
+\n【极其重要的世界变量系统 (MVU)】
+你是一个互动小说，并负责维护后台数据。
+【当前世界状态】
+- 时间：${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日
+- 骆云影入学时间：2026年1月7日（如果时间达到此日，骆云影必须已经出场）
+- 角色好感度：${JSON.stringify(aff)}
+- 当前任务：${JSON.stringify(quests)}
+- 特殊剧情点：${JSON.stringify(events)}
+
+【推进规则】
+1. 时间推进：随着剧情发展，如果过了一天或多天，你必须更新“时间”。
+2. 好感度变化：根据互动，适当增加/减少对应角色的好感度。如果出现新角色，请赋予 5~10 的初始值。
+3. 任务与剧情：如果触发了新任务、完成了任务，或发生了极其重要的特殊剧情点，请更新对应数组。
+
+【输出格式】
+在你输出完所有正文剧情后，必须另起一行，使用如下格式输出变量的改变（只输出变化的项，不要输出未改变的内容）：
+<UpdateVariable>
+{
+  "时间": { "年": 2026, "月": 1, "日": 2 },
+  "好感度": { "秦梧": 15 },
+  "任务": ["认识新同学"],
+  "特殊剧情点": ["去美食街吃了面"]
+}
+</UpdateVariable>
+`;
+          return base + mvuPrompt + '\n\n请严格续写剧情：';
+        }
+        return base;
+      };
+    }
+
+    if(typeof win.callChat==='function'){
+      const origChat=win.callChat;
+      win.callChat=async function(messages){
+        const reply=await origChat.call(this,messages);
+        let out=reply;
+        
+        const s = getState();
+        if(s.settings && s.settings.enableMVU && typeof win.mvuParseFromReply==='function' && typeof win.mvuApplyPatch==='function'){
+          try {
+            // 提取更新前的任务
+            const oldTasks = JSON.parse(JSON.stringify(s.mvu['任务'] || []));
+            
+            const patches=win.mvuParseFromReply(out);
+            if(patches && patches.length) {
+              win.mvuApplyPatch(patches);
+            }
+            if(typeof win.mvuStripVariableBlocks==='function'){
+              out=win.mvuStripVariableBlocks(out);
+            }
+            
+            // 检查是否有新任务，有的话弹窗
+            const newTasks = s.mvu['任务'] || [];
+            const addedTasks = newTasks.filter(t => !oldTasks.includes(t));
+            if (addedTasks.length > 0 && typeof win.toast === 'function') {
+              addedTasks.forEach(t => win.toast(`📜 获得新任务：${t}`));
+            }
+            if (typeof win.persist === 'function') win.persist();
+            
+          } catch(e) { console.warn('[MVU] 解析失败', e); }
+        }
+        
+        // 彻底清除标签块，防止漏网之鱼
+        out = out.replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '').trim();
+        
+        const {clean,actions} = parseSpecialMarkers(out);
+        if(actions.length) executeMarkerActions(actions);
+        return clean;
+      };
+    }
+  }
+
+  // 初始剧情检测：秦梧搭话时获得任务
+  function hookScene(){
+    const origRenderScene = win.renderScene;
+    win.renderScene = function() {
+      const s = getState();
+      if(s && s.characters){
+        const femaleIds = ['zhongyueru', 'yuanbao', 'miju'];
+        const maleIds = ['qinwu', 'luoyunying', 'linyan', 'tangjiawei'];
+        s.characters.forEach(c=>{
+          if(femaleIds.includes(c.id)||femaleIds.includes(c.name)) c.gender='女';
+          if(maleIds.includes(c.id)||maleIds.includes(c.name)) c.gender='男';
+        });
+      }
+
+      if(s && s.story && s.story.length > 0) {
+        const current = s.story[s.cursor];
+        // 秦梧第一句话，获得联系方式 + 触发任务
+        if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
+          const p = getPhoneData();
+          p.contacts = p.contacts || [];
+          let changed = false;
+
+          if (!p.contacts.includes('qinwu')) {
+            p.contacts.push('qinwu');
+            changed = true;
+            if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
+            if (!s.story.some(x => x.id === 'notify_qinwu_contact')) {
+              s.story.splice(s.cursor + 1, 0, { id: 'notify_qinwu_contact', speaker: '旁白', text: '【获得秦梧的联系方式】' });
+            }
+          }
+          
+          if (s.settings && s.settings.enableMVU) {
+            if (!s.mvu['任务']) s.mvu['任务'] = [];
+            if (!s.mvu['任务'].includes('认识新同学')) {
+              s.mvu['任务'].push('认识新同学');
+              changed = true;
+              setTimeout(() => { if(typeof win.toast === 'function') win.toast('📜 获得新任务：认识新同学'); }, 500);
+            }
+          }
+
+          if (changed) {
+            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+            if (typeof win.persist === 'function') win.persist();
+          }
+        }
+      }
+      const mapBtn = doc.querySelector('[data-action="open-map"]');
+      if(mapBtn) mapBtn.parentElement.style.display = isStoryMode() ? 'none' : '';
+      if (isStoryMode() && typeof win.renderStoryScene === 'function') { win.renderStoryScene(); return; }
+      return origRenderScene.call(this);
     };
   }
 
@@ -240,42 +424,6 @@ function boot(win,doc){
   function getPhoneData(){try{return JSON.parse(localStorage.getItem('sft_phone_v1'))||{};}catch(e){return{};}}
   function injectScript(src,cb){const s=doc.createElement('script');s.src=src;s.onload=()=>cb&&cb();s.onerror=()=>console.warn('[启动器] 脚本加载失败：',src);doc.body.appendChild(s);}
 
-  function hookScene(){
-    const origRenderScene = win.renderScene;
-    win.renderScene = function() {
-      const s = getState();
-      if(s && s.characters){
-        const femaleIds = ['zhongyueru', 'yuanbao', 'miju'];
-        const maleIds = ['qinwu', 'luoyunying', 'linyan', 'tangjiawei'];
-        s.characters.forEach(c=>{
-          if(femaleIds.includes(c.id)||femaleIds.includes(c.name)) c.gender='女';
-          if(maleIds.includes(c.id)||maleIds.includes(c.name)) c.gender='男';
-        });
-      }
-
-      if(s && s.story && s.story.length > 0) {
-        const current = s.story[s.cursor];
-        if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
-          const p = getPhoneData();
-          p.contacts = p.contacts || [];
-          if (!p.contacts.includes('qinwu')) {
-            p.contacts.push('qinwu');
-            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
-            if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
-            if (!s.story.some(x => x.id === 'notify_qinwu_contact')) {
-              s.story.splice(s.cursor + 1, 0, { id: 'notify_qinwu_contact', speaker: '旁白', text: '【获得秦梧的联系方式】' });
-              if (typeof win.persist === 'function') win.persist();
-            }
-          }
-        }
-      }
-      const mapBtn = doc.querySelector('[data-action="open-map"]');
-      if(mapBtn) mapBtn.parentElement.style.display = isStoryMode() ? 'none' : '';
-      if (isStoryMode() && typeof win.renderStoryScene === 'function') { win.renderStoryScene(); return; }
-      return origRenderScene.call(this);
-    };
-  }
-
   function buildPhoneContext(){
     try{
       const p=getPhoneData();const s=getState();const chars=s.characters||[];const lines=[];lines.push('【手机私聊最近消息】');const chatLines=[];
@@ -351,43 +499,6 @@ function boot(win,doc){
     localStorage.setItem('sft_phone_v1',JSON.stringify(p));
   }
 
-  function hookAPI(){
-    if(typeof win.buildSystem==='function'){
-      const origBuild=win.buildSystem;
-      win.buildSystem=function(){
-        const base=origBuild.call(this);const phoneCtx=buildPhoneContext();let prefix='';
-        if(phoneCtx)prefix+=`\n【手机端上下文】\n${phoneCtx}\n`;
-        prefix += '\n【手机端主动联动（极其重要）】\n';
-        prefix += '你不仅是在生成文字剧情，你还在操控角色们的“手机系统”。如果发生了特殊事件、角色内心产生波动，请务必使用以下指令（绝对不要在正文中显示）：\n';
-        prefix += '[朋友圈:角色名|内容] 发朋友圈\n[消息:角色名|内容] 发私聊消息\n[加好友:角色名] 加好友\n';
-        prefix += '【警告】必须使用半角英文方括号 `[]`。\n';
-        const s=getState();
-        if(s.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
-        return prefix+base;
-      };
-    }
-    if(typeof win.callChat==='function'){
-      const origChat=win.callChat;
-      win.callChat=async function(messages){
-        const reply=await origChat.call(this,messages);let out=reply;
-        
-        out = out.replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '');
-        out = out.replace(/```[a-zA-Z]*\n[\s\S]*?```/g, ''); 
-        
-        const s=getState();
-        if(s.settings.enableMVU&&typeof win.mvuParseFromReply==='function'&&typeof win.mvuApplyPatch==='function'){
-          try{const patches=win.mvuParseFromReply(reply);if(patches&&patches.length)win.mvuApplyPatch(patches);if(typeof win.mvuStripVariableBlocks==='function')out=win.mvuStripVariableBlocks(out);}catch(e){}
-        }
-        
-        out = out.replace(/\[?(系统|隐藏|变量|MVU)[:：][^\]]*\]?/gi, '');
-
-        const {clean,actions}=parseSpecialMarkers(out);
-        if(actions.length)executeMarkerActions(actions);
-        return clean;
-      };
-    }
-  }
-
   win.parent.startStoryById=function(storyId){ if(typeof win.startStoryById==='function')win.startStoryById(storyId); };
   win.parent.closePhoneOverlay=function(){const ov=doc.getElementById('phoneOverlay');if(ov)ov.hidden=true;};
   win.parent.renderMainScene=function(){if(typeof win.renderScene==='function')win.renderScene();};
@@ -395,6 +506,7 @@ function boot(win,doc){
   win.parent.onMeetupCancelled=function(){ if(typeof win.toast==='function')win.toast('约见已取消'); };
 
   whenReady(()=>{
+    cleanAndInitMvu(); // 启动时彻底洗一遍数据
     hookScene();
     hookAPI();
     setupPanelHook();
