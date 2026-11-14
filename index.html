@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V1.2 稳定版…</div>
+<div id="boot">正在加载 V3.2…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -50,7 +50,6 @@ function boot(win,doc){
     try { return win.eval('state'); } catch(e) { return win.state || {}; }
   }
 
-  // ★ 修复问题2：删除了修改导航栏间距的代码，完全保留原生排版
   function setupObserver(){
     const observer = new MutationObserver(() => {
       const navs = doc.querySelectorAll('.diamond-nav');
@@ -75,7 +74,7 @@ function boot(win,doc){
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
               <strong style="font-size:15px;">启用 MVU 变量系统（推荐）</strong>
-              <div style="font-size:12px; color:var(--muted); margin-top:4px; line-height:1.5;">开启后，AI 会自动推演时间（默认2026.1.1）和好感度，并在触发任务时弹出提示。</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px; line-height:1.5;">开启后，AI 会自动推演时间、好感度，并在触发任务时弹出提示。</div>
             </div>
             <label class="switch"><input type="checkbox" id="setupMvuCheckbox" ${isMvuOn ? 'checked' : ''}><span class="switch-ui"></span></label>
           </div>
@@ -105,12 +104,14 @@ function boot(win,doc){
     if (!s) return;
     if (!s.mvu || typeof s.mvu !== 'object') s.mvu = {};
     
-    if (!s.mvu['时间']) s.mvu['时间'] = { "年": 2026, "月": 1, "日": 1 };
+    if (!s.mvu['时间']) s.mvu['时间'] = { "年": 2026, "月": 1, "日": 1, "时": 8, "分": 0 };
     else {
       s.mvu['时间'] = { 
         "年": Number(s.mvu['时间']['年']) || 2026, 
         "月": Number(s.mvu['时间']['月']) || 1, 
-        "日": Number(s.mvu['时间']['日']) || 1 
+        "日": Number(s.mvu['时间']['日']) || 1,
+        "时": s.mvu['时间']['时'] !== undefined ? Number(s.mvu['时间']['时']) : 8,
+        "分": s.mvu['时间']['分'] !== undefined ? Number(s.mvu['时间']['分']) : 0
       };
     }
 
@@ -121,7 +122,7 @@ function boot(win,doc){
         let initFav = 10;
         if (c.relation && (c.relation.includes('同学') || c.relation.includes('兄弟'))) initFav = 10;
         if (c.relation && c.relation.includes('朋友')) initFav = 20;
-        if (c.id === 'qinwu') initFav = 10;
+        if (c.id === 'qinwu') initFav = 18; 
         s.mvu['好感度'][c.name] = initFav;
       }
     });
@@ -239,7 +240,86 @@ function boot(win,doc){
     };
   }
 
-  // ★ 修复问题1：强化 Prompt，让 AI 必须遵守时间与任务的更新规范
+  async function generateMomentComments(moment) {
+    const s = getState();
+    if (!s.settings || !s.api.endpoint || !s.api.key) return;
+    const p = getPhoneData();
+    const myContacts = p.contacts || [];
+    if (myContacts.length === 0) return;
+
+    const friends = s.characters.filter(c => myContacts.includes(String(c.id)));
+    if (friends.length === 0) return;
+
+    const friendsInfo = friends.map(f => `- ${f.name} (性格: ${(f.personality||'').slice(0, 50)})`).join('\n');
+    
+    const prompt = `你是一个互动小说系统。角色【${moment.authorName}】刚刚发了一条朋友圈：
+内容：“${moment.text}”
+
+现在你有以下这些角色在线，他们是【${moment.authorName}】的好友，请根据他们的性格，判断他们是否会在朋友圈下评论。
+角色列表：
+${friendsInfo}
+
+规则：
+1. 每个角色都有 50% 的概率评论。
+2. 如果评论，内容必须符合他的性格，简短（不超过20字），不要加引号。
+3. 只允许输出 JSON 格式，格式如下：
+{
+  "comments": [
+    { "name": "角色A", "text": "评论内容" },
+    { "name": "角色B", "text": "评论内容" }
+  ]
+}
+如果没有一个人评论，输出 {"comments": []}。
+请严格遵守 JSON 格式，不要输出多余的解释。`;
+
+    try {
+      const base=s.api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');
+      const url=base+'/chat/completions';
+      const opts={
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.api.key},
+        body:JSON.stringify({
+          model:s.api.model||'gpt-4o-mini',
+          messages:[{role:'system', content: prompt}],
+          temperature: 0.7
+        })
+      };
+      
+      let res;
+      if (window.parent && typeof window.parent.proxyFetch === 'function') {
+        res = await window.parent.proxyFetch(url, opts);
+      } else {
+        res = await fetch(url, opts);
+      }
+      
+      const data = await res.json();
+      let text = data.choices[0].message.content;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.comments && parsed.comments.length > 0) {
+          const latestP = getPhoneData();
+          const m = latestP.moments.find(x => x.id === moment.id);
+          if (m) {
+            m.comments = m.comments || [];
+            parsed.comments.forEach(c => {
+              const char = friends.find(f => f.name === c.name);
+              m.comments.push({
+                n: c.name,
+                t: c.text,
+                avatar: char ? (char.portraitUrl||'') : ''
+              });
+            });
+            localStorage.setItem('sft_phone_v1', JSON.stringify(latestP));
+            if (typeof win.toast === 'function') win.toast(`（朋友圈收到了 ${parsed.comments.length} 条回复）`);
+          }
+        }
+      }
+    } catch(e) {
+      console.warn('生成朋友圈评论失败', e);
+    }
+  }
+
   function hookAPI(){
     if(typeof win.buildSystem==='function'){
       const origBuild=win.buildSystem;
@@ -250,33 +330,33 @@ function boot(win,doc){
         let base = origBuild.call(this);
         
         if (s.settings && s.settings.enableMVU) {
-          const timeInfo = s.mvu['时间'] || {年:2026, 月:1, 日:1};
+          const timeInfo = s.mvu['时间'] || {年:2026, 月:1, 日:1, 时:8, 分:0};
           const aff = s.mvu['好感度'] || {};
           const quests = s.mvu['任务'] || [];
           const events = s.mvu['特殊剧情点'] || [];
           
           const mvuPrompt = `
 \n【极其重要的世界变量系统 (MVU)】
-你是一个互动小说，并负责维护后台数据。你**必须、绝对要**在每次输出正文后，严格附带最新状态的变量！
+你是一个互动小说，并负责维护后台数据。你**必须**在每次输出正文后，严格附带最新状态的变量！
 【当前世界状态】
-- 时间：${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日
+- 时间：${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}
 - 骆云影入学时间：2026年1月7日
 - 角色好感度：${JSON.stringify(aff)}
 - 当前任务：${JSON.stringify(quests)}
 - 特殊剧情点：${JSON.stringify(events)}
 
 【强制推演规则（必须执行）】
-1. **时间规则**：玩家或者剧情中明确提到了“第二天”、“几小时后”、“次日”，或者明显的过夜行为，你**必须**推演时间并更新变量！
-2. **任务规则**：如果剧情中老师布置了作业、同学约定了要做什么事、或者玩家发问“有什么作业”，你**必须**将其加入“任务”数组中（如："完成高一三班作业"）。
-3. **好感度规则**：互动良好提升好感度，交恶降低。出场新角色初始化 5~10 点。
-4. **特殊剧情点**：发生重要转折时记录。
+1. **时间流逝**：每次生成剧情，你必须在脑海中模拟时间流逝（过了几分钟？几小时？或者过夜了？）。然后在 <UpdateVariable> 里更新最新的“年、月、日、时、分”。
+2. **好感度变动**：如果角色因为玩家的话感到高兴、感动、脸红、或者主动帮忙，你**必须**增加对应角色的好感度（增加 1~5 点）！如果让角色生气，则扣减！绝对不能让好感度一直不变！
+3. **任务规则**：如果剧情中提到了作业、约定，你**必须**将其加入“任务”数组中（如："完成作业"）。
+4. **加好友**：如果玩家在线下和角色互加了微信，你除了在文本里写，必须输出 \`[加好友:角色名]\`！
 
 【严格输出格式（不要漏）】
 在你输出完所有正文剧情后，**必须另起一行**，使用如下格式输出改变（只输出变化的项）：
 <UpdateVariable>
 {
-  "时间": { "年": 2026, "月": 1, "日": 2 },
-  "好感度": { "秦梧": 15 },
+  "时间": { "年": 2026, "月": 1, "日": 2, "时": 14, "分": 30 },
+  "好感度": { "秦梧": 20 },
   "任务": ["完成高一三班作业"],
   "特殊剧情点": []
 }
@@ -294,15 +374,13 @@ function boot(win,doc){
         const s = getState();
         let finalMessages = messages;
 
-        // ★ 暴力催更：如果开启了 MVU，在发送前把玩家的话单独提出来警告 AI
         if (s.settings && s.settings.enableMVU) {
           const lastUserMsg = messages[messages.length - 1];
           if (lastUserMsg && lastUserMsg.role === 'user') {
              const userText = lastUserMsg.content;
-             // 找一找用户是否提了时间或任务关键词
              finalMessages = [
                ...messages.slice(0, -1),
-               { role: 'system', content: `【特别提醒】玩家刚刚输入了：“${userText}”。请仔细判断：这句话是否代表时间流逝（如第二天）？是否提及了任务（如作业、去某地）？如果有，请在回复末尾的 <UpdateVariable> 块中体现出来！` },
+               { role: 'system', content: `【系统强制判定】玩家刚刚输入：“${userText}”。请务必在结尾更新 <UpdateVariable>！检查：过去了几分钟/几小时？玩家的话让谁高兴了，必须要加好感度！如果这涉及到互加好友，请务必输出 [加好友:角色名]！` },
                lastUserMsg
              ];
           }
@@ -335,8 +413,36 @@ function boot(win,doc){
         
         out = out.replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '').trim();
         
+        // 1. 优先执行 AI 输出的标准标记
         const {clean,actions} = parseSpecialMarkers(out);
         if(actions.length) executeMarkerActions(actions);
+        
+        // 2. 语义兜底：检测文本里有没有“加微信/加好友”等字眼
+        const p = getPhoneData();
+        p.contacts = p.contacts || [];
+        let changed = false;
+        const keywords = /加好友|加微信|加个微信|联系方式|名片|扫一扫|加一下好友|同意下好友|扫码/;
+        
+        if (keywords.test(out)) {
+             // 查找上下文出现的角色
+             const recentMessages = messages.slice(-3);
+             const contextText = recentMessages.map(m => m.content).join(' ') + out;
+             const chars = s.characters || [];
+             
+             chars.forEach(c => {
+                 if (!p.contacts.includes(String(c.id))) {
+                     if (contextText.includes(c.name)) {
+                         p.contacts.push(String(c.id));
+                         changed = true;
+                         if(typeof win.toast==='function') win.toast(`（成功添加 ${c.name} 为好友）`);
+                     }
+                 }
+             });
+        }
+        if (changed) {
+            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+        }
+
         return clean;
       };
     }
@@ -537,8 +643,19 @@ function boot(win,doc){
       if(!c)continue;
       if(act.type==='朋友圈'){
         p.moments=p.moments||[];
-        p.moments.unshift({ id:'m_'+Date.now()+Math.random().toString(36).slice(2,6), authorId:c.id,authorName:charName, authorAvatar:c.portraitUrl||c.a||'', text:content,t:Date.now(),comments:[] });
+        const newMoment = { 
+          id:'m_'+Date.now()+Math.random().toString(36).slice(2,6), 
+          authorId:c.id, 
+          authorName:charName, 
+          authorAvatar:c.portraitUrl||c.a||'', 
+          text:content,
+          t:Date.now(),
+          comments:[]
+        };
+        p.moments.unshift(newMoment);
         if(typeof win.toast==='function')win.toast(`（${charName} 发了条朋友圈）`);
+        
+        setTimeout(() => generateMomentComments(newMoment), 1000);
       }
       else if(act.type==='消息'){
         p.chats=p.chats||{};p.contacts=p.contacts||[];
