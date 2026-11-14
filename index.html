@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 V3.2…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -140,7 +140,6 @@ function boot(win,doc){
     });
   }
 
-  // ★ 一键修正变量功能
   async function recalculateMVU() {
     const s = getState();
     if (!s.api.endpoint || !s.api.key) { win.toast('请先配置 API', 'error'); return; }
@@ -150,36 +149,39 @@ function boot(win,doc){
     const limit = limitInput ? parseInt(limitInput.value) || 200 : 200;
 
     const btn = doc.getElementById('mvuRecalcBtn');
-    if (btn) { btn.disabled = true; btn.textContent = '正在分析修正...'; }
+    const logDiv = doc.getElementById('mvuThoughtLog');
+    
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 正在深度分析剧情...'; }
+    if (logDiv) { logDiv.style.display = 'block'; logDiv.textContent = 'AI 正在翻阅这 ' + limit + ' 条剧情，推算时间与任务，请稍候...'; }
 
     const recentStory = s.story.slice(-limit).map(x => `${x.speaker}：${x.text}`).join('\n');
     const currentMvu = JSON.stringify(s.mvu, null, 2);
+    const timeInfo = s.mvu['时间'];
 
     const prompt = `你是一个专业的互动小说逻辑审查员，现在请根据最近的【大量剧情】，检查并修正后台变量。
 
-【当前变量】
+【当前真实的系统变量（请严格基于这个时间点往后推）】
 ${currentMvu}
 
-【最近剧情（读取了最近 ${limit} 条，最新剧情在最后面）】
+【最近剧情（读取了最近 ${limit} 条，最底部是最新发生的剧情）】
 ${recentStory}
 
 【修正规则】
-1. 【最高优先级】：一切以**最新的剧情**为准！后面的剧情会推翻前面的设定。如果前面说“去吃饭”，后面的剧情显示“已经到餐厅了”，则必须删除“去吃饭”这个任务。请仔细核对。
-2. 【检查任务】：查看任务列表。如果任务在最新剧情中已经完成了，必须将它从“任务”数组中删除，并加入到“特殊剧情点”中记录。
-3. 【检查时间】：根据剧情的推进，估算大概过去了多长时间？更新“时间”。
-4. 【检查好感度】：剧情中是否有让人开心、感动或生气的事？适当增减好感度。
+1. 【最高优先级时间】：当前系统时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${timeInfo.分}。仔细看最新的剧情，根据剧情里流逝的时间，把你认为正确的最新时间写在变量里。比如剧情里已经“放学”、“天黑”，时间必须推演到正确的时间（晚上）。
+2. 【检查任务】：如果任务在最新剧情中已经完成了，必须将它从“任务”数组中删除，并加入到“特殊剧情点”中记录。
+3. 【检查好感度】：剧情中是否有让角色感到开心、感动或生气的事？适当增减1-3点好感度。
 
 【输出格式】
 请先输出你的思考过程，然后输出修正后的完整变量（只包含要修改的项，请严格输出）：
 <Thought>
-在这里写你的分析过程，比如：前面接了去餐厅的任务，最后几段已经显示到达餐厅，所以去餐厅任务完成。时间大概过了1小时，从8:00变成了9:00。秦梧很高兴，好感度+2。
+在这里写你的分析过程。比如：当前时间是8:00，要在12:00去食堂。但最新剧情已经放学了，所以时间必须修改为下课的时间，如 17:30。此外，去食堂的任务已经完成，将其删除。
 </Thought>
 <UpdateVariable>
 {
-  "时间": { "年": 2026, "月": 1, "日": 1, "时": 9, "分": 0 },
+  "时间": { "年": 2026, "月": 1, "日": 1, "时": 17, "分": 30 },
   "好感度": { "秦梧": 20 },
   "任务": [], 
-  "特殊剧情点": ["到达餐厅"]
+  "特殊剧情点": ["放学了"]
 }
 </UpdateVariable>`;
 
@@ -202,10 +204,17 @@ ${recentStory}
       const data = await res.json();
       const replyText = data.choices[0].message.content;
       
+      // 提取思考过程展示给用户
+      const thoughtMatch = replyText.match(/<Thought>([\s\S]*?)<\/Thought>/i);
+      if (logDiv) {
+        logDiv.textContent = thoughtMatch ? thoughtMatch[1].trim() : 'AI 没有输出思考过程，已直接执行修正。';
+      }
+
       if (typeof win.mvuParseFromReply === 'function' && typeof win.mvuApplyPatch === 'function') {
           const patches = win.mvuParseFromReply(replyText);
           if (patches && patches.length) win.mvuApplyPatch(patches);
-          win.toast('✅ 变量已成功修正！');
+          
+          win.toast(`✅ 变量修正完成！`);
           
           const body = doc.getElementById('mvuDataBody');
           if (body && body.style.display === 'block') {
@@ -213,6 +222,7 @@ ${recentStory}
           }
       }
     } catch(e) {
+      if (logDiv) logDiv.textContent = '修正失败：' + e.message;
       win.toast('修正失败：' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '🔄 一键根据剧情修正变量'; }
@@ -264,6 +274,9 @@ ${recentStory}
                 <span style="font-size:13px; color:var(--muted);">条剧情修正</span>
               </div>
               <button id="mvuRecalcBtn" class="primary-btn" style="width:100%; height:36px; font-size:13px; border-radius:4px;" onclick="window.recalcMVUWrapper()">🔄 一键根据剧情修正变量</button>
+              
+              <!-- 思考过程展示区 -->
+              <div id="mvuThoughtLog" style="display:none; margin-top:12px; padding:10px; background:var(--bg); border:1px solid var(--line); border-radius:4px; font-size:12px; color:var(--muted); line-height:1.6; max-height:150px; overflow-y:auto;"></div>
             </div>
           </div>
         </div>
@@ -271,7 +284,6 @@ ${recentStory}
       
       actionsDiv.parentNode.insertBefore(row, actionsDiv);
       
-      // 把修正函数挂载到 window 上，以便内联 onclick 调用
       window.recalcMVUWrapper = recalculateMVU;
       
       const checkbox = doc.getElementById('mvuCheckbox');
@@ -421,16 +433,16 @@ ${friendsInfo}
         let base = origBuild.call(this);
         
         if (s.settings && s.settings.enableMVU) {
-          const timeInfo = s.mvu['时间'] || {年:2026, 月:1, 日:1, 时:8, 分:0};
+          const timeInfo = s.mvu['时间'];
           
           const cotPrompt = `
 \n【极其重要的系统指令：思维链与变量更新】
 你是一个严谨的互动小说引擎。在输出正文之前，你必须先在一对 <Thought> 标签中，严格按照以下格式推演当前状态：
 
 <Thought>
-1. 时间计算：当前时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}。玩家上一句话/当前动作，大约过去了多久？（例如：说了几句话过去2分钟，或者过了一夜到了第二天）。算出的新时间是多少？
-2. 好感度计算：刚才的互动中，角色高兴/感动了吗？好感度应该加多少？（必须变！）。
-3. 任务/剧情：是否产生了新任务？
+1. 时间推算：当前的真实时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}。请**基于这个时间**，结合玩家刚刚说的话/做的动作，推演现在剧情过去了多久？（比如说了几句话过去2分钟，或者放学了到下午5点）。算出新的准确时间。
+2. 好感度计算：刚才的互动中，角色高兴/感动了吗？好感度应该加多少？
+3. 任务/剧情：是否产生了新任务或完成了任务？
 </Thought>
 
 （写完后，在这里正常输出剧情正文...）
@@ -438,7 +450,7 @@ ${friendsInfo}
 剧情正文写完后，**必须另起一行**，输出系统变量：
 <UpdateVariable>
 {
-  "时间": { "年": 2026, "月": 1, "日": 2, "时": 14, "分": 30 },
+  "时间": { "年": ${timeInfo.年}, "月": ${timeInfo.月}, "日": ${timeInfo.日}, "时": 14, "分": 30 },
   "好感度": { "秦梧": 20 },
   "任务": ["完成高一三班作业"],
   "特殊剧情点": []
@@ -456,39 +468,15 @@ ${friendsInfo}
       win.callChat=async function(messages){
         const s = getState();
         
-        let oldTime = null;
-        if (s.settings && s.settings.enableMVU && s.mvu && s.mvu['时间']) {
-           oldTime = JSON.parse(JSON.stringify(s.mvu['时间']));
-        }
-
         const reply=await origChat.call(this, messages);
         let out=reply;
         
+        // 删掉 AI 思考过程防止显示在屏幕
         out = out.replace(/<Thought>[\s\S]*?<\/Thought>/gi, '').trim();
         
-        if(s.settings && s.settings.enableMVU && oldTime && s.mvu && s.mvu['时间']){
-            const newTime = s.mvu['时间'];
-            let timeChanged = false;
-            if (oldTime.日 !== newTime.日 || oldTime.时 !== newTime.时 || oldTime.分 !== newTime.分) {
-               timeChanged = true;
-            }
-            
-            const lastUserText = messages[messages.length-1]?.content || '';
-            
-            if (/第二天|次日|过了一天|明天/.test(lastUserText)) {
-               newTime.日 = (Number(newTime.日)||1) + 1;
-               timeChanged = true;
-            } else if (!timeChanged) {
-               newTime.分 = (Number(newTime.分)||0) + 2;
-               if (newTime.分 >= 60) {
-                   newTime.分 -= 60;
-                   newTime.时 = (Number(newTime.时)||0) + 1;
-               }
-            }
-            s.mvu['时间'] = newTime;
-            if (typeof win.persist === 'function') win.persist();
-        }
+        // 这里的“强行加时间”逻辑已经完全删除。时间推演完全交由 AI 在 <Thought> 和 <UpdateVariable> 中处理。
         
+        // 语义兜底：检测文本里有没有“加微信/加好友”等字眼
         const p = getPhoneData();
         p.contacts = p.contacts || [];
         let changed = false;
