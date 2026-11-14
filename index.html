@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V1.2 稳定版…</div>
+<div id="boot">正在加载 V3.2 稳定版…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -104,7 +104,6 @@ function boot(win,doc){
     if (!s) return;
     if (!s.mvu || typeof s.mvu !== 'object') s.mvu = {};
     
-    // 确保时间数据结构存在并且格式正确
     if (!s.mvu['时间']) s.mvu['时间'] = { "年": 2026, "月": 1, "日": 1, "时": 8, "分": 0 };
     else {
       s.mvu['时间'] = { 
@@ -128,7 +127,6 @@ function boot(win,doc){
       }
     });
 
-    // 清理掉不属于当前角色的好感度
     Object.keys(s.mvu['好感度']).forEach(name => {
       if (!chars.some(c => c.name === name)) delete s.mvu['好感度'][name];
     });
@@ -136,11 +134,89 @@ function boot(win,doc){
     if (!s.mvu['任务'] || !Array.isArray(s.mvu['任务'])) s.mvu['任务'] = [];
     if (!s.mvu['特殊剧情点'] || !Array.isArray(s.mvu['特殊剧情点'])) s.mvu['特殊剧情点'] = [];
     
-    // 彻底清除旧垃圾
     const allowedKeys = ['时间', '好感度', '任务', '特殊剧情点'];
     Object.keys(s.mvu).forEach(k => {
       if (!allowedKeys.includes(k)) delete s.mvu[k];
     });
+  }
+
+  // ★ 一键修正变量功能
+  async function recalculateMVU() {
+    const s = getState();
+    if (!s.api.endpoint || !s.api.key) { win.toast('请先配置 API', 'error'); return; }
+    if (!s.story || s.story.length === 0) { win.toast('没有剧情可以修正', 'error'); return; }
+
+    const limitInput = doc.getElementById('mvuHistoryLimit');
+    const limit = limitInput ? parseInt(limitInput.value) || 200 : 200;
+
+    const btn = doc.getElementById('mvuRecalcBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '正在分析修正...'; }
+
+    const recentStory = s.story.slice(-limit).map(x => `${x.speaker}：${x.text}`).join('\n');
+    const currentMvu = JSON.stringify(s.mvu, null, 2);
+
+    const prompt = `你是一个专业的互动小说逻辑审查员，现在请根据最近的【大量剧情】，检查并修正后台变量。
+
+【当前变量】
+${currentMvu}
+
+【最近剧情（读取了最近 ${limit} 条，最新剧情在最后面）】
+${recentStory}
+
+【修正规则】
+1. 【最高优先级】：一切以**最新的剧情**为准！后面的剧情会推翻前面的设定。如果前面说“去吃饭”，后面的剧情显示“已经到餐厅了”，则必须删除“去吃饭”这个任务。请仔细核对。
+2. 【检查任务】：查看任务列表。如果任务在最新剧情中已经完成了，必须将它从“任务”数组中删除，并加入到“特殊剧情点”中记录。
+3. 【检查时间】：根据剧情的推进，估算大概过去了多长时间？更新“时间”。
+4. 【检查好感度】：剧情中是否有让人开心、感动或生气的事？适当增减好感度。
+
+【输出格式】
+请先输出你的思考过程，然后输出修正后的完整变量（只包含要修改的项，请严格输出）：
+<Thought>
+在这里写你的分析过程，比如：前面接了去餐厅的任务，最后几段已经显示到达餐厅，所以去餐厅任务完成。时间大概过了1小时，从8:00变成了9:00。秦梧很高兴，好感度+2。
+</Thought>
+<UpdateVariable>
+{
+  "时间": { "年": 2026, "月": 1, "日": 1, "时": 9, "分": 0 },
+  "好感度": { "秦梧": 20 },
+  "任务": [], 
+  "特殊剧情点": ["到达餐厅"]
+}
+</UpdateVariable>`;
+
+    try {
+      const base=s.api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');
+      const url=base+'/chat/completions';
+      const opts={
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.api.key},
+        body:JSON.stringify({model:s.api.model||'gpt-4o-mini', messages:[{role:'system', content:prompt}], temperature: 0.3})
+      };
+      
+      let res;
+      if (window.parent && typeof window.parent.proxyFetch === 'function') {
+        res = await window.parent.proxyFetch(url, opts);
+      } else {
+        res = await fetch(url, opts);
+      }
+      
+      const data = await res.json();
+      const replyText = data.choices[0].message.content;
+      
+      if (typeof win.mvuParseFromReply === 'function' && typeof win.mvuApplyPatch === 'function') {
+          const patches = win.mvuParseFromReply(replyText);
+          if (patches && patches.length) win.mvuApplyPatch(patches);
+          win.toast('✅ 变量已成功修正！');
+          
+          const body = doc.getElementById('mvuDataBody');
+          if (body && body.style.display === 'block') {
+             doc.getElementById('mvuPreContent').textContent = JSON.stringify(getState().mvu, null, 2);
+          }
+      }
+    } catch(e) {
+      win.toast('修正失败：' + e.message, 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 一键根据剧情修正变量'; }
+    }
   }
 
   function injectMVUToggle(){
@@ -179,12 +255,24 @@ function boot(win,doc){
             <span id="mvuArrow" style="transition:transform 0.2s; font-size:12px; transform:rotate(${isEnabled ? '0deg' : '-90deg'}); opacity:${isEnabled ? '1' : '0.4'};">▼</span>
           </div>
           <div id="mvuDataBody" style="display:none; padding:12px; border-top:1px solid var(--line); background:var(--surface);">
-            <pre id="mvuPreContent" style="margin:0; white-space:pre-wrap; font-size:12px; color:var(--text); max-height:300px; overflow-y:auto; font-family:monospace;"></pre>
+            <pre id="mvuPreContent" style="margin:0 0 12px 0; white-space:pre-wrap; font-size:12px; color:var(--text); max-height:300px; overflow-y:auto; font-family:monospace;"></pre>
+            
+            <div style="padding-top:12px; border-top:1px dashed var(--line);">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                <span style="font-size:13px; color:var(--muted);">读取最近</span>
+                <input type="number" id="mvuHistoryLimit" value="200" style="width:70px; height:32px; text-align:center; padding:0 4px; border:1px solid var(--line); border-radius:4px; background:var(--bg); color:var(--text); font-size:13px;">
+                <span style="font-size:13px; color:var(--muted);">条剧情修正</span>
+              </div>
+              <button id="mvuRecalcBtn" class="primary-btn" style="width:100%; height:36px; font-size:13px; border-radius:4px;" onclick="window.recalcMVUWrapper()">🔄 一键根据剧情修正变量</button>
+            </div>
           </div>
         </div>
       `;
       
       actionsDiv.parentNode.insertBefore(row, actionsDiv);
+      
+      // 把修正函数挂载到 window 上，以便内联 onclick 调用
+      window.recalcMVUWrapper = recalculateMVU;
       
       const checkbox = doc.getElementById('mvuCheckbox');
       const header = doc.getElementById('mvuDataHeader');
@@ -323,24 +411,61 @@ ${friendsInfo}
     }
   }
 
-  // ★ 核心：完全尊重原版解析，只在外面套“防偷懒”和“防群加”
   function hookAPI(){
+    if(typeof win.buildSystem==='function'){
+      const origBuild=win.buildSystem;
+      win.buildSystem=function(){
+        const s = getState();
+        cleanAndInitMvu();
+        
+        let base = origBuild.call(this);
+        
+        if (s.settings && s.settings.enableMVU) {
+          const timeInfo = s.mvu['时间'] || {年:2026, 月:1, 日:1, 时:8, 分:0};
+          
+          const cotPrompt = `
+\n【极其重要的系统指令：思维链与变量更新】
+你是一个严谨的互动小说引擎。在输出正文之前，你必须先在一对 <Thought> 标签中，严格按照以下格式推演当前状态：
+
+<Thought>
+1. 时间计算：当前时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}。玩家上一句话/当前动作，大约过去了多久？（例如：说了几句话过去2分钟，或者过了一夜到了第二天）。算出的新时间是多少？
+2. 好感度计算：刚才的互动中，角色高兴/感动了吗？好感度应该加多少？（必须变！）。
+3. 任务/剧情：是否产生了新任务？
+</Thought>
+
+（写完后，在这里正常输出剧情正文...）
+
+剧情正文写完后，**必须另起一行**，输出系统变量：
+<UpdateVariable>
+{
+  "时间": { "年": 2026, "月": 1, "日": 2, "时": 14, "分": 30 },
+  "好感度": { "秦梧": 20 },
+  "任务": ["完成高一三班作业"],
+  "特殊剧情点": []
+}
+</UpdateVariable>
+`;
+          return base + cotPrompt + '\n\n请严格根据上述要求推演并生成：';
+        }
+        return base;
+      };
+    }
+
     if(typeof win.callChat==='function'){
       const origChat=win.callChat;
       win.callChat=async function(messages){
         const s = getState();
         
-        // 1. 记录旧时间
         let oldTime = null;
         if (s.settings && s.settings.enableMVU && s.mvu && s.mvu['时间']) {
            oldTime = JSON.parse(JSON.stringify(s.mvu['时间']));
         }
 
-        // 2. 调用原版（原版内部会把正则解析和 mvu.js 的修改全做完）
         const reply=await origChat.call(this, messages);
         let out=reply;
         
-        // 3. 强制推进时间（如果原版没推进）
+        out = out.replace(/<Thought>[\s\S]*?<\/Thought>/gi, '').trim();
+        
         if(s.settings && s.settings.enableMVU && oldTime && s.mvu && s.mvu['时间']){
             const newTime = s.mvu['时间'];
             let timeChanged = false;
@@ -364,7 +489,6 @@ ${friendsInfo}
             if (typeof win.persist === 'function') win.persist();
         }
         
-        // 4. 语义兜底：如果 AI 提到了加微信，但没发指令，补上！
         const p = getPhoneData();
         p.contacts = p.contacts || [];
         let changed = false;
@@ -577,7 +701,6 @@ ${friendsInfo}
     const s=getState();const chars=s.characters||[];
     for(const act of actions){
       if(act.type==='加好友'){
-        // ★ 精准狙击：不管 AI 输出了多少人，强行按逗号分割，只取第一个！
         const charName=act.parts[0].split(/[，,、]/)[0].trim(); 
         const c=chars.find(x=>x.name===charName);
         if(c){
