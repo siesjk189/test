@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2…</div>
+<div id="boot">正在加载 V3.2 稳定版…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -346,10 +346,10 @@ ${friendsInfo}
 - 特殊剧情点：${JSON.stringify(events)}
 
 【强制推演规则（必须执行）】
-1. **时间流逝**：每次生成剧情，你必须在脑海中模拟时间流逝（过了几分钟？几小时？或者过夜了？）。然后在 <UpdateVariable> 里更新最新的“年、月、日、时、分”。
+1. **时间流逝**：每次生成剧情，你必须在脑海中模拟时间流逝（过了几分钟？几小时？或者过夜了？）。然后在 <UpdateVariable> 里更新最新的“年、月、日、时、分”。哪怕只过去2分钟，也要更新！
 2. **好感度变动**：如果角色因为玩家的话感到高兴、感动、脸红、或者主动帮忙，你**必须**增加对应角色的好感度（增加 1~5 点）！如果让角色生气，则扣减！绝对不能让好感度一直不变！
 3. **任务规则**：如果剧情中提到了作业、约定，你**必须**将其加入“任务”数组中（如："完成作业"）。
-4. **加好友**：如果玩家在线下和角色互加了微信，你除了在文本里写，必须输出 \`[加好友:角色名]\`！
+4. **加好友**：如果玩家在线下和角色互加了微信，你除了在文本里写，必须输出 \`[加好友:角色名]\`，每次只输出当前正在聊天的角色！
 
 【严格输出格式（不要漏）】
 在你输出完所有正文剧情后，**必须另起一行**，使用如下格式输出改变（只输出变化的项）：
@@ -393,6 +393,9 @@ ${friendsInfo}
           try {
             const oldTasks = JSON.parse(JSON.stringify(s.mvu['任务'] || []));
             
+            // 备份旧时间，用于对比
+            const oldTime = JSON.parse(JSON.stringify(s.mvu['时间'] || {}));
+            
             const patches=win.mvuParseFromReply(out);
             if(patches && patches.length) {
               win.mvuApplyPatch(patches);
@@ -406,6 +409,31 @@ ${friendsInfo}
             if (addedTasks.length > 0 && typeof win.toast === 'function') {
               addedTasks.forEach(t => win.toast(`📜 获得新任务：${t}`));
             }
+            
+            // ★ 绝对兜底：如果 AI 没动时间，代码强制推进
+            let timeChanged = false;
+            const newTime = s.mvu['时间'] || {};
+            if (oldTime.日 !== newTime.日 || oldTime.时 !== newTime.时 || oldTime.分 !== newTime.分) {
+               timeChanged = true;
+            }
+            
+            const lastUserText = messages[messages.length-1]?.content || '';
+            
+            // 如果玩家明确说了“第二天”，强制加一天
+            if (/第二天|次日|过了一天|明天/.test(lastUserText)) {
+               newTime.日 = (Number(newTime.日)||1) + 1;
+               timeChanged = true;
+            } 
+            // 如果 AI 没推演，强制加 2 分钟
+            else if (!timeChanged) {
+               newTime.分 = (Number(newTime.分)||0) + 2;
+               if (newTime.分 >= 60) {
+                   newTime.分 -= 60;
+                   newTime.时 = (Number(newTime.时)||0) + 1;
+               }
+            }
+            s.mvu['时间'] = newTime;
+            
             if (typeof win.persist === 'function') win.persist();
             
           } catch(e) { console.warn('[MVU] 解析失败', e); }
@@ -413,32 +441,37 @@ ${friendsInfo}
         
         out = out.replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '').trim();
         
-        // 1. 优先执行 AI 输出的标准标记
         const {clean,actions} = parseSpecialMarkers(out);
         if(actions.length) executeMarkerActions(actions);
         
-        // 2. 语义兜底：检测文本里有没有“加微信/加好友”等字眼
+        // 语义兜底：检测文本里有没有“加微信/加好友”等字眼
         const p = getPhoneData();
         p.contacts = p.contacts || [];
         let changed = false;
         const keywords = /加好友|加微信|加个微信|联系方式|名片|扫一扫|加一下好友|同意下好友|扫码/;
         
         if (keywords.test(out)) {
-             // 查找上下文出现的角色
-             const recentMessages = messages.slice(-3);
-             const contextText = recentMessages.map(m => m.content).join(' ') + out;
-             const chars = s.characters || [];
+             // 查找上下文出现的角色，默认只找 AI 说话的 speaker
+             const currentSpeaker = out.match(/^([^：:\n]{1,30})[：:]/m);
+             let targetChar = null;
              
-             chars.forEach(c => {
-                 if (!p.contacts.includes(String(c.id))) {
-                     if (contextText.includes(c.name)) {
-                         p.contacts.push(String(c.id));
-                         changed = true;
-                         if(typeof win.toast==='function') win.toast(`（成功添加 ${c.name} 为好友）`);
-                     }
-                 }
-             });
+             if (currentSpeaker && currentSpeaker[1]) {
+                 targetChar = s.characters.find(c => c.name === currentSpeaker[1].trim());
+             }
+             
+             // 如果没找到 speaker，就找玩家上一句提到的名字
+             if (!targetChar) {
+                const lastUserMsg = messages.slice(-1)[0]?.content || '';
+                targetChar = s.characters.find(c => lastUserMsg.includes(c.name) || out.includes(c.name));
+             }
+
+             if (targetChar && !p.contacts.includes(String(targetChar.id))) {
+                 p.contacts.push(String(targetChar.id));
+                 changed = true;
+                 if(typeof win.toast==='function') win.toast(`（成功添加 ${targetChar.name} 为好友）`);
+             }
         }
+        
         if (changed) {
             localStorage.setItem('sft_phone_v1', JSON.stringify(p));
         }
@@ -626,7 +659,8 @@ ${friendsInfo}
     const s=getState();const chars=s.characters||[];
     for(const act of actions){
       if(act.type==='加好友'){
-        const charName=act.parts[0];
+        // 只取第一个名字，防止群加
+        const charName=act.parts[0].split(/[，,、]/)[0].trim(); 
         const c=chars.find(x=>x.name===charName);
         if(c){
           p.contacts=p.contacts||[];
