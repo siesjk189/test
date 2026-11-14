@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 稳定版…</div>
+<div id="boot">正在加载 V1.2 稳定版…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -50,7 +50,7 @@ function boot(win,doc){
     try { return win.eval('state'); } catch(e) { return win.state || {}; }
   }
 
-  // ★ 核心：自动注入“手机”按钮，不碰其他界面
+  // ★ 修复问题2：删除了修改导航栏间距的代码，完全保留原生排版
   function setupObserver(){
     const observer = new MutationObserver(() => {
       const navs = doc.querySelectorAll('.diamond-nav');
@@ -62,24 +62,7 @@ function boot(win,doc){
           nav.insertBefore(wrap, nav.firstChild);
         }
       });
-      
-      // 修复 5 个按钮时的间距问题（因为现在 4 个，不挤压了，但我们保留适配）
-      if (!doc.getElementById('injected-nav-style')) {
-        const style = doc.createElement('style');
-        style.id = 'injected-nav-style';
-        style.textContent = `
-          .diamond-nav { gap: 16px !important; }
-          @media(max-width:760px) { 
-            .diamond-nav { gap: 10px !important; right: 5px !important; padding: 4px !important; } 
-            .diamond-wrap { width: 44px !important; height: 44px !important; } 
-            .diamond { width: 32px !important; height: 32px !important; } 
-            .diamond span { font-size: 9px !important; } 
-          }
-        `;
-        doc.head.appendChild(style);
-      }
 
-      // ★ 处理初次填模型的快捷界面，注入 MVU 开关
       const setupApiContent = doc.getElementById('setupApiContent');
       if (setupApiContent && setupApiContent.innerHTML.includes('文本 AI 配置') && !doc.getElementById('setupMvuRow')) {
         const s = getState();
@@ -117,7 +100,6 @@ function boot(win,doc){
     observer.observe(doc.body, { childList: true, subtree: true });
   }
 
-  // 清洗旧存档，初始化正确的 MVU 数据结构
   function cleanAndInitMvu() {
     const s = getState();
     if (!s) return;
@@ -157,7 +139,6 @@ function boot(win,doc){
     });
   }
 
-  // 菜单栏 API 页面的注入（点击查看当前变量）
   function injectMVUToggle(){
     try {
       const testBtn = doc.querySelector('button[data-action="test-api"]');
@@ -258,6 +239,7 @@ function boot(win,doc){
     };
   }
 
+  // ★ 修复问题1：强化 Prompt，让 AI 必须遵守时间与任务的更新规范
   function hookAPI(){
     if(typeof win.buildSystem==='function'){
       const origBuild=win.buildSystem;
@@ -275,31 +257,32 @@ function boot(win,doc){
           
           const mvuPrompt = `
 \n【极其重要的世界变量系统 (MVU)】
-你是一个互动小说，并负责维护后台数据。
+你是一个互动小说，并负责维护后台数据。你**必须、绝对要**在每次输出正文后，严格附带最新状态的变量！
 【当前世界状态】
 - 时间：${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日
-- 骆云影入学时间：2026年1月7日（如果时间达到此日，骆云影必须已经出场）
+- 骆云影入学时间：2026年1月7日
 - 角色好感度：${JSON.stringify(aff)}
 - 当前任务：${JSON.stringify(quests)}
 - 特殊剧情点：${JSON.stringify(events)}
 
-【推进规则】
-1. 时间推进：随着剧情发展，如果过了一天或多天，你必须更新“时间”。
-2. 好感度变化：根据互动，适当增加/减少对应角色的好感度。如果出现新角色，请赋予 5~10 的初始值。
-3. 任务与剧情：如果触发了新任务、完成了任务，或发生了极其重要的特殊剧情点，请更新对应数组。
+【强制推演规则（必须执行）】
+1. **时间规则**：玩家或者剧情中明确提到了“第二天”、“几小时后”、“次日”，或者明显的过夜行为，你**必须**推演时间并更新变量！
+2. **任务规则**：如果剧情中老师布置了作业、同学约定了要做什么事、或者玩家发问“有什么作业”，你**必须**将其加入“任务”数组中（如："完成高一三班作业"）。
+3. **好感度规则**：互动良好提升好感度，交恶降低。出场新角色初始化 5~10 点。
+4. **特殊剧情点**：发生重要转折时记录。
 
-【输出格式】
-在你输出完所有正文剧情后，必须另起一行，使用如下格式输出变量的改变（只输出变化的项，不要输出未改变的内容）：
+【严格输出格式（不要漏）】
+在你输出完所有正文剧情后，**必须另起一行**，使用如下格式输出改变（只输出变化的项）：
 <UpdateVariable>
 {
   "时间": { "年": 2026, "月": 1, "日": 2 },
   "好感度": { "秦梧": 15 },
-  "任务": ["认识新同学"],
-  "特殊剧情点": ["去美食街吃了面"]
+  "任务": ["完成高一三班作业"],
+  "特殊剧情点": []
 }
 </UpdateVariable>
 `;
-          return base + mvuPrompt + '\n\n请严格续写剧情：';
+          return base + mvuPrompt + '\n\n请严格续写剧情，并务必在结尾带上 <UpdateVariable> 块：';
         }
         return base;
       };
@@ -308,10 +291,26 @@ function boot(win,doc){
     if(typeof win.callChat==='function'){
       const origChat=win.callChat;
       win.callChat=async function(messages){
-        const reply=await origChat.call(this,messages);
+        const s = getState();
+        let finalMessages = messages;
+
+        // ★ 暴力催更：如果开启了 MVU，在发送前把玩家的话单独提出来警告 AI
+        if (s.settings && s.settings.enableMVU) {
+          const lastUserMsg = messages[messages.length - 1];
+          if (lastUserMsg && lastUserMsg.role === 'user') {
+             const userText = lastUserMsg.content;
+             // 找一找用户是否提了时间或任务关键词
+             finalMessages = [
+               ...messages.slice(0, -1),
+               { role: 'system', content: `【特别提醒】玩家刚刚输入了：“${userText}”。请仔细判断：这句话是否代表时间流逝（如第二天）？是否提及了任务（如作业、去某地）？如果有，请在回复末尾的 <UpdateVariable> 块中体现出来！` },
+               lastUserMsg
+             ];
+          }
+        }
+
+        const reply=await origChat.call(this, finalMessages);
         let out=reply;
         
-        const s = getState();
         if(s.settings && s.settings.enableMVU && typeof win.mvuParseFromReply==='function' && typeof win.mvuApplyPatch==='function'){
           try {
             const oldTasks = JSON.parse(JSON.stringify(s.mvu['任务'] || []));
