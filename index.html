@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V3.2 …</div>
+<div id="boot">正在加载 V3.2 稳定版…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -110,7 +110,7 @@ function boot(win,doc){
     observer.observe(doc.body, { childList: true, subtree: true });
   }
 
-  // ★ 极简干净的时间初始化：只处理有没有数据。如果带有 3000 的脏数据，直接干掉！
+  // 极简干净的时间初始化
   function cleanAndInitMvu() {
     const s = getState();
     if (!s) return;
@@ -118,13 +118,11 @@ function boot(win,doc){
     
     if (!s.mvu['基础信息']) s.mvu['基础信息'] = {};
     
-    // 如果日期不存在，直接给 2026
     if (!s.mvu['基础信息']['日期']) {
       s.mvu['基础信息']['日期'] = { "年": 2026, "月": 1, "日": 1, "时": 8, "分": 0 };
     } else {
       const d = s.mvu['基础信息']['日期'];
       let y = Number(d['年']);
-      // 如果年份异常（比如旧代码写死的3000），强制重置为 2026
       if (isNaN(y) || y > 2050 || y < 2000) y = 2026;
       
       s.mvu['基础信息']['日期'] = { 
@@ -136,7 +134,6 @@ function boot(win,doc){
       };
     }
 
-    // 清洗基础信息里可能混入的其他垃圾
     if (s.mvu['基础信息']) {
       const dateObj = s.mvu['基础信息']['日期'];
       s.mvu['基础信息'] = { "日期": dateObj };
@@ -146,11 +143,7 @@ function boot(win,doc){
     const chars = s.characters || [];
     chars.forEach(c => {
       if (s.mvu['好感度'][c.name] === undefined) {
-        let initFav = 10;
-        if (c.relation && (c.relation.includes('同学') || c.relation.includes('兄弟'))) initFav = 10;
-        if (c.relation && c.relation.includes('朋友')) initFav = 20;
-        if (c.id === 'qinwu') initFav = 18; 
-        s.mvu['好感度'][c.name] = initFav;
+        s.mvu['好感度'][c.name] = 10;
       }
     });
 
@@ -167,7 +160,6 @@ function boot(win,doc){
       };
     }
     
-    // 顶层严格清洗
     const allowedKeys = ['基础信息', '好感度', '任务', '特殊剧情点', '固定日程'];
     Object.keys(s.mvu).forEach(k => {
       if (!allowedKeys.includes(k)) delete s.mvu[k];
@@ -259,17 +251,43 @@ ${recentStory}
         logDiv.textContent = thoughtMatch ? thoughtMatch[1].trim() : 'AI 没有输出思考过程，已直接执行修正。';
       }
 
-      if (typeof win.mvuParseFromReply === 'function' && typeof win.mvuApplyPatch === 'function') {
-          const patches = win.mvuParseFromReply(replyText);
-          if (patches && patches.length) win.mvuApplyPatch(patches);
-          
-          alert('变量修正完成！');
-          
-          const body = doc.getElementById('mvuDataBody');
-          if (body && body.style.display === 'block') {
-             doc.getElementById('mvuPreContent').textContent = JSON.stringify(getState().mvu, null, 2);
+      // ★ 核心修复：手动解析并合并 JSON，彻底抛弃原版容易出错的解析器
+      const m = replyText.match(/<UpdateVariable>([\s\S]*?)<\/UpdateVariable>/i);
+      if (m) {
+          try {
+              let jsonText = m[1].replace(/```json/g, '').replace(/```/g, '').trim();
+              const patchData = JSON.parse(jsonText);
+              
+              if (patchData['基础信息'] && patchData['基础信息']['日期']) {
+                  s.mvu['基础信息'] = s.mvu['基础信息'] || {};
+                  s.mvu['基础信息']['日期'] = { ...s.mvu['基础信息']['日期'], ...patchData['基础信息']['日期'] };
+              }
+              if (patchData['好感度']) {
+                  s.mvu['好感度'] = s.mvu['好感度'] || {};
+                  Object.assign(s.mvu['好感度'], patchData['好感度']);
+              }
+              if (Array.isArray(patchData['任务'])) {
+                  s.mvu['任务'] = patchData['任务'];
+              }
+              if (Array.isArray(patchData['特殊剧情点'])) {
+                  s.mvu['特殊剧情点'] = patchData['特殊剧情点'];
+              }
+              
+              if (typeof win.persist === 'function') win.persist();
+              
+              alert('变量修正完成！');
+              
+              const body = doc.getElementById('mvuDataBody');
+              if (body && body.style.display === 'block') {
+                 doc.getElementById('mvuPreContent').textContent = JSON.stringify(s.mvu, null, 2);
+              }
+          } catch (err) {
+              alert('解析 AI 返回的 JSON 失败：\n' + m[1]);
           }
+      } else {
+          alert('AI 没有输出 <UpdateVariable> 块，请重试。');
       }
+
     } catch(e) {
       if (logDiv) logDiv.textContent = '修正失败：' + e.message;
       alert('修正失败：' + e.message);
@@ -334,7 +352,6 @@ ${recentStory}
       
       const recalcBtn = doc.getElementById('mvuRecalcBtn');
       if (recalcBtn) {
-        // 移除所有原有的 onclick，重新绑定，确保在父窗口执行
         recalcBtn.onclick = null;
         recalcBtn.addEventListener('click', (e) => {
           e.preventDefault();
