@@ -16,7 +16,7 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
-<div id="boot">正在加载 V1.1…</div>
+<div id="boot">正在加载 V1.2…</div>
 <script>
 'use strict';
 window.proxyFetch = async function(url, opts) {
@@ -46,84 +46,11 @@ function boot(win,doc){
   const ready=()=>typeof win.renderScene==='function';
   const whenReady=(fn)=>{if(ready())return fn();let n=0;const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);};
 
-  // ================= 核心修复：强制纠正性别与剪影匹配 =================
-  function fixCharacterGenders() {
-    if (!win.state || !win.state.characters) return;
-    const femaleIds = ['zhongyueru', 'yuanbao', 'miju'];
-    const maleIds = ['qinwu', 'luoyunying', 'linyan', 'tangjiawei'];
-    
-    win.state.characters.forEach(c => {
-      if (femaleIds.includes(c.id) || femaleIds.includes(c.name)) c.gender = '女';
-      else if (maleIds.includes(c.id) || maleIds.includes(c.name)) c.gender = '男';
+  doc.addEventListener('click', (e) => {
+    const targetPhone = e.target.closest('[data-action="open-phone"]');
+    if (targetPhone) {
+      e.preventDefault();e.stopPropagation();
       
-      if (c.gender === 'female') c.gender = '女';
-      if (c.gender === 'male') c.gender = '男';
-    });
-
-    // 修复剪影库的性别字段，防止旧数据写成“女”而不是“female”
-    if (win.state.silhouettes) {
-      win.state.silhouettes.forEach(s => {
-        if (s.name.includes('女')) s.gender = 'female';
-        if (s.name.includes('男')) s.gender = 'male';
-      });
-    }
-  }
-
-  // 接管原版 findPortrait，绝对禁止女角色拿男剪影
-  win.findPortrait = function(speaker, text) {
-    if (!speaker || speaker === '旁白') return null;
-    const c = win.state.characters.find(c => c.name === speaker);
-    if (!c || c.useSprite === false) return null;
-    
-    let img = null;
-    if (c.portraitId) {
-      img = win.state.images.find(i => i.id === c.portraitId);
-    } else {
-      const list = win.state.images.filter(i => i.character === speaker && (i.builtIn || i.enabled !== false));
-      if (list.length) {
-        const emotion = typeof win.emotionFor === 'function' ? win.emotionFor(text) : '正常';
-        img = list.find(i => i.expression === emotion) || list.find(i => i.expression === '正常') || list[0];
-      }
-    }
-    if (img) return { ...img, isSilhouette: false };
-
-    const isFemale = c.gender === '女' || c.gender === 'female' || ['钟月茹','元宝','米桔'].includes(c.name);
-    const gender = isFemale ? 'female' : 'male';
-    
-    let sil = win.state.silhouettes.find(s => s.gender === gender && Array.isArray(s.boundCharacters) && s.boundCharacters.includes(c.id));
-    
-    // 如果绑定的剪影性别不对，清空绑定
-    if (sil && sil.gender !== gender) sil = null;
-
-    if (!sil) {
-      const unbound = win.state.silhouettes.filter(s => s.gender === gender && (!Array.isArray(s.boundCharacters) || s.boundCharacters.length === 0));
-      if (unbound.length) {
-        let sum = 0; for (let i=0;i<c.id.length;i++) sum += c.id.charCodeAt(i);
-        sil = unbound[sum % unbound.length];
-      }
-    }
-    
-    // 严格校验：如果拿到的剪影性别仍然不对，宁可不显示也不能跨性别
-    if (sil && ((gender === 'female' && sil.gender !== 'female') || (gender === 'male' && sil.gender !== 'male'))) {
-       sil = null;
-    }
-
-    if (sil) return { id: sil.id, url: sil.url, name: sil.name, isSilhouette: true };
-    return null;
-  };
-  // ====================================================================
-
-  function setupObserver(){
-    const observer = new MutationObserver(() => {
-      const navs = doc.querySelectorAll('.diamond-nav');
-      navs.forEach(nav => {
-        if (!nav.querySelector('[data-action="open-phone"]')) {
-          const wrap = doc.createElement('div');
-          wrap.className = 'diamond-wrap';
-          wrap.innerHTML = '<button class="diamond" data-action="open-phone" aria-label="打开手机"><span>手机</span></button>';
-          nav.insertBefore(wrap, nav.firstChild);
-        }
-      });
       if (!doc.getElementById('phoneOverlay')) {
         const ov = doc.createElement('div');
         ov.id = 'phoneOverlay';
@@ -132,25 +59,20 @@ function boot(win,doc){
         ov.innerHTML = '<iframe id="phoneFrame" src="./phone.html?v=10" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
         doc.body.appendChild(ov);
       }
-    });
-    observer.observe(doc.body, { childList: true, subtree: true });
-  }
 
-  doc.addEventListener('click', (e) => {
-    const targetPhone = e.target.closest('[data-action="open-phone"]');
-    if (targetPhone) {
-      e.preventDefault();e.stopPropagation();
       doc.getElementById('phoneOverlay').hidden = false;
       const f = doc.getElementById('phoneFrame');
       if (f && f.contentWindow) {
         try {
           const phoneData = getPhoneData();
           const expectedLen = (phoneData.contacts || []).length;
+          
           if (f.dataset.contactsLen !== String(expectedLen)) {
             f.dataset.contactsLen = String(expectedLen);
             try { f.contentWindow.location.reload(); } catch(err) { f.src = './phone.html?v=' + Date.now(); }
             return; 
           }
+
           const imgs = win.state.images || [];
           (win.state.characters || []).forEach(c => {
             if(!c.portraitUrl) {
@@ -160,14 +82,26 @@ function boot(win,doc){
               c.portraitUrl = url;
             }
           });
+          
           const recentStory = (win.state.story || []).slice(-15).map(s => `${s.speaker}：${s.text}`).join('\n');
           const memoryContext = (win.state.memory && win.state.memory.summaries) ? win.state.memory.summaries.slice(-2).map(m => m.content).join('\n') : '';
-          const payload = { characters: win.state.characters, player: win.state.player, api: win.state.api, mvu: win.state.mvu, settings: win.state.settings, recentStory, memoryContext };
+          
+          const payload = { 
+            characters: win.state.characters, 
+            player: win.state.player, 
+            api: win.state.api, 
+            mvu: win.state.mvu, 
+            settings: win.state.settings, 
+            recentStory, 
+            memoryContext,
+            mapSpots: win.state.mapSpots || [] 
+          };
           f.contentWindow.eval(`if (window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
         } catch(err) { console.warn('同步失败', err); }
       }
       return;
     }
+
     const targetNew = e.target.closest('[data-action="new-story"]');
     if (targetNew) {
       e.preventDefault(); e.stopPropagation();
@@ -200,9 +134,15 @@ function boot(win,doc){
   function hookScene(){
     const origRenderScene = win.renderScene;
     win.renderScene = function() {
-      // 每次渲染前强制修正一次数据
-      fixCharacterGenders();
-      
+      if(win.state && win.state.characters){
+        const femaleIds = ['zhongyueru', 'yuanbao', 'miju'];
+        const maleIds = ['qinwu', 'luoyunying', 'linyan', 'tangjiawei'];
+        win.state.characters.forEach(c=>{
+          if(femaleIds.includes(c.id)||femaleIds.includes(c.name)) c.gender='女';
+          if(maleIds.includes(c.id)||maleIds.includes(c.name)) c.gender='男';
+        });
+      }
+
       if(win.state && win.state.story && win.state.story.length > 0) {
         const current = win.state.story[win.state.cursor];
         if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
@@ -252,6 +192,7 @@ function boot(win,doc){
   }
 
   function parseSpecialMarkers(text){
+    // 兼容半角全角
     const RE=/(?:\[|【)(朋友圈|消息|加好友)[:：\s]*([^\]】]+)(?:\]|】)/g;
     const actions=[];
     const clean=text.replace(RE,(all,type,body)=>{
@@ -282,23 +223,19 @@ function boot(win,doc){
       const [charName,content]=act.parts;
       const c=chars.find(x=>x.name===charName);
       if(!c)continue;
-
       if(act.type==='朋友圈'){
         p.moments=p.moments||[];
         p.moments.unshift({ id:'m_'+Date.now()+Math.random().toString(36).slice(2,6), authorId:c.id,authorName:charName, authorAvatar:c.portraitUrl||c.a||'', text:content,t:Date.now(),comments:[] });
         if(typeof win.toast==='function')win.toast(`（${charName} 发了条朋友圈）`);
       }
       else if(act.type==='消息'){
-        p.chats=p.chats||{};
-        p.contacts=p.contacts||[];
-        
+        p.chats=p.chats||{};p.contacts=p.contacts||[];
         if(!p.contacts.includes(String(c.id))){
            p.contacts.push(String(c.id));
            if(typeof win.toast==='function')win.toast(`（${charName} 加你为好友，并给你发了条消息）`);
         } else {
            if(typeof win.toast==='function')win.toast(`（${charName} 给你发了条消息）`);
         }
-        
         (p.chats[c.id]=p.chats[c.id]||[]).push({r:'ai',c:content,t:Date.now()});
       }
     }
@@ -311,14 +248,10 @@ function boot(win,doc){
       win.buildSystem=function(){
         const base=origBuild.call(this);const phoneCtx=buildPhoneContext();let prefix='';
         if(phoneCtx)prefix+=`\n【手机端上下文】\n${phoneCtx}\n`;
-        
         prefix += '\n【手机端主动联动（极其重要）】\n';
-        prefix += '你不仅是在生成文字剧情，你还在操控角色们的“手机系统”。如果发生了特殊事件、角色内心产生波动、或者线下见面结束后，请务必使用以下指令让角色主动发手机动态（这些指令绝对不要在正文中显示）：\n';
-        prefix += '[朋友圈:角色名|内容] 表示该角色刚刚发了一条朋友圈。请在合适的时机使用，内容要符合人设。\n';
-        prefix += '[消息:角色名|内容] 表示该角色刚刚私聊给你发了一条消息。\n';
-        prefix += '[加好友:角色名] 表示该角色同意了你的好友请求。\n';
-        prefix += '【警告】必须严格使用半角英文方括号 `[]` 和半角冒号 `:`，不要使用【】。如果你想让一个还不是好友的角色发消息，必须先输出 [加好友:角色名] 或者直接使用 [消息:...] （系统会自动帮你加为好友）。\n';
-        
+        prefix += '你不仅是在生成文字剧情，你还在操控角色们的“手机系统”。如果发生了特殊事件、角色内心产生波动，请务必使用以下指令（绝对不要在正文中显示）：\n';
+        prefix += '[朋友圈:角色名|内容] 发朋友圈\n[消息:角色名|内容] 发私聊消息\n[加好友:角色名] 加好友\n';
+        prefix += '【警告】必须使用半角英文方括号 `[]`。\n';
         if(win.state.settings.enableMVU&&typeof win.mvuBuildPrompt==='function')return win.mvuBuildPrompt()+prefix+base;
         return prefix+base;
       };
@@ -327,24 +260,23 @@ function boot(win,doc){
       const origChat=win.callChat;
       win.callChat=async function(messages){
         const reply=await origChat.call(this,messages);let out=reply;
+        
+        // ★ 核心修复 1：彻底剔除任何带有 < > 等标签的变量块（MVU等）
+        out = out.replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/gi, '');
+        out = out.replace(/```[a-zA-Z]*\n[\s\S]*?```/g, ''); 
+        
         if(win.state.settings.enableMVU&&typeof win.mvuParseFromReply==='function'&&typeof win.mvuApplyPatch==='function'){
-          try{const patches=win.mvuParseFromReply(out);if(patches&&patches.length)win.mvuApplyPatch(patches);if(typeof win.mvuStripVariableBlocks==='function')out=win.mvuStripVariableBlocks(out);}catch(e){}
+          try{const patches=win.mvuParseFromReply(reply);if(patches&&patches.length)win.mvuApplyPatch(patches);if(typeof win.mvuStripVariableBlocks==='function')out=win.mvuStripVariableBlocks(out);}catch(e){}
         }
+        
+        // ★ 核心修复 2：剔除任何残留的底层指令方括号（如 [场景切换:xx] 或者 [前往地图:xx] 已经在 legacy 里处理，这里剔除漏网的内部标签）
+        out = out.replace(/\[?(系统|隐藏|变量|MVU)[:：][^\]]*\]?/gi, '');
+
         const {clean,actions}=parseSpecialMarkers(out);
         if(actions.length)executeMarkerActions(actions);
         return clean;
       };
     }
-  }
-
-  function injectMVUToggle(){
-    const status=doc.getElementById('apiStatus');if(!status||doc.getElementById('mvuToggleRow'))return;
-    const actionsDiv=status.parentElement;if(!actionsDiv||!actionsDiv.parentNode)return;
-    const checked=win.state.settings.enableMVU?'checked':'';
-    const row=doc.createElement('div');row.id='mvuToggleRow';row.className='switch-row';row.style.marginTop='8px';
-    row.innerHTML='<div class="switch-copy"><strong>启用 MVU 变量同步</strong><small>开启后生成剧情会附带当前世界变量</small></div><label class="switch"><input type="checkbox" id="mvuCheckbox" '+checked+'><span class="switch-ui"></span></label>';
-    actionsDiv.parentNode.insertBefore(row,actionsDiv);
-    doc.getElementById('mvuCheckbox').addEventListener('change',function(e){win.state.settings.enableMVU=e.target.checked;win.persist();});
   }
 
   win.parent.startStoryById=function(storyId){ if(typeof win.startStoryById==='function')win.startStoryById(storyId); };
@@ -354,9 +286,7 @@ function boot(win,doc){
   win.parent.onMeetupCancelled=function(){ if(typeof win.toast==='function')win.toast('约见已取消'); };
 
   whenReady(()=>{
-    setupObserver();hookScene();hookAPI();
-    const origRenderPanel=win.renderPanel;
-    win.renderPanel=function(){origRenderPanel.call(this);setTimeout(injectMVUToggle,20);};
+    hookScene();hookAPI();
     injectScript('./story-engine.js');injectScript('./js/mvu.js');
   });
 }
