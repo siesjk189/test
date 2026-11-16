@@ -296,26 +296,16 @@ body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
   .map-spot span{font-size:9px;}
 }
 
-/* ... 之前的代码（292-296行） ... */
-.map-spot{width:46px;height:46px;}
-.map-spot .inner{width:32px;height:32px;}
-.map-spot span{font-size:9px;}
-} /* 这是第 297 行的大括号 */
-
-/* 👇 请把第六步的代码粘贴在这里 👇 */
-/* ===== 面板内嵌页面（资源库 / 人物设定） ===== */
-.panel-content.embed-content{padding:0;overflow:hidden;display:flex;flex-direction:column;}
-.embed-wrap{flex:1;min-height:0;width:100%;background:var(--surface-2);}
-.embed-frame{display:block;width:100%;height:100%;border:0;background:var(--surface-2);}
-/* 👆 粘贴结束 👆 */
-
+/* ===== 面板内嵌页面（资源库 / 人物设定 / 公告） ===== */
+.panel-content.embed-content{padding:0;overflow:hidden;display:flex;flex-direction:column; height: 100%;}
+.embed-wrap{flex:1;min-height:0;width:100%;background:var(--surface-2); position: relative;}
+.embed-frame{position:absolute; inset:0; width:100%;height:100%;border:0;background:var(--surface-2);}
+  
 @media(prefers-reduced-motion: reduce){ /* 这是第 298 行 */
   *,*:before,*:after{animation:none!important;transition:none!important}
 }
 </style>
   
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
-</style>
 </head>
 <body class="theme-light">
 <main class="scene" id="scene" aria-label="互动剧情界面">

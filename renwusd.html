@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>人物设定</title>
 <style>
   /* 默认值兜底 */
@@ -10,184 +10,158 @@
     --bg: #fbf9f4; --surface: #fff; --surface-2: #faf8f3;
     --text: #1c1c1e; --muted: #8b877e; --line: rgba(28,28,30,.14);
     --accent: #1c1c1e; --radius: 8px;
+    --p-paper: #fff; --p-ink: #1c1c1e;
     --font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #151519; --surface: #1b1b20; --surface-2: #151519;
-      --text: #eceae5; --muted: #807d76; --line: rgba(236,234,229,.14);
-      --accent: #eceae5;
-    }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { 
+    font-family: var(--font-family); color: var(--text); background: var(--surface); 
+    font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+    padding: 24px 28px 60px; height: 100vh; overflow-y: auto; scrollbar-width: thin;
   }
+
+  /* ===== 完全复刻 legacy 的布局 ===== */
+  .character-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 26px; }
+  .character-list { display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start; }
+  .character-select { 
+    display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; 
+    min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 3px; 
+    background: var(--surface-2); color: var(--text); text-align: left; font-size: 14px; 
+    transition: all .2s; cursor: pointer; 
+  }
+  .character-select.active { border-color: var(--accent); background: oklch(0.65 0.16 250 / .15); color: var(--accent); font-weight: bold; }
+  .built-in-tag { font: 10px/1.4 sans-serif; color: var(--muted); font-weight: normal; }
   
-  * { box-sizing: border-box; font-family: var(--font-family); }
-  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
+  /* 编辑器区域 */
+  .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .editor-head h3 { font-size: 18px; font-weight: 500; }
+  .group { padding: 20px 0; border-bottom: 1px solid var(--line); }
+  .group:first-child { padding-top: 0; }
+  .group:last-child { border-bottom: none; }
+  .group-title { display: flex; align-items: center; gap: 10px; font-size: 17px; margin-bottom: 16px; font-weight: 500; }
   
-  .layout { display: flex; gap: 16px; height: calc(100vh - 32px); }
-  .sidebar { width: 140px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
-  .main { flex: 1; overflow-y: auto; padding-right: 8px; padding-bottom: 40px; scrollbar-width: thin; }
-  
-  /* 侧边栏按钮 */
-  .char-btn { padding: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; color: var(--text); cursor: pointer; text-align: left; transition: all 0.2s; }
-  .char-btn.active { border-color: var(--accent); background: rgba(100,100,100,.1); font-weight: bold; }
-  .char-btn .tag { font-size: 10px; opacity: 0.6; font-weight: normal; margin-left: 4px; }
-  
-  /* 表单样式 */
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .field input, .field textarea, .field select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--text); font-family: inherit; font-size: 13px; outline: none; transition: border 0.2s; }
+  /* 表单统一 */
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+  .field { display: grid; gap: 7px; min-width: 0; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font: 13px/1.5 "Microsoft YaHei", sans-serif; color: var(--muted); }
+  .field input, .field textarea, .field select { 
+    width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); 
+    border-radius: 3px; background: var(--surface-2); color: var(--text); 
+    font-family: inherit; font-size: 15px; transition: border-color .2s, background .3s; 
+  }
+  .field textarea { min-height: 100px; resize: vertical; line-height: 1.7; }
   .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
-  .field textarea { min-height: 80px; resize: vertical; line-height: 1.6; }
-  .field input:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface-2); }
+  .field input:disabled { opacity: 0.5; }
   
-  /* 头部与工具条 */
-  .editor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-  .editor-head h3 { margin: 0; font-size: 16px; }
-  .btn { padding: 6px 12px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; font-size: 12px; transition: all 0.2s; }
-  .btn:hover { border-color: var(--accent); }
-  .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-  .btn-danger { color: #ef4444; border-color: rgba(239,68,68,.3); }
-  .btn-danger:hover { background: rgba(239,68,68,.1); border-color: #ef4444; }
-  
-  /* 方案切换 */
-  .scheme-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; background: var(--surface-2); padding: 8px; border-radius: 4px; border: 1px solid var(--line); }
-  .scheme-bar select { flex: 1; min-height: 32px; padding: 4px 8px; }
-  
-  /* 开关组件 */
-  .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--line); margin-bottom: 14px; }
-  .switch-row:last-child { border-bottom: none; }
-  .switch-copy strong { display: block; font-size: 13px; }
-  .switch-copy small { display: block; color: var(--muted); font-size: 11px; }
-  .switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+  /* 开关组件原版复刻 */
+  .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 54px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .switch-copy strong { display: block; font-weight: 500; }
+  .switch-copy small { display: block; color: var(--muted); font: 12px/1.6 "Microsoft YaHei", sans-serif; }
+  .switch { position: relative; flex: 0 0 48px; width: 48px; height: 26px; }
   .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; }
-  .switch-ui { display: block; width: 100%; height: 100%; border: 1px solid var(--muted); border-radius: 20px; transition: 0.2s; position: relative; }
-  .switch-ui::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: 0.2s; }
+  .switch-ui { display: block; width: 100%; height: 100%; border: 1px solid var(--muted); border-radius: 20px; transition: background .2s, border-color .2s; pointer-events: none; }
+  .switch-ui:after { content: ""; position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; }
   .switch input:checked + .switch-ui { background: var(--accent); border-color: var(--accent); }
-  .switch input:checked + .switch-ui::after { transform: translateX(18px); background: var(--bg); }
-  
-  /* 网格布局 */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  
-  /* 分组框 */
-  .group-box { border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin-bottom: 20px; background: var(--surface); }
-  .group-title { font-size: 13px; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; border-left: 3px solid var(--accent); padding-left: 8px; }
+  .switch input:checked + .switch-ui:after { transform: translateX(22px); background: var(--p-paper); }
+
+  /* 按钮 */
+  .btn { min-height: 44px; padding: 10px 20px; border-radius: 3px; font: 500 14px/1.5 "Microsoft YaHei", sans-serif; transition: .2s; cursor: pointer; }
+  .primary-btn { background: var(--p-paper); color: var(--p-ink); border: 1px solid var(--p-paper); }
+  .secondary-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+  .danger-btn { background: transparent; color: oklch(0.7 0.16 25); border: 1px solid oklch(0.7 0.16 25 / .5); }
+  .text-btn { min-height: 36px; border: 0; background: transparent; color: var(--muted); padding: 4px 6px; cursor: pointer; font: 13px/1.4 "Microsoft YaHei", sans-serif; }
+  .text-btn:hover { color: var(--text); text-decoration: underline; }
+
+  /* 方案栏 */
+  .scheme-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; background: var(--surface-2); padding: 12px; border-radius: 3px; border: 1px solid var(--line); }
+  .scheme-bar select { flex: 1; min-height: 40px; padding: 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--text); font-family: inherit; }
+
+  /* ===== 手机端适配（和 legacy 原生一样，自动上下排列） ===== */
+  @media(max-width:760px){
+    body { padding: 16px 16px 60px; }
+    .character-layout { grid-template-columns: 1fr; gap: 16px; }
+    .character-list { display: flex; flex-wrap: wrap; gap: 5px; }
+    .character-select { flex: 0 0 auto; }
+    .form-grid { grid-template-columns: 1fr; }
+    .field.full { grid-column: auto; }
+  }
 </style>
 </head>
 <body>
 
-<div class="layout">
-  <div class="sidebar" id="charList"></div>
-  <div class="main" id="charEditor">
-    <p style="color:var(--muted);text-align:center;margin-top:50px;">正在读取游戏数据...</p>
-  </div>
+<div class="character-layout">
+  <div class="character-list" id="charList"></div>
+  <div class="character-editor" id="charEditor"></div>
 </div>
 
 <script>
 let state = null;
 try {
-  // 强行获取父窗口的数据仓库
+  // 获取父窗口的数据
   state = window.parent.state;
 } catch(e) {
-  document.body.innerHTML = '<p style="color:red;padding:20px;">无法获取游戏数据。请确保在游戏菜单中打开此页面。</p>';
+  document.body.innerHTML = '<p style="color:red;padding:20px;">无法获取游戏数据，请确保在游戏中打开。</p>';
 }
 
 if (state) {
   let currentId = state.characters[0]?.id || '';
-
-  // ================== 工具函数 ==================
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  
-  // 调用父窗口的保存机制
-  function saveState() {
-    try { window.parent.persist(true); } catch(e) {}
-  }
+  function saveState() { try { window.parent.persist(true); } catch(e) {} }
 
-  // ================== 渲染侧边栏 ==================
-  function renderSidebar() {
+  // 渲染左侧列表
+  function renderList() {
     const list = document.getElementById('charList');
     list.innerHTML = state.characters.map(c => `
-      <button class="char-btn ${c.id === currentId ? 'active' : ''}" onclick="selectChar('${c.id}')">
-        ${esc(c.name)} ${c.builtIn ? '<span class="tag">内置</span>' : ''}
+      <button class="character-select ${c.id === currentId ? 'active' : ''}" onclick="selectChar('${c.id}')">
+        <span>${esc(c.name)}</span> ${c.builtIn ? '<span class="built-in-tag">内置</span>' : ''}
       </button>
-    `).join('') + `<button class="btn btn-primary" style="margin-top:10px;" onclick="addCharacter()">+ 新建角色</button>`;
+    `).join('') + `<button class="text-btn" style="width:100%; border:1px dashed var(--line); margin-top:8px; border-radius:3px;" onclick="addCharacter()">+ 新建角色</button>`;
   }
 
-  window.selectChar = function(id) {
-    currentId = id;
-    renderSidebar();
-    renderEditor();
-  };
+  window.selectChar = (id) => { currentId = id; renderList(); renderEditor(); };
 
-  // ================== 新建与删除角色 ==================
-  window.addCharacter = function() {
+  window.addCharacter = () => {
     const newChar = {
-      id: 'custom_' + Date.now(),
-      builtIn: false,
-      name: '新角色',
-      gender: '女',
-      identity: '',
-      relation: '同学',
-      address: '你',
-      personality: '',
-      description: '',
-      useSprite: true,
-      portraitId: '',
-      activeScheme: 'default',
+      id: 'custom_' + Date.now(), builtIn: false, name: '新角色', gender: '女',
+      identity: '', relation: '同学', address: '你', personality: '', description: '',
+      useSprite: true, portraitId: '', activeScheme: 'default', 
       schemes: [{ id: 'default', name: '默认方案', data: {} }],
-      district: '其他',
-      preferredLocations: '',
-      voiceOverride: '',
-      useCustomVoice: false,
-      voiceEnabled: false
+      district: '其他', preferredLocations: '', voiceOverride: '', useCustomVoice: false, voiceEnabled: false
     };
     state.characters.push(newChar);
-    saveState();
-    currentId = newChar.id;
-    renderSidebar();
-    renderEditor();
-    try { window.parent.toast('已创建新角色'); } catch(e){}
+    saveState(); currentId = newChar.id;
+    renderList(); renderEditor();
   };
 
-  window.deleteCharacter = function() {
+  window.deleteCharacter = () => {
     if (!confirm('确定要删除这个角色吗？此操作不可逆！')) return;
     state.characters = state.characters.filter(c => c.id !== currentId);
     if (state.selectedCharacterId === currentId) state.selectedCharacterId = state.characters[0]?.id || '';
     currentId = state.characters[0]?.id || '';
-    saveState();
-    renderSidebar();
-    renderEditor();
-    try { window.parent.toast('已删除角色'); } catch(e){}
+    saveState(); renderList(); renderEditor();
   };
 
-  // ================== 渲染编辑区 ==================
+  // 渲染右侧编辑器
   function renderEditor() {
     const c = state.characters.find(x => x.id === currentId);
     const box = document.getElementById('charEditor');
     if (!c) { box.innerHTML = '<p style="color:var(--muted)">请选择或新建一个角色。</p>'; return; }
 
-    // 提取立绘和音色的下拉选项
-    const portraits = state.images.filter(i => i.character === c.name || c.portraitId === i.id);
-    let voicesList = state.voice.customList || [];
-    const builtInVoices = [
-      {id:'male-qn-qingse', name:'青涩青年'}, {id:'male-qn-jingying', name:'精英青年'},
-      {id:'male-qn-badao', name:'霸道青年'}, {id:'female-shaonv', name:'少女'}, {id:'female-yujie', name:'御姐'}
-    ];
-
-    // 构建 HTML
     let html = `
       <div class="editor-head">
-        <h3>${esc(c.name)} ${c.builtIn ? '(内置角色)' : '(自定义)'}</h3>
-        ${!c.builtIn ? `<button class="btn btn-danger" onclick="deleteCharacter()">删除角色</button>` : ''}
+        <h3>${esc(c.name)} ${c.builtIn ? '<span class="built-in-tag" style="margin-left:8px;">内置角色</span>' : ''}</h3>
+        ${!c.builtIn ? `<button class="text-btn" style="color:oklch(0.7 0.16 25)" onclick="deleteCharacter()">删除角色</button>` : ''}
       </div>
     `;
 
-    // 1. 基础信息 / 覆盖内置
+    // 基础信息 / 覆盖
     if (!c.builtIn) {
       html += `
-        <div class="group-box">
+        <div class="group">
           <div class="group-title">基础信息</div>
-          <div class="grid-2">
+          <div class="form-grid">
             <div class="field"><label>姓名</label><input value="${esc(c.name)}" oninput="updateField('name', this.value)"></div>
             <div class="field"><label>性别</label>
               <select onchange="updateField('gender', this.value)">
@@ -197,93 +171,98 @@ if (state) {
             </div>
             <div class="field"><label>身份</label><input value="${esc(c.identity || '')}" oninput="updateField('identity', this.value)"></div>
             <div class="field"><label>关系</label><input value="${esc(c.relation || '')}" oninput="updateField('relation', this.value)"></div>
-            <div class="field" style="grid-column:1/-1;"><label>对玩家的称呼</label><input value="${esc(c.address || '')}" oninput="updateField('address', this.value)"></div>
+            <div class="field full"><label>对玩家的称呼</label><input value="${esc(c.address || '')}" oninput="updateField('address', this.value)"></div>
           </div>
         </div>
       `;
     } else {
-      // 内置角色设置
       if (!c.customProfile) c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
       html += `
-        <div class="group-box">
+        <div class="group">
+          <div class="group-title">覆盖内置设定</div>
           <div class="switch-row">
-            <div class="switch-copy"><strong>覆盖内置设定</strong><small>开启后可修改该角色的专属设定</small></div>
+            <div class="switch-copy"><strong>启用自定义设定</strong><small>开启后可覆盖该角色的官方设定</small></div>
             <label class="switch"><input type="checkbox" ${c.useCustomProfile ? 'checked' : ''} onchange="updateField('useCustomProfile', this.checked)"><span class="switch-ui"></span></label>
           </div>
-          <div class="${c.useCustomProfile ? '' : 'locked'}" style="${!c.useCustomProfile ? 'opacity:0.5;pointer-events:none;' : ''}">
-            <div class="grid-2">
+          <div style="${!c.useCustomProfile ? 'opacity:0.4;pointer-events:none;' : ''}; margin-top:16px;">
+            <div class="form-grid">
               <div class="field"><label>覆盖身份</label><input value="${esc(c.customProfile.identity)}" oninput="updateField('customProfile.identity', this.value)" placeholder="留空则不覆盖"></div>
               <div class="field"><label>覆盖关系</label><input value="${esc(c.customProfile.relation)}" oninput="updateField('customProfile.relation', this.value)" placeholder="留空则不覆盖"></div>
-              <div class="field" style="grid-column:1/-1;"><label>覆盖称呼</label><input value="${esc(c.customProfile.address)}" oninput="updateField('customProfile.address', this.value)" placeholder="留空则不覆盖"></div>
+              <div class="field full"><label>覆盖称呼</label><input value="${esc(c.customProfile.address)}" oninput="updateField('customProfile.address', this.value)" placeholder="留空则不覆盖"></div>
             </div>
           </div>
         </div>
       `;
     }
 
-    // 2. 设定方案（仅自定义角色）
+    // 方案
     if (!c.builtIn) {
       if (!c.schemes) c.schemes = [{id:'default', name:'默认方案', data:{}}];
       html += `
-        <div class="group-box">
+        <div class="group">
           <div class="group-title">多套设定方案</div>
           <div class="scheme-bar">
             <select onchange="switchScheme(this.value)">
               ${c.schemes.map(s => `<option value="${s.id}" ${s.id === c.activeScheme ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
             </select>
-            <button class="btn" onclick="addScheme()">+ 新建方案</button>
-            <button class="btn btn-danger" onclick="deleteScheme()" ${c.schemes.length <= 1 ? 'disabled' : ''}>删除</button>
+            <button class="btn secondary-btn" style="min-height:40px;padding:0 16px;" onclick="addScheme()">新建</button>
+            <button class="btn danger-btn" style="min-height:40px;padding:0 16px;" onclick="deleteScheme()" ${c.schemes.length <= 1 ? 'disabled' : ''}>删除</button>
           </div>
         </div>
       `;
     }
 
-    // 3. 详细设定（内核）
+    // 详细内核
     const currentData = getCurrentData(c);
     html += `
-      <div class="group-box">
+      <div class="group">
         <div class="group-title">详细设定</div>
-        <div class="field"><label>性格 / 核心设定</label><textarea oninput="updateField('personality', this.value)">${esc(currentData.personality)}</textarea></div>
-        <div class="field"><label>外貌 / 描述</label><textarea oninput="updateField('description', this.value)">${esc(currentData.description)}</textarea></div>
+        <div class="form-grid">
+          <div class="field full"><label>性格 / 核心设定</label><textarea oninput="updateField('personality', this.value)">${esc(currentData.personality)}</textarea></div>
+          <div class="field full"><label>外貌 / 描述</label><textarea oninput="updateField('description', this.value)">${esc(currentData.description)}</textarea></div>
+        </div>
       </div>
     `;
 
-    // 4. 立绘与音色
+    // 立绘与语音
     html += `
-      <div class="group-box">
-        <div class="group-title">立绘与音色</div>
+      <div class="group">
+        <div class="group-title">立绘与语音</div>
         <div class="switch-row">
-          <div class="switch-copy"><strong>显示立绘</strong><small>关闭后，剧情中此人只会显示剪影</small></div>
+          <div class="switch-copy"><strong>显示立绘</strong><small>关闭后剧情中此人只显示剪影</small></div>
           <label class="switch"><input type="checkbox" ${c.useSprite !== false ? 'checked' : ''} onchange="updateField('useSprite', this.checked)"><span class="switch-ui"></span></label>
         </div>
-        <div class="field">
-          <label>专属立绘绑定</label>
-          <select onchange="updateField('portraitId', this.value)">
-            <option value="">-- 自动匹配(根据名字) --</option>
-            ${state.images.map(img => `<option value="${img.id}" ${c.portraitId === img.id ? 'selected' : ''}>${esc(img.name)}</option>`).join('')}
-          </select>
+        <div class="form-grid" style="margin-top:16px;">
+          <div class="field full">
+            <label>专属立绘绑定</label>
+            <select onchange="updateField('portraitId', this.value)">
+              <option value="">-- 根据名字自动匹配 --</option>
+              ${state.images.map(img => `<option value="${img.id}" ${c.portraitId === img.id ? 'selected' : ''}>${esc(img.name)}</option>`).join('')}
+            </select>
+          </div>
         </div>
-        <div class="switch-row">
-          <div class="switch-copy"><strong>启用语音</strong><small>开启后剧情中说话会配音</small></div>
+        <div class="switch-row" style="margin-top:10px;">
+          <div class="switch-copy"><strong>启用语音朗读</strong><small>开启后说话时会播放音色</small></div>
           <label class="switch"><input type="checkbox" ${c.voiceEnabled ? 'checked' : ''} onchange="updateField('voiceEnabled', this.checked)"><span class="switch-ui"></span></label>
         </div>
-        <div class="field">
-          <label>语音 ID (Voice ID)</label>
-          <input value="${esc(c.voiceOverride || '')}" oninput="updateField('voiceOverride', this.value)" placeholder="填写 MiniMax 音色 ID">
-          <div style="font-size:11px;color:var(--muted);margin-top:4px;">常用：female-shaonv (少女), male-qn-qingse (青年)</div>
+        <div class="form-grid" style="margin-top:16px;">
+          <div class="field full">
+            <label>语音 ID (Voice ID)</label>
+            <input value="${esc(c.voiceOverride || '')}" oninput="updateField('voiceOverride', this.value)" placeholder="例如: female-shaonv">
+          </div>
         </div>
       </div>
     `;
 
-    // 5. 活跃区域
+    // 活跃区域
     html += `
-      <div class="group-box">
+      <div class="group">
         <div class="group-title">日常活动地点</div>
-        <div class="grid-2">
+        <div class="form-grid">
           <div class="field">
             <label>常去区域</label>
             <select onchange="updateField('district', this.value)">
-              <option value="常去" ${c.district === '常去' ? 'selected' : ''}>常去区域（容易偶遇）</option>
+              <option value="常去" ${c.district === '常去' ? 'selected' : ''}>常去（容易偶遇）</option>
               <option value="其他" ${c.district === '其他' ? 'selected' : ''}>其他区域</option>
             </select>
           </div>
@@ -298,7 +277,6 @@ if (state) {
     box.innerHTML = html;
   }
 
-  // ================== 数据操作 ==================
   function getCurrentData(c) {
     if (!c.builtIn && c.schemes) {
       const active = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
@@ -307,28 +285,22 @@ if (state) {
     return c;
   }
 
-  // 核心更新逻辑
-  window.updateField = function(path, value) {
+  window.updateField = (path, value) => {
     const c = state.characters.find(x => x.id === currentId);
     if (!c) return;
 
     if (!c.builtIn && c.schemes) {
-      // 如果是自定义角色，数据要写进方案里
       const active = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
       if (!active.data) active.data = {};
-      
       if (path.includes('.')) {
-        // customProfile 的覆盖
         const parts = path.split('.');
         if (!c[parts[0]]) c[parts[0]] = {};
         c[parts[0]][parts[1]] = value;
       } else {
         active.data[path] = value;
-        // 同步到顶层（保留主程序的兼容性）
         c[path] = value;
       }
     } else {
-      // 内置角色
       if (path.includes('.')) {
         const parts = path.split('.');
         if (!c[parts[0]]) c[parts[0]] = {};
@@ -337,56 +309,54 @@ if (state) {
         c[path] = value;
       }
     }
-    
     saveState();
-    
-    // 如果改了名字，侧边栏也要刷新
     if (path === 'name') {
-      renderSidebar();
-      document.querySelector('.editor-head h3').textContent = value + ' (自定义)';
+      renderList();
+      document.querySelector('.editor-head h3').innerHTML = esc(value) + ' <span class="built-in-tag" style="margin-left:8px;">(自定义)</span>';
     }
   };
 
-  // ================== 方案管理 ==================
-  window.switchScheme = function(id) {
+  window.switchScheme = (id) => {
     const c = state.characters.find(x => x.id === currentId);
     if (c && !c.builtIn) {
       c.activeScheme = id;
-      // 把方案数据覆盖到角色本体，方便主游戏读取
       const active = c.schemes.find(s => s.id === id);
-      if (active && active.data) {
-        Object.assign(c, active.data);
-      }
-      saveState();
-      renderEditor();
+      if (active && active.data) Object.assign(c, active.data);
+      saveState(); renderEditor();
     }
   };
 
-  window.addScheme = function() {
+  window.addScheme = () => {
     const c = state.characters.find(x => x.id === currentId);
     if (!c || c.builtIn) return;
     const name = prompt('请输入新方案名称：', '方案 ' + (c.schemes.length + 1));
     if (!name) return;
-    
     const id = 'scheme_' + Date.now();
     c.schemes.push({ id: id, name: name, data: JSON.parse(JSON.stringify(getCurrentData(c))) });
-    c.activeScheme = id;
-    saveState();
-    renderEditor();
+    c.activeScheme = id; saveState(); renderEditor();
   };
 
-  window.deleteScheme = function() {
+  window.deleteScheme = () => {
     const c = state.characters.find(x => x.id === currentId);
     if (!c || c.builtIn || c.schemes.length <= 1) return;
-    
     if (!confirm('确定删除当前方案吗？')) return;
     c.schemes = c.schemes.filter(s => s.id !== c.activeScheme);
     c.activeScheme = c.schemes[0].id;
     switchScheme(c.activeScheme);
   };
 
-  // ================== 初始化 ==================
-  renderSidebar();
+  // 强行同步父窗口的主题变量，保证颜色 100% 一致
+  try {
+    const pStyle = window.parent.getComputedStyle(window.parent.document.body);
+    ['--bg', '--surface', '--surface-2', '--text', '--muted', '--line', '--accent', '--radius', '--p-paper', '--p-ink'].forEach(v => {
+      let val = pStyle.getPropertyValue(v);
+      if(val) document.documentElement.style.setProperty(v, val);
+    });
+    let font = pStyle.getPropertyValue('font-family');
+    if(font) document.documentElement.style.setProperty('--font-family', font);
+  } catch(e) {}
+
+  renderList();
   renderEditor();
 }
 </script>
