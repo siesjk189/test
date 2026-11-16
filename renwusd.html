@@ -133,7 +133,6 @@ if (state) {
     }
   });
 
-  // 获取资源库导入的角色数据
   const resourceChars = state.custom_resources?.characters || [];
   let currentSameNameRes = [];
 
@@ -141,40 +140,35 @@ if (state) {
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function saveState() { try { window.parent.persist(true); } catch(e) {} }
 
-  // 核心修复：资源库数据解析器
-  // 因为资源库导出时，是把整个角色对象存了下来，文本可能藏在 customProfile 或 schemes 里
-  function parseResData(resData) {
-    // 情况 1：从内置角色覆盖导出的
+  // 核心解析器：严格只提取文本（身份、关系、性格、外貌），绝对不碰音色、立绘、地点等配置
+  function applyResData(targetChar, resData) {
+    let profile = { identity:'', relation:'', address:'', personality:'', description:'' };
+    
+    // 提取文字
     if (resData.customProfile && resData.useCustomProfile) {
-      return {
-        identity: resData.customProfile.identity || '',
-        relation: resData.customProfile.relation || '',
-        address: resData.customProfile.address || '',
-        personality: resData.customProfile.personality || '',
-        description: resData.customProfile.description || ''
+      profile = { ...resData.customProfile };
+    } else if (resData.schemes && resData.schemes.length > 0) {
+      const active = resData.schemes.find(s => s.id === resData.activeScheme) || resData.schemes[0];
+      if (active.data) profile = { ...active.data };
+    } else {
+      profile = {
+        identity: resData.identity || '',
+        relation: resData.relation || '',
+        address: resData.address || '',
+        personality: resData.personality || '',
+        description: resData.description || ''
       };
     }
-    // 情况 2：从自定义角色导出的（带有方案）
-    if (resData.schemes && resData.schemes.length > 0) {
-      const active = resData.schemes.find(s => s.id === resData.activeScheme) || resData.schemes[0];
-      if (active.data) {
-        return {
-          identity: active.data.identity || '',
-          relation: active.data.relation || '',
-          address: active.data.address || '',
-          personality: active.data.personality || '',
-          description: active.data.description || ''
-        };
-      }
+    
+    // 写入数据
+    if (!targetChar.builtIn) {
+      const active = targetChar.schemes.find(s => s.id === targetChar.activeScheme) || targetChar.schemes[0];
+      active.data = profile;
+      Object.assign(targetChar, profile);
+    } else {
+      targetChar.customProfile = profile;
+      targetChar.useCustomProfile = true;
     }
-    // 情况 3：直接在顶层
-    return {
-      identity: resData.identity || '',
-      relation: resData.relation || '',
-      address: resData.address || '',
-      personality: resData.personality || '',
-      description: resData.description || ''
-    };
   }
 
   function renderList() {
@@ -235,7 +229,6 @@ if (state) {
 
     html += `<div class="field full">
       <label>设定来源</label>`;
-    
     if (c.builtIn) {
       html += `<select onchange="changeSource(this.value)">`;
       html += `<option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>`;
@@ -389,10 +382,8 @@ if (state) {
       const idx = parseInt(val.replace('res_', ''));
       const resData = currentSameNameRes[idx];
       if (resData) {
-        // 这里调用了修复的解析器！
-        c.customProfile = parseResData(resData);
-        c.useCustomProfile = true;
-        try { window.parent.toast('已应用资源库设定'); } catch(e){}
+        applyResData(c, resData); 
+        try { window.parent.toast('已应用资源库文字设定'); } catch(e){}
       }
     }
     saveState(); renderEditor();
@@ -407,17 +398,17 @@ if (state) {
       const resData = currentSameNameRes[idx];
       if (resData) {
         const newId = 'scheme_res_' + Date.now();
-        // 这里也调用了修复的解析器！
-        c.schemes.push({ id: newId, name: '导入:' + resData.name, data: parseResData(resData) });
+        c.schemes.push({ id: newId, name: '导入:' + resData.name, data: {} });
         c.activeScheme = newId;
-        try { window.parent.toast('已导入为新的设定方案'); } catch(e){}
+        applyResData(c, resData); 
+        try { window.parent.toast('已导入资源库文字方案'); } catch(e){}
       }
     } else {
       c.activeScheme = id;
+      const active = c.schemes.find(s => s.id === id);
+      if (active && active.data) Object.assign(c, active.data);
     }
     
-    const active = c.schemes.find(s => s.id === c.activeScheme);
-    if (active && active.data) Object.assign(c, active.data);
     saveState(); renderEditor();
   };
 
