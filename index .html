@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1118">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>那什么dk萌</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0d1118;}
+#legacy{display:block;width:100%;height:100dvh;border:0;background:#0d1118;}
+#boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#8b94a8;font:14px/1.6 -apple-system,"PingFang SC",sans-serif;background:#0d1118;z-index:10;transition:opacity .4s;}
+#boot.hide{opacity:0;pointer-events:none;}
+</style>
+</head>
+<body>
+<iframe id="legacy" allow="autoplay" style="width:100%;height:100%;border:0;background:#0d1118;"></iframe>
+<div id="boot">正在加载 V1.3…</div>
+<script>
+'use strict';
+window.proxyFetch = async function(url, opts) {
+  const proxies = ["", "https://corsproxy.io/?", "https://api.allorigins.win/raw?url="];
+  let lastErr;
+  for (const p of proxies) {
+    try {
+      let fetchUrl = url;
+      if (p) fetchUrl = p.includes('?') || p.includes('=') ? p + encodeURIComponent(url) : p + '?url=' + encodeURIComponent(url);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
+      const res = await fetch(fetchUrl, { ...opts, signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      if (!res.ok && p !== "") continue;
+      const text = await res.text();
+      return {
+         ok: res.ok,
+         status: res.status,
+         json: async () => JSON.parse(text),
+         text: async () => text
+      };
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+};
+
+const frame=document.getElementById('legacy');
+frame.src = './legacy.html?v=' + Date.now();
+frame.addEventListener('load',()=>{
+  try{boot(frame.contentWindow,frame.contentDocument);document.getElementById('boot').classList.add('hide');}
+  catch(e){console.error('[启动器] 注入失败：',e);document.getElementById('boot').textContent='注入失败：'+e.message;}
+});
+
+function boot(win,doc){
+  const ready=()=>typeof win.renderScene==='function';
+  const whenReady=(fn)=>{if(ready())return fn();let n=0;const t=setInterval(()=>{if(ready()||++n>100){clearInterval(t);fn();}},100);};
+
+  function getState() {
+    try { return win.eval('state'); } catch(e) { return win.state || {}; }
+  }
+
+  function setupObserver(){
+    const observer = new MutationObserver(() => {
+      const navs = doc.querySelectorAll('.diamond-nav');
+      navs.forEach(nav => {
+        if (!nav.querySelector('[data-action="open-phone"]')) {
+          const wrap = doc.createElement('div');
+          wrap.className = 'diamond-wrap';
+          wrap.innerHTML = '<button class="diamond" data-action="open-phone" aria-label="打开手机"><span>手机</span></button>';
+          nav.insertBefore(wrap, nav.firstChild);
+        }
+      });
+
+      const setupApiContent = doc.getElementById('setupApiContent');
+      if (setupApiContent && setupApiContent.innerHTML.includes('文本 AI 配置') && !doc.getElementById('setupMvuRow')) {
+        const s = getState();
+        const isMvuOn = s && s.settings && s.settings.enableMVU;
+        
+        const row = doc.createElement('div');
+        row.id = 'setupMvuRow';
+        row.className = 'switch-row';
+        row.style.marginTop = '20px';
+        
+        row.innerHTML = `
+          <div class="switch-copy">
+            <strong>启用 MVU 变量系统</strong>
+            <small>开启后，AI 会自动推演时间、好感度，并触发任务。</small>
+          </div>
+          <label class="switch"><input type="checkbox" id="setupMvuCheckbox" ${isMvuOn ? 'checked' : ''}><span class="switch-ui"></span></label>
+        `;
+        
+        const actionsDiv = setupApiContent.querySelector('.actions');
+        if (actionsDiv) {
+          setupApiContent.insertBefore(row, actionsDiv);
+        } else {
+          setupApiContent.appendChild(row);
+        }
+        
+        doc.getElementById('setupMvuCheckbox').addEventListener('change', function(e) {
+          const state = getState();
+          if (state && state.settings) {
+            state.settings.enableMVU = e.target.checked;
+            if (typeof win.persist === 'function') win.persist();
+          }
+        });
+      }
+    });
+    observer.observe(doc.body, { childList: true, subtree: true });
+  }
+
+  // 极简干净的时间初始化
+  function cleanAndInitMvu() {
+    const s = getState();
+    if (!s) return;
+    if (!s.mvu || typeof s.mvu !== 'object') s.mvu = {};
+    
+    if (!s.mvu['基础信息']) s.mvu['基础信息'] = {};
+    
+    if (!s.mvu['基础信息']['日期']) {
+      s.mvu['基础信息']['日期'] = { "年": 2026, "月": 9, "日": 1, "时": 8, "分": 0 };
+    } else {
+      const d = s.mvu['基础信息']['日期'];
+      let y = Number(d['年']);
+      if (isNaN(y) || y > 2050 || y < 2000) y = 2026;
+      
+      s.mvu['基础信息']['日期'] = { 
+        "年": y, 
+        "月": Number(d['月']) || 1, 
+        "日": Number(d['日']) || 1,
+        "时": d['时'] !== undefined ? Number(d['时']) : 8,
+        "分": d['分'] !== undefined ? Number(d['分']) : 0
+      };
+    }
+
+    if (s.mvu['基础信息']) {
+      const dateObj = s.mvu['基础信息']['日期'];
+      s.mvu['基础信息'] = { "日期": dateObj };
+    }
+
+    if (!s.mvu['好感度'] || typeof s.mvu['好感度'] !== 'object') s.mvu['好感度'] = {};
+    const chars = s.characters || [];
+    chars.forEach(c => {
+      if (s.mvu['好感度'][c.name] === undefined) {
+        s.mvu['好感度'][c.name] = 10;
+      }
+    });
+
+    Object.keys(s.mvu['好感度']).forEach(name => {
+      if (!chars.some(c => c.name === name)) delete s.mvu['好感度'][name];
+    });
+
+    if (!s.mvu['任务'] || !Array.isArray(s.mvu['任务'])) s.mvu['任务'] = [];
+    if (!s.mvu['特殊剧情点'] || !Array.isArray(s.mvu['特殊剧情点'])) s.mvu['特殊剧情点'] = [];
+    
+    if (!s.mvu['固定日程'] || typeof s.mvu['固定日程'] !== 'object') {
+      s.mvu['固定日程'] = {
+        "2026-09-07": "骆云影转学来到高一三班"
+      };
+    }
+    
+    const allowedKeys = ['基础信息', '好感度', '任务', '特殊剧情点', '固定日程'];
+    Object.keys(s.mvu).forEach(k => {
+      if (!allowedKeys.includes(k)) delete s.mvu[k];
+    });
+  }
+
+  async function recalculateMVU() {
+    const s = getState();
+    if (!s.api.endpoint || !s.api.key) { 
+      alert('请先在 API 配置中填写接口和密钥');
+      return; 
+    }
+    if (!s.story || s.story.length === 0) { 
+      alert('没有剧情可以修正');
+      return; 
+    }
+
+    const limitInput = doc.getElementById('mvuHistoryLimit');
+    const limit = limitInput ? parseInt(limitInput.value) || 200 : 200;
+
+    const btn = doc.getElementById('mvuRecalcBtn');
+    const logDiv = doc.getElementById('mvuThoughtLog');
+    
+    if (btn) { btn.disabled = true; btn.textContent = '正在分析中...'; }
+    if (logDiv) { 
+      logDiv.style.display = 'block'; 
+      logDiv.textContent = '正在向 AI 发送最近 ' + limit + ' 条剧情数据，请等待（最长60秒）...'; 
+    }
+
+    const recentStory = s.story.slice(-limit).map(x => `${x.speaker}：${x.text}`).join('\n');
+    const currentMvu = JSON.stringify(s.mvu, null, 2);
+    const timeInfo = s.mvu['基础信息']['日期'];
+
+    const prompt = `你是一个专业的互动小说逻辑审查员，现在请根据最近的【大量剧情】，检查并修正后台变量。
+
+【当前真实的系统变量】
+${currentMvu}
+
+【最近剧情（读取了最近 ${limit} 条，最底部是最新发生的剧情）】
+${recentStory}
+
+【修正规则】
+1. 【时间推演】：当前系统时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${timeInfo.分}。请结合最新剧情的时间跨度，推演出当前该有的准确时间。如果剧情明显已经到了下午或晚上，时间必须更新。
+2. 【任务生命周期】：检查现有的“任务”。如果时间跨度已经很大（比如早上接的去食堂任务，现在已经是下午），或者剧情里已经做完了，必须将其从“任务”数组中删除，放入“特殊剧情点”作为记录。
+3. 【固定日程触发】：检查“固定日程”。如果当前时间已经到达或超过了日程里的日期，必须把该日程事件加入到“任务”中。
+
+【输出格式】
+请先输出你的思考过程，然后输出修正后的完整变量（只包含要修改的项，请严格输出）：
+<Thought>
+（在这里写你的分析过程。例如：玩家进行了一下午的剧情，现在时间应该是 17:00。早上接的去食堂任务已经因为时间过期而失效，应当删除。同时检查日历发现今天还没到1月7日，日程暂不触发。）
+</Thought>
+<UpdateVariable>
+{
+  "基础信息": {
+    "日期": { "年": ${timeInfo.年}, "月": ${timeInfo.月}, "日": ${timeInfo.日}, "时": 17, "分": 0 }
+  },
+  "好感度": { "秦梧": 22 },
+  "任务": [], 
+  "特殊剧情点": ["去食堂吃饭"]
+}
+</UpdateVariable>`;
+
+    try {
+      const base=s.api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');
+      const url=base+'/chat/completions';
+      const opts={
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.api.key},
+        body:JSON.stringify({model:s.api.model||'gpt-4o-mini', messages:[{role:'system', content:prompt}], temperature: 0.3})
+      };
+      
+      let res;
+      if (window.parent && typeof window.parent.proxyFetch === 'function') {
+        res = await window.parent.proxyFetch(url, opts);
+      } else {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        res = await fetch(url, {...opts, signal: controller.signal});
+        clearTimeout(timeoutId);
+      }
+      
+      if (!res.ok) throw new Error(`接口报错 HTTP ${res.status}`);
+      
+      const data = await res.json();
+      const replyText = data.choices[0].message.content;
+      
+      const thoughtMatch = replyText.match(/<Thought>([\s\S]*?)<\/Thought>/i);
+      if (logDiv) {
+        logDiv.textContent = thoughtMatch ? thoughtMatch[1].trim() : 'AI 没有输出思考过程，已直接执行修正。';
+      }
+
+      // ★ 核心修复：手动解析并合并 JSON，彻底抛弃原版容易出错的解析器
+      const m = replyText.match(/<UpdateVariable>([\s\S]*?)<\/UpdateVariable>/i);
+      if (m) {
+          try {
+              let jsonText = m[1].replace(/```json/g, '').replace(/```/g, '').trim();
+              const patchData = JSON.parse(jsonText);
+              
+              if (patchData['基础信息'] && patchData['基础信息']['日期']) {
+                  s.mvu['基础信息'] = s.mvu['基础信息'] || {};
+                  s.mvu['基础信息']['日期'] = { ...s.mvu['基础信息']['日期'], ...patchData['基础信息']['日期'] };
+              }
+              if (patchData['好感度']) {
+                  s.mvu['好感度'] = s.mvu['好感度'] || {};
+                  Object.assign(s.mvu['好感度'], patchData['好感度']);
+              }
+              if (Array.isArray(patchData['任务'])) {
+                  s.mvu['任务'] = patchData['任务'];
+              }
+              if (Array.isArray(patchData['特殊剧情点'])) {
+                  s.mvu['特殊剧情点'] = patchData['特殊剧情点'];
+              }
+              
+              if (typeof win.persist === 'function') win.persist();
+              
+              alert('变量修正完成！');
+              
+              const body = doc.getElementById('mvuDataBody');
+              if (body && body.style.display === 'block') {
+                 doc.getElementById('mvuPreContent').textContent = JSON.stringify(s.mvu, null, 2);
+              }
+          } catch (err) {
+              alert('解析 AI 返回的 JSON 失败：\n' + m[1]);
+          }
+      } else {
+          alert('AI 没有输出 <UpdateVariable> 块，请重试。');
+      }
+
+    } catch(e) {
+      if (logDiv) logDiv.textContent = '修正失败：' + e.message;
+      alert('修正失败：' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '一键根据剧情修正变量'; }
+    }
+  }
+
+  function injectMVUToggle(){
+    try {
+      const testBtn = doc.querySelector('button[data-action="test-api"]');
+      if (!testBtn) return;
+      if (doc.getElementById('mvuToggleRow')) return;
+
+      const actionsDiv = testBtn.parentElement;
+      if (!actionsDiv || !actionsDiv.parentNode) return;
+
+      const stateObj = getState();
+      cleanAndInitMvu(); 
+      
+      const settings = stateObj.settings || {};
+      const isEnabled = settings.enableMVU || false;
+      const checked = isEnabled ? 'checked' : '';
+      
+      const row = doc.createElement('div');
+      row.id = 'mvuToggleRow';
+      
+      row.innerHTML = `
+        <div class="switch-row" style="margin-top:20px;">
+          <div class="switch-copy">
+            <strong>启用 MVU 变量同步</strong>
+            <small>开启后生成剧情会附带当前世界变量，并解析 AI 输出的 UpdateVariable 来推进数值</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="mvuCheckbox" ${checked}>
+            <span class="switch-ui"></span>
+          </label>
+        </div>
+        
+        <div id="mvuDataContainer" style="margin-top:16px;">
+          <button id="mvuDataHeader" class="secondary-btn" style="width:100%; border:1px solid var(--line); background:var(--surface-2); color:${isEnabled ? 'var(--accent)' : 'var(--muted)'}; cursor:${isEnabled ? 'pointer' : 'not-allowed'};">
+            点击查看当前变量
+          </button>
+          
+          <div id="mvuDataBody" style="display:none; margin-top:12px;">
+            <pre id="mvuPreContent" style="margin:0; padding:12px; white-space:pre-wrap; font-size:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); color:var(--text); max-height:300px; overflow-y:auto; font-family:monospace;"></pre>
+            
+            <div class="form-grid" style="margin-top:16px; grid-template-columns: 1fr;">
+              <div class="field">
+                <label>读取最近剧情条数</label>
+                <input type="number" id="mvuHistoryLimit" value="200">
+              </div>
+              <button id="mvuRecalcBtn" class="primary-btn" style="margin-top:8px;">一键根据剧情修正变量</button>
+              
+              <div id="mvuThoughtLog" style="display:none; margin-top:12px; padding:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); font-size:13px; color:var(--muted); line-height:1.6; max-height:200px; overflow-y:auto;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      actionsDiv.parentNode.insertBefore(row, actionsDiv);
+      
+      const recalcBtn = doc.getElementById('mvuRecalcBtn');
+      if (recalcBtn) {
+        recalcBtn.onclick = null;
+        recalcBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          recalculateMVU();
+        });
+      }
+      
+      const checkbox = doc.getElementById('mvuCheckbox');
+      const header = doc.getElementById('mvuDataHeader');
+      const body = doc.getElementById('mvuDataBody');
+      
+      checkbox.addEventListener('change', function(e) {
+        const s = getState();
+        if (s && s.settings) {
+          s.settings.enableMVU = e.target.checked;
+          if (typeof win.persist === 'function') win.persist();
+        }
+        
+        if (e.target.checked) {
+          header.style.cursor = 'pointer';
+          header.style.color = 'var(--accent)';
+        } else {
+          header.style.cursor = 'not-allowed';
+          header.style.color = 'var(--muted)';
+          body.style.display = 'none';
+        }
+      });
+      
+      header.addEventListener('click', () => {
+        const s = getState();
+        const enabled = s && s.settings && s.settings.enableMVU;
+        if (!enabled) {
+          if(typeof win.toast === 'function') win.toast('请先开启上方 MVU 变量同步开关', 'error');
+          return;
+        }
+        
+        const isHidden = body.style.display === 'none' || body.style.display === '';
+        if (isHidden) {
+          cleanAndInitMvu();
+          doc.getElementById('mvuPreContent').textContent = JSON.stringify(s.mvu || {}, null, 2);
+          body.style.display = 'block';
+        } else {
+          body.style.display = 'none';
+        }
+      });
+    } catch(e) { console.warn('注入MVU失败', e); }
+  }
+
+  function setupPanelHook() {
+    const origRenderPanel = win.renderPanel;
+    win.renderPanel = function() {
+      origRenderPanel.call(this);
+      setTimeout(injectMVUToggle, 50);
+    };
+  }
+
+  async function generateMomentComments(moment) {
+    const s = getState();
+    if (!s.settings || !s.api.endpoint || !s.api.key) return;
+    const p = getPhoneData();
+    const myContacts = p.contacts || [];
+    if (myContacts.length === 0) return;
+
+    const friends = s.characters.filter(c => myContacts.includes(String(c.id)));
+    if (friends.length === 0) return;
+
+    const friendsInfo = friends.map(f => `- ${f.name} (性格: ${(f.personality||'').slice(0, 50)})`).join('\n');
+    
+    const prompt = `你是一个互动小说系统。角色【${moment.authorName}】刚刚发了一条朋友圈：
+内容：“${moment.text}”
+
+现在你有以下这些角色在线，他们是【${moment.authorName}】的好友，请根据他们的性格，判断他们是否会在朋友圈下评论。
+角色列表：
+${friendsInfo}
+
+规则：
+1. 每个角色都有 50% 的概率评论。
+2. 如果评论，内容必须符合他的性格，简短（不超过20字），不要加引号。
+3. 只允许输出 JSON 格式，格式如下：
+{
+  "comments": [
+    { "name": "角色A", "text": "评论内容" },
+    { "name": "角色B", "text": "评论内容" }
+  ]
+}
+如果没有一个人评论，输出 {"comments": []}。
+请严格遵守 JSON 格式，不要输出多余的解释。`;
+
+    try {
+      const base=s.api.endpoint.replace(/\/chat\/completions\/?$/,'').replace(/\/$/,'');
+      const url=base+'/chat/completions';
+      const opts={
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.api.key},
+        body:JSON.stringify({
+          model:s.api.model||'gpt-4o-mini',
+          messages:[{role:'system', content: prompt}],
+          temperature: 0.7
+        })
+      };
+      
+      let res;
+      if (window.parent && typeof window.parent.proxyFetch === 'function') {
+        res = await window.parent.proxyFetch(url, opts);
+      } else {
+        res = await fetch(url, opts);
+      }
+      
+      const data = await res.json();
+      let text = data.choices[0].message.content;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.comments && parsed.comments.length > 0) {
+          const latestP = getPhoneData();
+          const m = latestP.moments.find(x => x.id === moment.id);
+          if (m) {
+            m.comments = m.comments || [];
+            parsed.comments.forEach(c => {
+              const char = friends.find(f => f.name === c.name);
+              m.comments.push({
+                n: c.name,
+                t: c.text,
+                avatar: char ? (char.portraitUrl||'') : ''
+              });
+            });
+            localStorage.setItem('sft_phone_v1', JSON.stringify(latestP));
+            if (typeof win.toast === 'function') win.toast(`朋友圈收到了 ${parsed.comments.length} 条回复`);
+          }
+        }
+      }
+    } catch(e) {
+      console.warn('生成朋友圈评论失败', e);
+    }
+  }
+
+  function hookAPI(){
+    if(typeof win.buildSystem==='function'){
+      const origBuild=win.buildSystem;
+      win.buildSystem=function(){
+        const s = getState();
+        cleanAndInitMvu();
+        
+        let base = origBuild.call(this);
+        
+        if (s.settings && s.settings.enableMVU) {
+          const timeInfo = s.mvu['基础信息']['日期'];
+          
+          const currentDateStr = `${timeInfo.年}-${String(timeInfo.月).padStart(2,'0')}-${String(timeInfo.日).padStart(2,'0')}`;
+          let forcedEventPrompt = '';
+          if (s.mvu['固定日程'] && s.mvu['固定日程'][currentDateStr]) {
+             forcedEventPrompt = `\n【突发事件警告】：今天是 ${currentDateStr}，根据固定日程，今天必定发生：【${s.mvu['固定日程'][currentDateStr]}】。请务必在本次生成的剧情中自然引出这件事！`;
+          }
+          
+          const mvuInstruction = `
+\n【MVU 变量系统指令】
+在输出正文之前，你必须先在一对 <Thought> 标签中推演时间与状态。
+输出完正文后，必须另起一行输出系统变量更新。
+
+【变量说明】
+- 基础信息.日期：记录年、月、日、时、分。时间会随着剧情推进而流逝。
+- 好感度：角色对玩家的好感程度（0-100）。互动好会增加，惹人生气会减少。
+- 任务：当前未完成的目标（如：去食堂吃饭，完成作业）。
+- 特殊剧情点：已经发生的重要事件记录。
+- 固定日程：在特定日期必定触发的事件。
+
+【更新规则】
+1. 时间推演：当前时间是 ${timeInfo.年}年${timeInfo.月}月${timeInfo.日}日 ${timeInfo.时}:${String(timeInfo.分).padStart(2,'0')}。请结合玩家的话，推断过了多久。哪怕聊了几句话，也要加几分钟；如果下课了或者过夜了，必须大幅推进时间。
+2. 任务生命周期：任务有保质期。如果早上接的“去食堂”任务，到了下午还没去，必须自动删除，说明已经过期。
+3. 固定日程触发：到了日历上标记的日期，必须把日程内容加进“任务”中。
+
+<Thought>
+（在这里进行思考推算，例如：当前是早上8点，玩家说“走吧去吃饭”，说明到了中午，时间更新为12:00。接着检查任务列表...）
+</Thought>
+
+（正常输出剧情正文...）
+
+<UpdateVariable>
+{
+  "基础信息": {
+    "日期": { "年": ${timeInfo.年}, "月": ${timeInfo.月}, "日": ${timeInfo.日}, "时": 12, "分": 0 }
+  },
+  "好感度": { "秦梧": 20 },
+  "任务": ["去食堂吃饭"],
+  "特殊剧情点": []
+}
+</UpdateVariable>
+`;
+          return base + mvuInstruction + '\n\n请严格根据上述要求推演并生成：';
+        }
+        return base;
+      };
+    }
+
+    if(typeof win.callChat==='function'){
+      const origChat=win.callChat;
+      win.callChat=async function(messages){
+        const s = getState();
+        
+        const reply=await origChat.call(this, messages);
+        let out=reply;
+        
+        out = out.replace(/<Thought>[\s\S]*?<\/Thought>/gi, '').trim();
+        
+        const p = getPhoneData();
+        p.contacts = p.contacts || [];
+        let changed = false;
+        const keywords = /加好友|加微信|加个微信|联系方式|名片|扫一扫|加一下好友|同意下好友/;
+        
+        if (keywords.test(out)) {
+             const currentSpeaker = out.match(/^([^：:\n]{1,30})[：:]/m);
+             let targetChar = null;
+             
+             if (currentSpeaker && currentSpeaker[1]) {
+                 targetChar = s.characters.find(c => c.name === currentSpeaker[1].trim());
+             }
+             
+             if (!targetChar) {
+                const lastUserMsg = messages.slice(-1)[0]?.content || '';
+                targetChar = s.characters.find(c => lastUserMsg.includes(c.name) || out.includes(c.name));
+             }
+
+             if (targetChar && !p.contacts.includes(String(targetChar.id))) {
+                 p.contacts.push(String(targetChar.id));
+                 changed = true;
+                 if(typeof win.toast==='function') win.toast(`成功添加 ${targetChar.name} 为好友`);
+             }
+        }
+        
+        if (changed) {
+            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+        }
+
+        return out;
+      };
+    }
+  }
+
+  function hookScene(){
+    const origRenderScene = win.renderScene;
+    win.renderScene = function() {
+      const s = getState();
+      if(s && s.characters){
+        const femaleIds = ['zhongyueru', 'yuanbao', 'miju'];
+        const maleIds = ['qinwu', 'luoyunying', 'linyan', 'tangjiawei'];
+        s.characters.forEach(c=>{
+          if(femaleIds.includes(c.id)||femaleIds.includes(c.name)) c.gender='女';
+          if(maleIds.includes(c.id)||maleIds.includes(c.name)) c.gender='男';
+        });
+      }
+
+      if(s && s.story && s.story.length > 0) {
+        const current = s.story[s.cursor];
+        if (current && current.speaker === '秦梧' && current.text.includes('以后有事可以找我呀')) {
+          const p = getPhoneData();
+          p.contacts = p.contacts || [];
+          let changed = false;
+
+          if (!p.contacts.includes('qinwu')) {
+            p.contacts.push('qinwu');
+            changed = true;
+            if (typeof win.toast === 'function') win.toast('【获得秦梧的联系方式】');
+            if (!s.story.some(x => x.id === 'notify_qinwu_contact')) {
+              s.story.splice(s.cursor + 1, 0, { id: 'notify_qinwu_contact', speaker: '旁白', text: '【获得秦梧的联系方式】' });
+            }
+          }
+          
+          if (s.settings && s.settings.enableMVU) {
+            if (!s.mvu['任务']) s.mvu['任务'] = [];
+            if (!s.mvu['任务'].includes('认识新同学')) {
+              s.mvu['任务'].push('认识新同学');
+              changed = true;
+              setTimeout(() => { if(typeof win.toast === 'function') win.toast('获得新任务：认识新同学'); }, 500);
+            }
+          }
+
+          if (changed) {
+            localStorage.setItem('sft_phone_v1', JSON.stringify(p));
+            if (typeof win.persist === 'function') win.persist();
+          }
+        }
+      }
+      const mapBtn = doc.querySelector('[data-action="open-map"]');
+      if(mapBtn) mapBtn.parentElement.style.display = isStoryMode() ? 'none' : '';
+      if (isStoryMode() && typeof win.renderStoryScene === 'function') { win.renderStoryScene(); return; }
+      return origRenderScene.call(this);
+    };
+  }
+
+  doc.addEventListener('click', (e) => {
+    const targetPhone = e.target.closest('[data-action="open-phone"]');
+    if (targetPhone) {
+      e.preventDefault();e.stopPropagation();
+      
+      if (!doc.getElementById('phoneOverlay')) {
+        const ov = doc.createElement('div');
+        ov.id = 'phoneOverlay';
+        ov.hidden = true;
+        ov.style.cssText = 'position:fixed;inset:0;z-index:9997;background:#111;display:flex;align-items:center;justify-content:center;';
+        ov.innerHTML = '<iframe id="phoneFrame" src="./phone.html?v=10" allow="autoplay" style="width:100%;height:100%;border:0;background:#111;"></iframe>';
+        doc.body.appendChild(ov);
+      }
+
+      doc.getElementById('phoneOverlay').hidden = false;
+      const f = doc.getElementById('phoneFrame');
+      if (f && f.contentWindow) {
+        try {
+          const phoneData = getPhoneData();
+          const expectedLen = (phoneData.contacts || []).length;
+          
+          if (f.dataset.contactsLen !== String(expectedLen)) {
+            f.dataset.contactsLen = String(expectedLen);
+            try { f.contentWindow.location.reload(); } catch(err) { f.src = './phone.html?v=' + Date.now(); }
+            return; 
+          }
+
+          const s = getState();
+          const imgs = s.images || [];
+          (s.characters || []).forEach(c => {
+            if(!c.portraitUrl) {
+              let url = '';
+              if(c.portraitId) { const img = imgs.find(i=>i.id===c.portraitId); if(img) url = img.url; }
+              if(!url) { const list = imgs.filter(i=>i.character===c.name&&(i.builtIn||i.enabled!==false)); if(list.length) url = list[0].url; }
+              c.portraitUrl = url;
+            }
+          });
+          
+          const recentStory = (s.story || []).slice(-15).map(x => `${x.speaker}：${x.text}`).join('\n');
+          const memoryContext = (s.memory && s.memory.summaries) ? s.memory.summaries.slice(-2).map(m => m.content).join('\n') : '';
+          
+          const payload = { 
+            characters: s.characters || [], 
+            player: s.player || {}, 
+            api: s.api || {}, 
+            mvu: s.mvu || {}, 
+            settings: s.settings || {}, 
+            recentStory, 
+            memoryContext,
+            mapSpots: s.mapSpots || [] 
+          };
+          f.contentWindow.eval(`if (window.receiveData) window.receiveData(${JSON.stringify(payload)})`);
+        } catch(err) { console.warn('同步失败', err); }
+      }
+      return;
+    }
+
+    const targetNew = e.target.closest('[data-action="new-story"]');
+    if (targetNew) {
+      e.preventDefault(); e.stopPropagation();
+      win.showConfirm('重新开始', '确定要完全重新开始吗？将清空所有进度、手机聊天记录和个人设定。', () => {
+        localStorage.removeItem('sft_phone_v1');
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sft_phone_story_')) localStorage.removeItem(key);
+        }
+        let storeKey = '';
+        try { storeKey = win.eval('typeof STORE === "string" ? STORE : ""'); } catch (err) {}
+        if (!storeKey) storeKey = 'yueying-visual-novel-v16';
+        localStorage.removeItem(storeKey);
+        localStorage.removeItem('yueying-custom-font');
+        try { window.top.location.reload(); } catch (err) {
+          try { document.getElementById('boot').classList.remove('hide'); frame.src = './legacy.html?v=' + Date.now(); } catch (e2) { location.reload(); }
+        }
+      });
+      return;
+    }
+  }, true);
+
+  function isStoryMode(){
+    try{const raw=localStorage.getItem('sft_phone_v1');if(!raw)return false;return (JSON.parse(raw).mode||'ai')==='story';}catch(e){return false;}
+  }
+  win.isStoryMode=isStoryMode;window.isStoryMode=isStoryMode;
+  function getPhoneData(){try{return JSON.parse(localStorage.getItem('sft_phone_v1'))||{};}catch(e){return{};}}
+  function injectScript(src,cb){const s=doc.createElement('script');s.src=src;s.onload=()=>cb&&cb();s.onerror=()=>console.warn('[启动器] 脚本加载失败：',src);doc.body.appendChild(s);}
+
+  function buildPhoneContext(){
+    try{
+      const p=getPhoneData();const s=getState();const chars=s.characters||[];const lines=[];lines.push('【手机私聊最近消息】');const chatLines=[];
+      for(const cid in (p.chats||{})){
+        const c=chars.find(x=>String(x.id)===String(cid));if(!c)continue;
+        const list=(p.chats[cid]||[]).filter(m=>m.r!=='sys').slice(-5);if(!list.length)continue;
+        chatLines.push(`--- ${c.name} ---`);list.forEach(m=>chatLines.push(`${m.r==='user'?'玩家':c.name}：${m.c}`));
+      }
+      lines.push(chatLines.join('\n')||'（暂无）');lines.push('\n【朋友圈最近动态】');
+      const moLines=(p.moments||[]).slice(0,5).map(m=>`${m.authorName}：${m.text}`);lines.push(moLines.join('\n')||'（暂无）');
+      lines.push('\n【角色关系】');const relLines=[];
+      for(const idA in (p.relations||{})){
+        const cA=chars.find(x=>String(x.id)===String(idA));if(!cA)continue;
+        for(const idB in p.relations[idA]){
+          const r=p.relations[idA][idB];if(!r.known)continue;
+          const cB=chars.find(x=>String(x.id)===String(idB));if(!cB)continue;
+          relLines.push(`${cA.name} 与 ${cB.name}：${r.relation||'认识'}`);
+        }
+      }
+      lines.push(relLines.join('\n')||'（暂无）');
+      if(p.activeMeetup){ lines.push(`\n【当前约见】${p.activeMeetup.charName} 约在 ${p.activeMeetup.location}（${p.activeMeetup.daysFromNow===0?'今天':p.activeMeetup.daysFromNow+'天后'}）`);}
+      return lines.join('\n');
+    }catch(e){return '';}
+  }
+
+  function parseSpecialMarkers(text){
+    const RE=/(?:\[|【)(朋友圈|消息|加好友)[:：\s]*([^\]】]+)(?:\]|】)/g;
+    const actions=[];
+    const clean=text.replace(RE,(all,type,body)=>{
+      const parts=body.split('|').map(s=>s.trim());
+      if(parts.length>=1)actions.push({type,parts});
+      return '';
+    }).trim();
+    return {clean,actions};
+  }
+
+  function executeMarkerActions(actions){
+    const p=getPhoneData();
+    const s=getState();const chars=s.characters||[];
+    for(const act of actions){
+      if(act.type==='加好友'){
+        const charName=act.parts[0].split(/[，,、]/)[0].trim(); 
+        const c=chars.find(x=>x.name===charName);
+        if(c){
+          p.contacts=p.contacts||[];
+          if(!p.contacts.includes(String(c.id))){
+            p.contacts.push(String(c.id));
+            if(typeof win.toast==='function')win.toast(`（${charName} 加你为好友了）`);
+          }
+        }
+        continue;
+      }
+      if(act.parts.length<2) continue;
+      const [charName,content]=act.parts;
+      const c=chars.find(x=>x.name===charName);
+      if(!c)continue;
+      if(act.type==='朋友圈'){
+        p.moments=p.moments||[];
+        const newMoment = { 
+          id:'m_'+Date.now()+Math.random().toString(36).slice(2,6), 
+          authorId:c.id, 
+          authorName:charName, 
+          authorAvatar:c.portraitUrl||c.a||'', 
+          text:content,
+          t:Date.now(),
+          comments:[]
+        };
+        p.moments.unshift(newMoment);
+        if(typeof win.toast==='function')win.toast(`（${charName} 发了条朋友圈）`);
+        
+        setTimeout(() => generateMomentComments(newMoment), 1000);
+      }
+      else if(act.type==='消息'){
+        p.chats=p.chats||{};p.contacts=p.contacts||[];
+        if(!p.contacts.includes(String(c.id))){
+           p.contacts.push(String(c.id));
+           if(typeof win.toast==='function')win.toast(`（${charName} 加你为好友，并给你发了条消息）`);
+        } else {
+           if(typeof win.toast==='function')win.toast(`（${charName} 给你发了条消息）`);
+        }
+        (p.chats[c.id]=p.chats[c.id]||[]).push({r:'ai',c:content,t:Date.now()});
+      }
+    }
+    localStorage.setItem('sft_phone_v1',JSON.stringify(p));
+  }
+
+  win.parent.startStoryById=function(storyId){ if(typeof win.startStoryById==='function')win.startStoryById(storyId); };
+  win.parent.closePhoneOverlay=function(){const ov=doc.getElementById('phoneOverlay');if(ov)ov.hidden=true;};
+  win.parent.renderMainScene=function(){if(typeof win.renderScene==='function')win.renderScene();};
+  win.parent.onMeetupAccepted=function(meetup){ if(typeof win.toast==='function')win.toast(`约见已确认：${meetup.location}`); };
+  win.parent.onMeetupCancelled=function(){ if(typeof win.toast==='function')win.toast('约见已取消'); };
+
+  whenReady(()=>{
+    cleanAndInitMvu();
+    hookScene();
+    hookAPI();
+    setupPanelHook();
+    setupObserver();
+    injectScript('./story-engine.js');
+    injectScript('./js/mvu.js');
+  });
+}
+</script>
+</body>
+</html>
