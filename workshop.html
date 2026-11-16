@@ -5,44 +5,96 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
 <title>PNG 资源分享工坊</title>
 <style>
-  :root { --bg: #f5f5f7; --surface: #fff; --text: #333; --muted: #888; --line: #e0e0e0; --accent: #007aff; --success: #34c759; --danger: #ff3b30; --radius: 8px; }
-  body.theme-dark { --bg: #1e1e1e; --surface: #2d2d2d; --text: #e0e0e0; --muted: #888; --line: #444; --accent: #0a84ff; --success: #30d158; --danger: #ff453a; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); padding: 16px; height: 100vh; overflow-y: auto; }
-  h2 { font-size: 16px; margin-bottom: 12px; border-left: 4px solid var(--accent); padding-left: 8px; }
-  .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
-  .intro { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
-  .btn { width: 100%; padding: 14px; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-success { background: var(--success); color: #fff; }
+  /* 默认值兜底 */
+  :root { 
+    --bg: #0d1118; --surface: #1b1f26; --text: #e2e8f0; --muted: #8b94a8; 
+    --line: #2c3542; --accent: #4b8bf5; --success: #10b981; 
+    --radius: 8px; 
+    --font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", serif;
+    --p-paper: #ffffff; --p-ink: #111111;
+  }
   
-  .check-group { max-height: 150px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--bg); margin-bottom: 12px; }
-  .check-item { display: flex; align-items: center; padding: 6px; font-size: 13px; border-bottom: 1px solid var(--line); }
-  .check-item:last-child { border-bottom: none; }
-  .check-item input { margin-right: 10px; transform: scale(1.2); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { 
+    font-family: var(--font-family); 
+    background: var(--bg); color: var(--text); 
+    padding: 16px; height: 100vh; overflow-y: auto; 
+    transition: background 0.3s, color 0.3s;
+  }
+  
+  h2 { font-size: 16px; margin-bottom: 12px; border-left: 4px solid var(--p-paper); padding-left: 8px; font-weight: 600; letter-spacing: .08em; color: var(--text); }
+  .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; transition: background 0.3s; }
+  .intro { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  
+  /* 统一按钮样式，完全贴合主游戏 */
+  .btn { 
+    width: 100%; padding: 12px; border-radius: 3px; 
+    font-size: 14px; font-weight: 500; font-family: inherit;
+    cursor: pointer; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px;
+    transition: background 0.2s, color 0.2s, transform 0.2s, border-color 0.2s;
+  }
+  .btn:active { transform: translateY(1px) scale(0.98); }
+  
+  /* 对应主游戏的 primary-btn */
+  .btn-primary { 
+    background: var(--p-paper); 
+    color: var(--p-ink); 
+    border: 1px solid var(--p-paper); 
+  }
+  .btn-primary:hover { 
+    background: oklch(0.85 0.02 250); 
+  }
 
-  .upload-box { border: 2px dashed var(--line); border-radius: 8px; padding: 16px; text-align: center; background: var(--bg); margin-bottom: 16px; }
+  /* 导入按钮，同样使用主游戏的风格 */
+  .btn-import {
+    background: var(--surface-2, #2c3542); 
+    color: var(--text); 
+    border: 1px solid var(--line);
+  }
+  .btn-import:hover { 
+    border-color: var(--p-paper); 
+    color: var(--p-paper);
+  }
+  
+  /* 列表区域 */
+  .check-group { max-height: 150px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; background: var(--bg); margin-bottom: 12px; scrollbar-width: thin; }
+  .check-item { display: flex; align-items: center; padding: 8px; font-size: 14px; border-bottom: 1px dashed var(--line); color: var(--text); cursor: pointer; }
+  .check-item:last-child { border-bottom: none; }
+  .check-item input { margin-right: 12px; transform: scale(1.2); accent-color: var(--p-paper); cursor: pointer; }
+  
+  /* 上传区 */
+  .upload-box { border: 2px dashed var(--line); border-radius: var(--radius); padding: 16px; text-align: center; background: var(--bg); margin-bottom: 16px; transition: border-color 0.2s; }
+  .upload-box:hover { border-color: var(--p-paper); }
   .upload-box p { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
   
-  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  /* 自定义 Input 和 File */
+  input[type="file"] { width: 100%; color: var(--text); font-family: inherit; font-size: 13px; }
+  input[type="file"]::file-selector-button {
+    padding: 6px 12px; border: 1px solid var(--line); border-radius: 3px;
+    background: var(--surface); color: var(--text); cursor: pointer; margin-right: 10px;
+    font-family: inherit; transition: background 0.2s;
+  }
+  input[type="file"]::file-selector-button:hover { background: var(--line); }
+
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); color: var(--text); padding: 10px 20px; border-radius: 3px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; border: 1px solid var(--line); box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
 </style>
 </head>
-<body class="theme-light">
+<body>
   <div id="toast" class="toast"></div>
 
-  <div class="section" style="border-color: var(--success);">
-    <h2 style="border-color: var(--success);">📥 导入分享卡</h2>
-    <input type="file" id="importPngFile" accept="image/png" style="width:100%; margin-bottom:12px; padding:8px; border:1px solid var(--line); border-radius:4px;">
-    <button class="btn btn-success" onclick="importPNG()">读取并导入</button>
+  <div class="section">
+    <h2>📥 导入分享卡</h2>
+    <p class="intro">选择其他玩家分享的 PNG 图片。</p>
+    <input type="file" id="importPngFile" accept="image/png" style="margin-bottom:12px;">
+    <button class="btn btn-import" onclick="importPNG()">读取并导入</button>
   </div>
 
   <div class="section">
     <h2>📤 制作分享卡</h2>
     
-    <!-- 手动上传兜底方案 -->
     <div class="upload-box">
-      <p>系统将使用 <code>base.png</code> 作为底图（请确保文件在同目录下）。<br>如果没放，请手动选图：</p>
-      <input type="file" id="baseImageUpload" accept="image/jpeg, image/png" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:4px;">
+      <p>系统将使用本地 <b>base.png</b> 作为底图。<br>如果没有该文件，请手动上传：</p>
+      <input type="file" id="baseImageUpload" accept="image/jpeg, image/png">
     </div>
 
     <div class="check-group" id="charList"></div>
@@ -50,11 +102,43 @@
     <div class="check-group" id="bgList"></div>
     <div class="check-group" id="voiceList"></div>
 
-    <button class="btn btn-primary" onclick="exportPNG()"> 生成 PNG</button>
+    <button class="btn btn-primary" onclick="exportPNG()" style="padding:14px; font-size:15px;">💾 生成并下载 PNG</button>
   </div>
 
 <script>
-  try { if (window.parent.document.body.className.includes('theme-dark')) document.body.className = 'theme-dark'; } catch(e) {}
+  // 榨取父窗口的主题变量，强行应用到工坊
+  function syncThemeFromParent() {
+    try {
+      const parentBody = window.parent.document.body;
+      const parentRoot = window.parent.document.documentElement;
+      
+      // 同步主题类名
+      if (parentBody.classList.contains('theme-dark')) {
+        document.body.classList.add('theme-dark');
+      } else {
+        document.body.classList.add('theme-light');
+      }
+
+      // 提取父窗口的所有核心 CSS 变量
+      const computedStyle = window.parent.getComputedStyle(parentBody);
+      const varsToCopy = ['--bg', '--surface', '--surface-2', '--text', '--muted', '--line', '--accent', '--glass', '--p-ink', '--p-paper', '--radius'];
+      
+      varsToCopy.forEach(v => {
+        let val = computedStyle.getPropertyValue(v);
+        if(val) document.documentElement.style.setProperty(v, val);
+      });
+
+      // 同步字体
+      let fontVar = computedStyle.getPropertyValue('font-family');
+      if(fontVar) document.documentElement.style.setProperty('--font-family', fontVar);
+
+    } catch(e) {
+      console.warn("由于跨域限制，无法读取父窗口主题。", e);
+    }
+  }
+
+  syncThemeFromParent();
+
   const PNG_KEYWORD = "dk_share_data";
 
   function toast(msg) {
@@ -114,20 +198,16 @@
       
       let dataUrl = '';
       if (fileInput.files && fileInput.files[0]) {
-        // 如果用户手动选了图
         dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(fileInput.files[0]); });
       } else {
-        // 走本地同源文件 base.png（绝不跨域）
         dataUrl = './base.png'; 
       }
 
-      // 画到 Canvas 上强转成 PNG 格式
       const img = new Image();
       img.src = dataUrl;
       await new Promise((res, rej) => {
         img.onload = res;
-        // 如果加载 ./base.png 失败，给个提示
-        img.onerror = () => rej(new Error('加载底图失败，请确认目录下是否有 base.png，或者手动上传底图'));
+        img.onerror = () => rej(new Error('加载底图失败，请确认目录下有 base.png，或手动上传图片'));
       });
       
       const canvas = document.createElement('canvas');
@@ -137,7 +217,6 @@
       const pngBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
       const imgBuffer = await pngBlob.arrayBuffer();
 
-      // 注入数据并下载
       const newBuffer = injectPNGData(imgBuffer, PNG_KEYWORD, base64Data);
       const finalBlob = new Blob([newBuffer], { type: 'image/png' });
       const url = URL.createObjectURL(finalBlob);
@@ -150,7 +229,7 @@
     } catch(e) {
       toast('生成失败：' + e.message);
     } finally {
-      btn.textContent = ' 生成并下载 PNG'; btn.disabled = false;
+      btn.textContent = '💾 生成并下载 PNG'; btn.disabled = false;
     }
   }
 
