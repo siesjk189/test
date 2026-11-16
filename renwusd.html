@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>人物设定</title>
 <style>
-  /* 默认值兜底 */
   :root {
     --bg: #fbf9f4; --surface: #fff; --surface-2: #faf8f3;
     --text: #1c1c1e; --muted: #8b877e; --line: rgba(28,28,30,.14);
@@ -21,7 +20,6 @@
     padding: 24px 28px 60px; height: 100vh; overflow-y: auto; scrollbar-width: thin;
   }
 
-  /* 桌面/平板布局 */
   .character-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 26px; }
   .character-list-wrap { display: flex; flex-direction: column; gap: 12px; }
   .character-list-title { font-size: 14px; color: var(--muted); font-family: "Microsoft YaHei", sans-serif; }
@@ -43,19 +41,16 @@
   }
   .add-char-btn:hover { border-color: var(--accent); }
 
-  /* 编辑器区域 */
   .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
   .editor-head h3 { font-size: 21px; font-weight: 500; letter-spacing: .1em; }
   .group { padding: 20px 0; border-bottom: 1px solid var(--line); }
   .group:first-child { padding-top: 0; }
   .group:last-child { border-bottom: none; }
-  .group-title { display: flex; align-items: center; gap: 10px; font-size: 17px; margin-bottom: 16px; font-weight: 500; }
+  .group-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 17px; margin-bottom: 16px; font-weight: 500; }
   
-  /* 提示框（虚线框） */
   .locked-note { padding: 14px 16px; border: 1px dashed var(--line); color: var(--muted); font: 13px/1.7 "Microsoft YaHei", sans-serif; border-radius: 3px; margin-bottom: 20px; }
 
-  /* 表单统一 */
-  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
   .field { display: grid; gap: 7px; min-width: 0; margin-bottom: 16px; }
   .field.full { grid-column: 1 / -1; }
   .field label { font: 13px/1.5 "Microsoft YaHei", sans-serif; color: var(--muted); }
@@ -66,8 +61,8 @@
   }
   .field textarea { min-height: 100px; resize: vertical; line-height: 1.7; }
   .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
+  .field input:disabled { opacity: 0.5; background: var(--bg); cursor: not-allowed; }
   
-  /* 开关组件完全复刻 */
   .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 54px; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .switch-copy strong { display: block; font-weight: 500; font-size: 16px; }
   .switch-copy small { display: block; color: var(--muted); font: 13px/1.6 "Microsoft YaHei", sans-serif; margin-top: 4px; }
@@ -78,21 +73,22 @@
   .switch input:checked + .switch-ui { background: var(--accent); border-color: var(--accent); }
   .switch input:checked + .switch-ui:after { transform: translateX(22px); background: var(--p-paper); }
 
-  /* 方案栏 */
-  .scheme-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; background: var(--surface-2); padding: 12px; border-radius: 3px; border: 1px solid var(--line); }
-  .scheme-bar select { flex: 1; min-height: 40px; padding: 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--text); font-family: inherit; }
-  .btn { min-height: 40px; padding: 0 16px; border-radius: 3px; font: 500 14px/1.5 "Microsoft YaHei", sans-serif; transition: .2s; cursor: pointer; }
+  .scheme-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .scheme-bar select { flex: 1; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 15px; }
+  
+  .btn { min-height: 44px; padding: 0 16px; border-radius: 3px; font: 500 14px/1.5 "Microsoft YaHei", sans-serif; transition: .2s; cursor: pointer; white-space: nowrap; }
   .secondary-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
   .danger-btn { background: transparent; color: oklch(0.7 0.16 25); border: 1px solid oklch(0.7 0.16 25 / .5); }
   .text-btn { min-height: 36px; border: 0; background: transparent; color: var(--muted); padding: 4px 6px; cursor: pointer; font: 13px/1.4 "Microsoft YaHei", sans-serif; }
   .text-btn:hover { color: var(--text); text-decoration: underline; }
 
-  /* 手机端适配 */
   @media(max-width:760px){
     body { padding: 16px 16px 60px; }
     .character-layout { grid-template-columns: 1fr; gap: 24px; }
     .form-grid { grid-template-columns: 1fr; }
     .field.full { grid-column: auto; }
+    .scheme-bar { flex-wrap: wrap; }
+    .scheme-bar select { width: 100%; flex: auto; margin-bottom: 8px; }
   }
 </style>
 </head>
@@ -116,10 +112,29 @@ try {
 }
 
 if (state) {
+  // ================= 1. 强制初始化与修复数据 =================
+  // 解决某些旧存档或内置角色缺失字段导致无法自定义的 Bug
+  state.characters.forEach(c => {
+    if (!c.customProfile) {
+      c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+    }
+    if (c.useCustomProfile === undefined) c.useCustomProfile = false;
+    if (c.useCustomVoice === undefined) c.useCustomVoice = false;
+    if (c.useSprite === undefined) c.useSprite = true;
+    
+    if (!c.builtIn) {
+      if (!c.schemes || !c.schemes.length) {
+        c.schemes = [{ id: 'default', name: '默认方案', data: {} }];
+        c.activeScheme = 'default';
+      }
+    }
+  });
+
   let currentId = state.characters[0]?.id || '';
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function saveState() { try { window.parent.persist(true); } catch(e) {} }
 
+  // ================= 2. 左侧列表渲染 =================
   function renderList() {
     const list = document.getElementById('charList');
     list.innerHTML = state.characters.map(c => `
@@ -152,10 +167,25 @@ if (state) {
     saveState(); renderList(); renderEditor();
   };
 
+  // ================= 3. 核心：获取当前角色当前生效的数据 =================
+  function getActiveData(c) {
+    if (c.builtIn) {
+      // 如果是内置角色，且开启了自定义覆盖，则使用 customProfile，否则留空代表使用原版
+      return c.useCustomProfile ? c.customProfile : { identity:'', relation:'', address:'', personality:'', description:'' };
+    } else {
+      // 自定义角色，从方案里取数据
+      const scheme = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
+      return scheme.data || {};
+    }
+  }
+
+  // ================= 4. 渲染右侧编辑器 =================
   function renderEditor() {
     const c = state.characters.find(x => x.id === currentId);
     const box = document.getElementById('charEditor');
     if (!c) { box.innerHTML = '<p style="color:var(--muted)">请选择或新建一个角色。</p>'; return; }
+
+    const data = getActiveData(c);
 
     let html = `
       <div class="editor-head">
@@ -164,70 +194,61 @@ if (state) {
       </div>
     `;
 
-    // 内置角色
+    // 设定来源
+    html += `<div class="field full">
+      <label>设定来源</label>`;
+    
     if (c.builtIn) {
-      if (!c.customProfile) c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
       html += `
-        <div class="locked-note">
-          该角色为内置角色：名称与性别固定；设定可在“使用内置设定 / 自定义填写”之间切换。<br>
-          选择自定义填写后从空白开始，切回内置设定不会删除已填写内容。
-        </div>
-        <div class="field full">
-          <label>设定来源</label>
-          <select onchange="updateField('useCustomProfile', this.value === '1')">
-            <option value="0" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
-            <option value="1" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
+        <select onchange="updateField('useCustomProfile', this.value === '1')">
+          <option value="0" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
+          <option value="1" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
+        </select>
+      `;
+    } else {
+      html += `
+        <div class="scheme-bar" style="margin-bottom:0;">
+          <select onchange="switchScheme(this.value)">
+            ${c.schemes.map(s => `<option value="${s.id}" ${s.id === c.activeScheme ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
           </select>
+          <button class="btn secondary-btn" onclick="addScheme()">新建</button>
+          <button class="btn danger-btn" onclick="deleteScheme()" ${c.schemes.length <= 1 ? 'disabled' : ''}>删除</button>
         </div>
       `;
-      
-      if (c.useCustomProfile) {
-        html += `
-          <div class="group" style="padding-top:0; border-top:none;">
-            <div class="form-grid">
-              <div class="field"><label>身份</label><input value="${esc(c.customProfile.identity)}" oninput="updateField('customProfile.identity', this.value)" placeholder="留空则不覆盖"></div>
-              <div class="field"><label>关系</label><input value="${esc(c.customProfile.relation)}" oninput="updateField('customProfile.relation', this.value)" placeholder="留空则不覆盖"></div>
-              <div class="field full"><label>称呼</label><input value="${esc(c.customProfile.address)}" oninput="updateField('customProfile.address', this.value)" placeholder="留空则不覆盖"></div>
-              <div class="field full"><label>性格设定</label><textarea oninput="updateField('customProfile.personality', this.value)" placeholder="留空则不覆盖">${esc(c.customProfile.personality)}</textarea></div>
-              <div class="field full"><label>外貌描述</label><textarea oninput="updateField('customProfile.description', this.value)" placeholder="留空则不覆盖">${esc(c.customProfile.description)}</textarea></div>
-            </div>
-          </div>
-        `;
-      }
+    }
+    html += `</div>`;
+
+    // 当处于“只读内置”状态时，显示提示
+    if (c.builtIn && !c.useCustomProfile) {
+      html += `
+        <div class="locked-note">
+          当前正在使用该角色的**官方内置设定**。<br>
+          如果你想覆盖或修改其性格、经历，请在上方【设定来源】中选择“自定义填写”。<br>
+          切回内置设定不会删除你已填写的自定义内容。
+        </div>
+      `;
     } else {
-      // 自定义角色
-      if (!c.schemes) c.schemes = [{id:'default', name:'默认方案', data:{}}];
+      // 显示编辑表单
       html += `
         <div class="group">
           <div class="group-title">基础信息</div>
           <div class="form-grid">
-            <div class="field"><label>姓名</label><input value="${esc(c.name)}" oninput="updateField('name', this.value)"></div>
-            <div class="field"><label>性别</label>
-              <select onchange="updateField('gender', this.value)">
+            <div class="field">
+              <label>姓名</label>
+              <input value="${esc(c.name)}" ${c.builtIn ? 'disabled' : `oninput="updateField('name', this.value)"`} placeholder="${c.builtIn ? '内置角色不可改名' : ''}">
+            </div>
+            <div class="field">
+              <label>性别</label>
+              <select ${c.builtIn ? 'disabled' : `onchange="updateField('gender', this.value)"`}>
                 <option value="男" ${c.gender === '男' ? 'selected' : ''}>男</option>
                 <option value="女" ${c.gender === '女' ? 'selected' : ''}>女</option>
               </select>
             </div>
-            <div class="field"><label>身份</label><input value="${esc(c.identity || '')}" oninput="updateField('identity', this.value)"></div>
-            <div class="field"><label>关系</label><input value="${esc(c.relation || '')}" oninput="updateField('relation', this.value)"></div>
-            <div class="field full"><label>对玩家的称呼</label><input value="${esc(c.address || '')}" oninput="updateField('address', this.value)"></div>
-          </div>
-        </div>
-        <div class="group">
-          <div class="group-title">多套设定方案</div>
-          <div class="scheme-bar">
-            <select onchange="switchScheme(this.value)">
-              ${c.schemes.map(s => `<option value="${s.id}" ${s.id === c.activeScheme ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
-            </select>
-            <button class="btn secondary-btn" onclick="addScheme()">新建</button>
-            <button class="btn danger-btn" onclick="deleteScheme()" ${c.schemes.length <= 1 ? 'disabled' : ''}>删除</button>
-          </div>
-        </div>
-        <div class="group">
-          <div class="group-title">详细设定</div>
-          <div class="form-grid">
-            <div class="field full"><label>性格 / 核心设定</label><textarea oninput="updateField('personality', this.value)">${esc(getCurrentData(c).personality)}</textarea></div>
-            <div class="field full"><label>外貌 / 描述</label><textarea oninput="updateField('description', this.value)">${esc(getCurrentData(c).description)}</textarea></div>
+            <div class="field"><label>身份</label><input value="${esc(data.identity || '')}" oninput="updateField('identity', this.value)" placeholder="${c.builtIn ? '留空则沿用内置' : ''}"></div>
+            <div class="field"><label>关系</label><input value="${esc(data.relation || '')}" oninput="updateField('relation', this.value)" placeholder="${c.builtIn ? '留空则沿用内置' : ''}"></div>
+            <div class="field full"><label>对玩家的称呼</label><input value="${esc(data.address || '')}" oninput="updateField('address', this.value)" placeholder="${c.builtIn ? '留空则沿用内置' : ''}"></div>
+            <div class="field full"><label>性格设定</label><textarea oninput="updateField('personality', this.value)" placeholder="${c.builtIn ? '留空则沿用内置' : ''}">${esc(data.personality || '')}</textarea></div>
+            <div class="field full"><label>外貌描述</label><textarea oninput="updateField('description', this.value)" placeholder="${c.builtIn ? '留空则沿用内置' : ''}">${esc(data.description || '')}</textarea></div>
           </div>
         </div>
       `;
@@ -259,7 +280,7 @@ if (state) {
       </div>
     `;
 
-    // 所在区域与立绘
+    // 立绘与地点
     html += `
       <div class="group">
         <div class="field full">
@@ -296,40 +317,40 @@ if (state) {
     box.innerHTML = html;
   }
 
-  function getCurrentData(c) {
-    if (!c.builtIn && c.schemes) {
-      const active = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
-      return active.data || {};
-    }
-    return c;
-  }
-
+  // ================= 5. 核心：数据更新逻辑 =================
   window.updateField = (path, value) => {
     const c = state.characters.find(x => x.id === currentId);
     if (!c) return;
 
-    if (!c.builtIn && c.schemes && !path.includes('.')) {
-      const active = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
-      if (!active.data) active.data = {};
-      active.data[path] = value;
-      c[path] = value;
-    } else if (path.includes('.')) {
-      const parts = path.split('.');
-      if (!c[parts[0]]) c[parts[0]] = {};
-      c[parts[0]][parts[1]] = value;
+    // 属于基础设定的字段
+    const baseFields = ['identity', 'relation', 'address', 'personality', 'description'];
+
+    if (baseFields.includes(path)) {
+      if (c.builtIn) {
+        // 内置角色写到 customProfile
+        c.customProfile[path] = value;
+      } else {
+        // 自定义角色写到方案里，并同步到顶层
+        const scheme = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
+        if (!scheme.data) scheme.data = {};
+        scheme.data[path] = value;
+        c[path] = value;
+      }
     } else {
+      // 属于角色本身的设置（姓名、性别、音色、立绘、小区等），直接写顶层
       c[path] = value;
     }
     
     saveState();
     
-    // 会改变 UI 结构的字段需要重新渲染
-    if (path === 'name' || path === 'useCustomProfile' || path === 'useCustomVoice' || path === 'useSprite') {
+    // 改变 UI 结构的字段需要重绘
+    if (['useCustomProfile', 'useCustomVoice', 'useSprite', 'name'].includes(path)) {
       if (path === 'name') renderList();
       renderEditor();
     }
   };
 
+  // ================= 6. 方案操作 =================
   window.switchScheme = (id) => {
     const c = state.characters.find(x => x.id === currentId);
     if (c && !c.builtIn) {
@@ -346,7 +367,7 @@ if (state) {
     const name = prompt('请输入新方案名称：', '方案 ' + (c.schemes.length + 1));
     if (!name) return;
     const id = 'scheme_' + Date.now();
-    c.schemes.push({ id: id, name: name, data: JSON.parse(JSON.stringify(getCurrentData(c))) });
+    c.schemes.push({ id: id, name: name, data: JSON.parse(JSON.stringify(getActiveData(c))) });
     c.activeScheme = id; saveState(); renderEditor();
   };
 
@@ -359,7 +380,7 @@ if (state) {
     switchScheme(c.activeScheme);
   };
 
-  // 继承主题
+  // ================= 7. 继承主题并初始化 =================
   try {
     const pStyle = window.parent.getComputedStyle(window.parent.document.body);
     ['--bg', '--surface', '--surface-2', '--text', '--muted', '--line', '--accent', '--radius', '--p-paper', '--p-ink'].forEach(v => {
