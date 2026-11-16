@@ -602,14 +602,24 @@ function renderCharacters(){
         </div>`;
     }
 
-    const cp = c.customProfile || {};
-    const profileHTML = `
-      <div class="field full"><label>设定来源</label>
-        <select data-change="profile-mode" data-id="${c.id}">
-          <option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
-          <option value="custom" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
-        </select>
-      </div>
+const cp = c.customProfile || {};
+const poolChars = state.custom_resources?.characters || [];
+let libProfileOpts = '<option value="">-- 从资源库导入设定 --</option>';
+poolChars.forEach((pc, idx) => {
+    libProfileOpts += `<option value="${idx}">${esc(pc.name)} (分享版)</option>`;
+});
+
+const profileHTML = `
+  <div class="field full"><label>设定来源</label>
+    <select data-change="profile-mode" data-id="${c.id}">
+      <option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
+      <option value="custom" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
+    </select>
+  </div>
+  <div class="field full" style="margin-top:-10px; margin-bottom:16px;">
+    <label style="font-size:12px; color:var(--accent);">套用资源库设定</label>
+    <select onchange="applyLibProfile('${c.id}', this)">${libProfileOpts}</select>
+  </div>
       <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>身份</label><input data-profile-field="identity" value="${esc(cp.identity || '')}"></div>
       <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>与你的关系</label><input data-profile-field="relation" value="${esc(cp.relation || '')}"></div>
       <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>对你的称呼</label><input data-profile-field="address" value="${esc(cp.address || '')}"></div>
@@ -1063,6 +1073,33 @@ function initNoticePage(){
   enterBtn.addEventListener('click', () => {if (enterBtn.disabled) return;clearInterval(timer);enterBtn.disabled = true;enterBtn.textContent = '正在进入…';appRoot.classList.add('leaving');setTimeout(() => {if (typeof window.onNoticeAccepted === 'function') {try { window.onNoticeAccepted(); } catch (err) { console.error(err); }} else {window.dispatchEvent(new CustomEvent('notice:accepted'));}}, 450);});
   render(null);
 }
+
+window.applyLibProfile = function(charId, selectEl) {
+  const idx = selectEl.value;
+  if(idx === '') return;
+  
+  const state = window.state || (window.parent && window.parent.state);
+  if(!state) return;
+  
+  const pc = state.custom_resources.characters[idx];
+  const c = state.characters.find(x => x.id === charId);
+  
+  if (c && pc) {
+    if (!c.customProfile) c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+    
+    c.customProfile.identity = pc.identity || '';
+    c.customProfile.relation = pc.relation || '';
+    c.customProfile.address = pc.address || '';
+    c.customProfile.personality = pc.personality || '';
+    c.customProfile.description = pc.description || '';
+    c.useCustomProfile = true;
+    
+    persist();
+    renderPanel();
+    toast(`已套用【${pc.name}】的分享设定`);
+  }
+}
+  
 injectBuiltins().then(() => {if (state.characters.length && !state.selectedCharacterId) state.selectedCharacterId = state.characters[0].id;if (!isInitialized) {const app = $('#noticeApp');if (app) app.hidden = false;initNoticePage();} else {const app = $('#noticeApp');if (app) app.hidden = true;renderScene();if (state.awaitingSetup) openSetup();}persist();});
 </script>
 </body>
