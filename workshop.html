@@ -3,78 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
-<title>云端资源共享大厅</title>
+<title>PNG 资源分享工坊</title>
 <style>
-  :root { --bg: #f5f5f7; --surface: #fff; --text: #333; --muted: #888; --line: #e0e0e0; --accent: #007aff; --success: #34c759; --radius: 8px; }
-  body.theme-dark { --bg: #1e1e1e; --surface: #2d2d2d; --text: #e0e0e0; --muted: #888; --line: #444; --accent: #0a84ff; --success: #30d158; }
+  :root { --bg: #f5f5f7; --surface: #fff; --text: #333; --muted: #888; --line: #e0e0e0; --accent: #007aff; --success: #34c759; --danger: #ff3b30; --radius: 8px; }
+  body.theme-dark { --bg: #1e1e1e; --surface: #2d2d2d; --text: #e0e0e0; --muted: #888; --line: #444; --accent: #0a84ff; --success: #30d158; --danger: #ff453a; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); padding: 16px; height: 100vh; overflow-y: auto; transition: background 0.3s, color 0.3s; }
   h2 { font-size: 16px; margin-bottom: 12px; border-left: 4px solid var(--accent); padding-left: 8px; }
+  h3 { font-size: 14px; margin: 12px 0 8px; color: var(--muted); }
   .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
-  .intro { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  .intro { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
   .field { margin-bottom: 12px; }
   .field label { display: block; font-size: 13px; margin-bottom: 6px; font-weight: 600; }
-  textarea { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; outline: none; min-height: 80px; resize: vertical; }
+  input[type="text"], input[type="file"] { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; outline: none; }
   .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-success { background: var(--success); color: #fff; }
   .btn-secondary { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
   
+  .type-checkboxes { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--line); }
+  .type-checkboxes label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+  .type-checkboxes input { transform: scale(1.2); }
+
   .check-group { max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--bg); margin-bottom: 12px; }
   .check-item { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
-  .check-item:last-child { border-bottom: none; }
   .check-item input { margin-right: 10px; transform: scale(1.2); }
-  
+
+  .dynamic-section { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line); }
+  .dynamic-section.active { display: block; }
+
   .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 </style>
 </head>
 <body class="theme-light">
   <div id="toast" class="toast"></div>
 
-  <!-- 你的 Github 仓库配置（这里我预填了示例，你发布前需改成你自己的） -->
-  <script>
-    const GITHUB_OWNER = "你的GitHub用户名"; 
-    const GITHUB_REPO = "你的仓库名";
-    // 云端清单文件路径
-    const MANIFEST_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@main/manifest.json`;
-  </script>
-
+  <!-- 导入区 -->
   <div class="section" style="border-color: var(--success);">
-    <h2 style="border-color: var(--success);">☁️ 下载共享资源</h2>
-    <p class="intro">从公共仓库拉取所有玩家分享的素材。拉取后，你可以去【人物设定】或【图片配置】中直接选用。</p>
-    <button class="btn btn-success" onclick="syncCloudResources()">📥 一键同步公共资源</button>
+    <h2 style="border-color: var(--success);">📥 导入图片</h2>
+    <p class="intro">选择别人分享给你的 PNG 图片，系统会自动读取并导入里面的资源。</p>
+    <input type="file" id="importPngFile" accept="image/png">
+    <button class="btn btn-success" onclick="importPNG()">读取并导入</button>
   </div>
 
+  <!-- 导出区 -->
   <div class="section">
-    <h2>📤 上传我的资源</h2>
-    <p class="intro">勾选你想分享的内容。生成代码后，系统会带你跳转到 GitHub 提交页面，审核合并后所有人即可下载。</p>
+    <h2>分享图片</h2>
+    <p class="intro">勾选你想分享的内容，填写完成后生成图片，她人可导入这张图片使用你分享的内容。</p>
 
-    <div class="field">
-      <label>我创建的角色</label>
-      <div class="check-group" id="exportChars"></div>
-    </div>
-    <div class="field">
-      <label>我添加的立绘</label>
-      <div class="check-group" id="exportImages"></div>
-    </div>
-    <div class="field">
-      <label>我添加的背景</label>
-      <div class="check-group" id="exportBackgrounds"></div>
-    </div>
-    <div class="field">
-      <label>我的音色配置</label>
-      <div class="check-group" id="exportVoices"></div>
+    <h3>1. 选择要分享的类型</h3>
+    <div class="type-checkboxes">
+      <label><input type="checkbox" id="typeChar" onchange="toggleSection('char')"> 人物设定</label>
+      <label><input type="checkbox" id="typeImage" onchange="toggleSection('image')"> 立绘图片</label>
+      <label><input type="checkbox" id="typeBg" onchange="toggleSection('bg')"> 背景图片</label>
+      <label><input type="checkbox" id="typeVoice" onchange="toggleSection('voice')"> 音色 ID</label>
     </div>
 
-    <button class="btn btn-primary" onclick="prepareUpload()">生成提交代码</button>
-    <textarea id="uploadCode" readonly placeholder="点击上方按钮生成..." style="margin-top:12px;"></textarea>
-    <button class="btn btn-secondary" onclick="goToGithubIssue()">🚀 一键前往 GitHub 提交</button>
+    <!-- 人物设定 -->
+    <div id="section-char" class="dynamic-section">
+      <h3>选择角色</h3>
+      <div class="check-group" id="charList"></div>
+    </div>
+
+    <!-- 立绘图片 -->
+    <div id="section-image" class="dynamic-section">
+      <h3>添加要分享的立绘</h3>
+      <div class="field">
+        <input type="text" id="newImgName" placeholder="角色名">
+        <input type="text" id="newImgUrl" placeholder="图片 URL " style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="addNewImage()" style="margin-top:8px;">＋ 添加到分享列表</button>
+      </div>
+      <div class="check-group" id="imageList"></div>
+    </div>
+
+    <!-- 背景图片 -->
+    <div id="section-bg" class="dynamic-section">
+      <h3>添加要分享的背景</h3>
+      <div class="field">
+        <input type="text" id="newBgName" placeholder="背景名称 (如: 黄昏教室)">
+        <input type="text" id="newBgUrl" placeholder="图片 URL (https://...)" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="addNewBg()" style="margin-top:8px;">＋ 添加到分享列表</button>
+      </div>
+      <div class="check-group" id="bgList"></div>
+    </div>
+
+    <!-- 音色 ID -->
+    <div id="section-voice" class="dynamic-section">
+      <h3>添加要分享的音色</h3>
+      <div class="field">
+        <input type="text" id="newVoiceChar" placeholder="绑定的角色名 (可选，若不填将绑定至默认音色选择栏）">
+        <input type="text" id="newVoiceId" placeholder="音色 ID （此id将公开可见，谨慎使用）" style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="addNewVoice()" style="margin-top:8px;">＋ 添加到分享列表</button>
+      </div>
+      <div class="check-group" id="voiceList"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="exportPNG()" style="margin-top:20px; padding:16px; font-size:16px;">生成图片 </button>
   </div>
 
 <script>
   try {
     if (window.parent.document.body.className.includes('theme-dark')) document.body.className = 'theme-dark';
   } catch(e) {}
+
+  // 底图 URL
+  const BASE_IMAGE_URL = "https://image.arityflow.top/uploads/2026/11/6afa992b293996.53301893_2737e32f.jpg";
+  // PNG 隐藏数据标识
+  const PNG_KEYWORD = "dk_share_data";
+
+  // 临时存储玩家填写的分享项
+  let shareData = {
+    characters: [],
+    images: [],
+    backgrounds: [],
+    voices: []
+  };
 
   function toast(msg) {
     const el = document.getElementById('toast');
@@ -91,29 +134,194 @@
     try { window.parent.eval('persist(true)'); window.parent.eval('renderPanel()'); } catch(e) {}
   }
 
-  // ================= 核心 1：云端同步 =================
-  async function syncCloudResources() {
+  function toggleSection(type) {
+    const cb = document.getElementById(`type${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    document.getElementById(`section-${type}`).classList.toggle('active', cb.checked);
+  }
+
+  // ================= 初始化已有数据 =================
+  window.onload = () => {
+    const state = getParentState();
+    if (!state) return;
+
+    // 人物设定（内置如果改了自定义设定也能分享）
+    const charBox = document.getElementById('charList');
+    const validChars = state.characters.filter(c => !c.builtIn || c.useCustomProfile);
+    if (validChars.length === 0) charBox.innerHTML = '<div class="intro">暂无自定义角色</div>';
+    else {
+      charBox.innerHTML = validChars.map((c, i) => `
+        <label class="check-item">
+          <input type="checkbox" data-type="char" data-index="${i}" value="${c.name}">
+          <span>${c.name} ${c.builtIn ? '(自定义)' : ''}</span>
+        </label>
+      `).join('');
+    }
+
+    // 默认加载已有的立绘和背景供选择
+    renderImageLists();
+  };
+
+  function renderImageLists() {
+    const state = getParentState();
+    const imgBox = document.getElementById('imageList');
+    const bgBox = document.getElementById('bgList');
+    const voiceBox = document.getElementById('voiceList');
+
+    let allImgs = [...shareData.images, ...state.images.filter(i => !i.builtIn)];
+    let allBgs = [...shareData.backgrounds, ...state.backgrounds.filter(b => !b.builtIn)];
+    
+    let allVoices = [...shareData.voices];
+    if (state.voice.customList) allVoices.push(...state.voice.customList);
+
+    const renderList = (box, arr, type, emptyText) => {
+        if(arr.length === 0) { box.innerHTML = `<div class="intro">${emptyText}</div>`; return; }
+        box.innerHTML = arr.map((item, i) => `
+          <label class="check-item">
+            <input type="checkbox" data-type="${type}" data-index="${i}" value="${item.name || i}">
+            <span>${item.name} ${item.voiceId ? '('+item.voiceId+')' : ''}</span>
+          </label>
+        `).join('');
+    };
+
+    renderList(imgBox, allImgs, 'image', '暂无立绘');
+    renderList(bgBox, allBgs, 'bg', '暂无背景');
+    renderList(voiceBox, allVoices, 'voice', '暂无音色');
+  }
+
+  // ================= 动态添加 =================
+  function addNewImage() {
+    const name = document.getElementById('newImgName').value.trim();
+    const url = document.getElementById('newImgUrl').value.trim();
+    if (!name || !url) return toast('请填写名称和 URL');
+    shareData.images.push({ name, url, id: 'shared_' + Date.now() });
+    document.getElementById('newImgName').value = '';
+    document.getElementById('newImgUrl').value = '';
+    renderImageLists();
+    toast('立绘已加入列表');
+  }
+
+  function addNewBg() {
+    const name = document.getElementById('newBgName').value.trim();
+    const url = document.getElementById('newBgUrl').value.trim();
+    if (!name || !url) return toast('请填写名称和 URL');
+    shareData.backgrounds.push({ name, url, id: 'shared_' + Date.now() });
+    document.getElementById('newBgName').value = '';
+    document.getElementById('newBgUrl').value = '';
+    renderImageLists();
+    toast('背景已加入列表');
+  }
+
+  function addNewVoice() {
+    const charName = document.getElementById('newVoiceChar').value.trim();
+    const voiceId = document.getElementById('newVoiceId').value.trim();
+    if (!voiceId) return toast('请填写音色 ID');
+    const name = charName ? `${charName}的音色` : '独立音色';
+    shareData.voices.push({ name, voiceId, bindChar: charName });
+    document.getElementById('newVoiceChar').value = '';
+    document.getElementById('newVoiceId').value = '';
+    renderImageLists();
+    toast('音色已加入列表');
+  }
+
+  // ================= 核心：生成 PNG =================
+  async function exportPNG() {
+    const state = getParentState();
+    const pack = { characters: [], images: [], backgrounds: [], voices: [] };
+
+    document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+      const type = cb.dataset.type;
+      const idx = parseInt(cb.dataset.index);
+      if (!type) return;
+
+      if (type === 'char') {
+        const validChars = state.characters.filter(c => !c.builtIn || c.useCustomProfile);
+        pack.characters.push(JSON.parse(JSON.stringify(validChars[idx])));
+      }
+      if (type === 'image') {
+        let allImgs = [...shareData.images, ...state.images.filter(i => !i.builtIn)];
+        pack.images.push(allImgs[idx]);
+      }
+      if (type === 'bg') {
+        let allBgs = [...shareData.backgrounds, ...state.backgrounds.filter(b => !b.builtIn)];
+        pack.backgrounds.push(allBgs[idx]);
+      }
+      if (type === 'voice') {
+        let allVoices = [...shareData.voices];
+        if (state.voice.customList) allVoices.push(...state.voice.customList);
+        pack.voices.push(allVoices[idx]);
+      }
+    });
+
+    if (pack.characters.length === 0 && pack.images.length === 0 && pack.backgrounds.length === 0 && pack.voices.length === 0) {
+      return toast('请至少选择或添加一项资源');
+    }
+
     const btn = event.target;
-    const oldText = btn.innerHTML;
-    btn.innerHTML = '⏳ 正在拉取...';
+    btn.textContent = '正在生成...';
     btn.disabled = true;
 
     try {
-      // 加上时间戳防止浏览器缓存
-      const res = await fetch(MANIFEST_URL + '?t=' + Date.now());
-      if (!res.ok) throw new Error('云端清单不存在或网络异常');
-      const data = await res.json();
+      // 1. 将数据转为 Base64 字符串
+      const jsonStr = JSON.stringify(pack);
+      const base64Data = btoa(unescape(encodeURIComponent(jsonStr)));
+
+      // 2. 获取底图（处理跨域）
+      let buffer;
+      try {
+        const res = await fetch(BASE_IMAGE_URL);
+        buffer = await res.arrayBuffer();
+      } catch(e) {
+        // 跨域失败时的备用代理
+        const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(BASE_IMAGE_URL)}`);
+        buffer = await res.arrayBuffer();
+      }
+
+      // 3. 注入 PNG 数据块
+      const newBuffer = injectPNGData(buffer, PNG_KEYWORD, base64Data);
+
+      // 4. 下载
+      const blob = new Blob([newBuffer], { type: 'image/png' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `那什么dk分享卡_${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('生成成功！可以把图片发给别人了');
+    } catch(e) {
+      console.error(e);
+      toast('生成失败：网络问题无法加载底图');
+    } finally {
+      btn.textContent = '💾 生成分享卡图片 (.png)';
+      btn.disabled = false;
+    }
+  }
+
+  // ================= 核心：读取 PNG =================
+  async function importPNG() {
+    const file = document.getElementById('importPngFile').files[0];
+    if (!file) return toast('请先选择一张 PNG 图片');
+
+    const btn = event.target;
+    btn.textContent = '正在读取...';
+    btn.disabled = true;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const base64Data = extractPNGData(buffer, PNG_KEYWORD);
+      
+      if (!base64Data) throw new Error('这张图片里没有资源数据');
+
+      const jsonStr = decodeURIComponent(escape(atob(base64Data)));
+      const pack = JSON.parse(jsonStr);
 
       const state = getParentState();
-      if (!state) throw new Error('读取主游戏数据失败');
       if (!state.custom_resources) state.custom_resources = { characters: [], images: [], backgrounds: [], voices: [] };
-      
       const pool = state.custom_resources;
+      
       let count = 0;
-
-      // 去重合并逻辑
       const merge = (target, source) => {
-        if (!source) return;
+        if (!source || !Array.isArray(source)) return;
         source.forEach(item => {
           if (!target.some(x => x.name === item.name)) {
             target.push(item);
@@ -122,113 +330,114 @@
         });
       };
 
-      merge(pool.characters, data.characters);
-      merge(pool.images, data.images);
-      merge(pool.backgrounds, data.backgrounds);
-      merge(pool.voices, data.voices);
+      // 处理音色的特殊绑定逻辑
+      if (pack.voices) {
+        pack.voices.forEach(v => {
+          if (v.bindChar) {
+            // 如果有绑定角色，尝试写入该角色的音色
+            const char = state.characters.find(c => c.name === v.bindChar);
+            if (char) { char.voiceOverride = v.voiceId; char.useCustomVoice = true; count++; return; }
+          }
+          // 否则存入池子
+          if (!pool.voices.some(x => x.name === v.name)) { pool.voices.push(v); count++; }
+        });
+      }
+
+      merge(pool.characters, pack.characters);
+      merge(pool.images, pack.images);
+      merge(pool.backgrounds, pack.backgrounds);
 
       saveParentState();
-      toast(`✅ 同步成功！新增了 ${count} 项资源。`);
+      toast(`✅ 成功读取并导入了 ${count} 项资源！`);
+      document.getElementById('importPngFile').value = '';
     } catch(e) {
-      toast('拉取失败：仓库尚未配置或网络错误');
       console.error(e);
+      toast('读取失败：' + e.message);
     } finally {
-      btn.innerHTML = oldText;
+      btn.textContent = '读取并导入';
       btn.disabled = false;
     }
   }
 
-  // ================= 核心 2：上传准备 =================
-  function renderExportLists() {
-    const state = getParentState();
-    if (!state) return;
-
-    const makeList = (containerId, items) => {
-      const box = document.getElementById(containerId);
-      if (!items || items.length === 0) {
-        box.innerHTML = '<div class="intro" style="margin:0;padding:8px;">暂无内容</div>';
-        return;
-      }
-      box.innerHTML = items.map((item, i) => `
-        <label class="check-item">
-          <input type="checkbox" data-type="${containerId}" data-index="${i}" value="${item.id || i}">
-          <span>${item.name}</span>
-        </label>
-      `).join('');
-    };
-
-    const myChars = state.characters.filter(c => !c.builtIn);
-    const myImgs = state.images.filter(i => !i.builtIn);
-    const myBgs = state.backgrounds.filter(b => !b.builtIn && !b.id.startsWith('bg'));
-    
-    let myVoices = [];
-    if (state.voice.customList) myVoices = state.voice.customList;
-    state.characters.forEach(c => { if (c.voiceOverride) myVoices.push({ name: c.name + '的音色', voiceId: c.voiceOverride }); });
-    
-    // 音色去重
-    const seenVoices = new Set();
-    myVoices = myVoices.filter(v => { if (seenVoices.has(v.voiceId)) return false; seenVoices.add(v.voiceId); return true; });
-
-    makeList('exportChars', myChars);
-    makeList('exportImages', myImgs);
-    makeList('exportBackgrounds', myBgs);
-    makeList('exportVoices', myVoices);
-  }
-
-  function prepareUpload() {
-    const state = getParentState();
-    if (!state) return;
-
-    const pack = { characters: [], images: [], backgrounds: [], voices: [] };
-    
-    document.querySelectorAll('input[type="checkbox"][data-type]:checked').forEach(cb => {
-      const type = cb.dataset.type;
-      const idx = parseInt(cb.dataset.index);
-
-      if (type === 'exportChars') {
-        pack.characters.push(JSON.parse(JSON.stringify(state.characters.filter(c => !c.builtIn)[idx])));
-      }
-      if (type === 'exportImages') {
-        pack.images.push(JSON.parse(JSON.stringify(state.images.filter(i => !i.builtIn)[idx])));
-      }
-      if (type === 'exportBackgrounds') {
-        pack.backgrounds.push(JSON.parse(JSON.stringify(state.backgrounds.filter(b => !b.builtIn && !b.id.startsWith('bg'))[idx])));
-      }
-      if (type === 'exportVoices') {
-        let myVoices = [...(state.voice.customList||[])];
-        state.characters.forEach(c => { if(c.voiceOverride) myVoices.push({ name: c.name + '的音色', voiceId: c.voiceOverride }); });
-        const seen = new Set();
-        myVoices = myVoices.filter(v => { if(seen.has(v.voiceId)) return false; seen.add(v.voiceId); return true; });
-        pack.voices.push(JSON.parse(JSON.stringify(myVoices[idx])));
-      }
-    });
-
-    if (pack.characters.length === 0 && pack.images.length === 0 && pack.backgrounds.length === 0 && pack.voices.length === 0) {
-      return toast('请至少勾选一项想要分享的资源');
+  // ================= 底层工具：PNG tEXt 写入/读取 =================
+  
+  // 计算 CRC32 (用于 PNG 块校验)
+  function crc32(buf) {
+    let c = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) {
+      c = (c >>> 8) ^ (crcTable[(c ^ buf[i]) & 0xff]);
     }
-
-    // 格式化为美化后的 JSON，方便你直接复制到 Github
-    document.getElementById('uploadCode').value = JSON.stringify(pack, null, 2);
-    toast('代码已生成，请前往 GitHub 提交');
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  const crcTable = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    crcTable[n] = c;
   }
 
-  // ================= 核心 3：跳转 Issue =================
-  function goToGithubIssue() {
-    const code = document.getElementById('uploadCode').value;
-    if (!code) return toast('请先点击上方按钮生成代码');
+  function injectPNGData(buffer, keyword, text) {
+    const uint8 = new Uint8Array(buffer);
+    // 找到 IEND 块的位置 (通常是最后12个字节)
+    let iendPos = uint8.length - 12;
+    
+    // 构建 tEXt 块数据：keyword(UTF-8) + \0 + text(UTF-8)
+    const enc = new TextEncoder();
+    const keyBytes = enc.encode(keyword);
+    const textBytes = enc.encode(text);
+    const dataLen = keyBytes.length + 1 + textBytes.length;
+    
+    const chunk = new Uint8Array(12 + dataLen);
+    const view = new DataView(chunk.buffer);
+    
+    view.setUint32(0, dataLen); // Length
+    chunk.set([116, 69, 88, 116], 4); // "tEXt"
+    chunk.set(keyBytes, 8);
+    chunk.set([0], 8 + keyBytes.length); // null separator
+    chunk.set(textBytes, 8 + keyBytes.length + 1);
+    
+    const crcBuf = chunk.slice(4, 8 + dataLen);
+    view.setUint32(8 + dataLen, crc32(crcBuf)); // CRC
 
-    const title = encodeURIComponent(`[新资源提交] 来自玩家的分享`);
-    const body = encodeURIComponent(`请作者审核我的资源。\n\n\`\`\`json\n${code}\n\`\`\`\n\n*(提交后请等待作者合并至主库)*`);
-    
-    const issueUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/issues/new?title=${title}&body=${body}`;
-    
-    // 打开新窗口提交
-    window.open(issueUrl, '_blank');
+    // 拼接新 PNG
+    const newBuffer = new Uint8Array(uint8.length + chunk.length);
+    newBuffer.set(uint8.slice(0, iendPos), 0);
+    newBuffer.set(chunk, iendPos);
+    newBuffer.set(uint8.slice(iendPos), iendPos + chunk.length);
+    return newBuffer.buffer;
   }
 
-  window.onload = () => {
-    renderExportLists();
-  };
+  function extractPNGData(buffer, keyword) {
+    const uint8 = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+    let pos = 8; // 跳过 PNG 头
+
+    const dec = new TextDecoder("utf-8");
+    const keyBytes = new TextEncoder().encode(keyword);
+
+    while (pos < uint8.length) {
+      const length = view.getUint32(pos);
+      const type = String.fromCharCode(...uint8.slice(pos + 4, pos + 8));
+      
+      if (type === 'tEXt') {
+        const data = uint8.slice(pos + 8, pos + 8 + length);
+        // 匹配 keyword
+        let isMatch = true;
+        for (let i = 0; i < keyBytes.length; i++) {
+          if (data[i] !== keyBytes[i]) { isMatch = false; break; }
+        }
+        if (isMatch && data[keyBytes.length] === 0) {
+          // 提取 text
+          const textBytes = data.slice(keyBytes.length + 1);
+          return dec.decode(textBytes);
+        }
+      }
+      
+      pos += 12 + length;
+      if (type === 'IEND') break;
+    }
+    return null;
+  }
 </script>
 </body>
 </html>
