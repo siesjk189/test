@@ -224,78 +224,90 @@
   }
 
   // ================= 核心：生成 PNG =================
-  async function exportPNG() {
-    const state = getParentState();
-    const pack = { characters: [], images: [], backgrounds: [], voices: [] };
+async function exportPNG() {
+  const state = getParentState();
+  const pack = { characters: [], images: [], backgrounds: [], voices: [] };
 
-    document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
-      const type = cb.dataset.type;
-      const idx = parseInt(cb.dataset.index);
-      if (!type) return;
+  document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+    const type = cb.dataset.type;
+    const idx = parseInt(cb.dataset.index);
+    if (!type) return;
 
-      if (type === 'char') {
-        const validChars = state.characters.filter(c => !c.builtIn || c.useCustomProfile);
-        pack.characters.push(JSON.parse(JSON.stringify(validChars[idx])));
-      }
-      if (type === 'image') {
-        let allImgs = [...shareData.images, ...state.images.filter(i => !i.builtIn)];
-        pack.images.push(allImgs[idx]);
-      }
-      if (type === 'bg') {
-        let allBgs = [...shareData.backgrounds, ...state.backgrounds.filter(b => !b.builtIn)];
-        pack.backgrounds.push(allBgs[idx]);
-      }
-      if (type === 'voice') {
-        let allVoices = [...shareData.voices];
-        if (state.voice.customList) allVoices.push(...state.voice.customList);
-        pack.voices.push(allVoices[idx]);
-      }
+    if (type === 'char') {
+      const validChars = state.characters.filter(c => !c.builtIn || c.useCustomProfile);
+      pack.characters.push(JSON.parse(JSON.stringify(validChars[idx])));
+    }
+    if (type === 'image') {
+      let allImgs = [...shareData.images, ...state.images.filter(i => !i.builtIn)];
+      pack.images.push(allImgs[idx]);
+    }
+    if (type === 'bg') {
+      let allBgs = [...shareData.backgrounds, ...state.backgrounds.filter(b => !b.builtIn)];
+      pack.backgrounds.push(allBgs[idx]);
+    }
+    if (type === 'voice') {
+      let allVoices = [...shareData.voices];
+      if (state.voice.customList) allVoices.push(...state.voice.customList);
+      pack.voices.push(allVoices[idx]);
+    }
+  });
+
+  if (pack.characters.length === 0 && pack.images.length === 0 && pack.backgrounds.length === 0 && pack.voices.length === 0) {
+    return toast('请至少选择或添加一项资源');
+  }
+
+  const btn = event.target;
+  btn.textContent = '正在生成...';
+  btn.disabled = true;
+
+  try {
+    // 1. 将数据转为 Base64 字符串
+    const jsonStr = JSON.stringify(pack);
+    const base64Data = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    // 2. 用 Canvas 加载底图（更兼容跨域）
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = BASE_IMAGE_URL;
+
+    const buffer = await new Promise((resolve, reject) => {
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width || 1024;
+        canvas.height = img.height || 1024;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob(blob => {
+          if(!blob) return reject(new Error("Canvas 转换失败"));
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsArrayBuffer(blob);
+        }, 'image/png');
+      };
+      img.onerror = () => reject(new Error("无法加载底图，请检查网络"));
     });
 
-    if (pack.characters.length === 0 && pack.images.length === 0 && pack.backgrounds.length === 0 && pack.voices.length === 0) {
-      return toast('请至少选择或添加一项资源');
-    }
+    // 3. 注入 PNG 数据块
+    const newBuffer = injectPNGData(buffer, PNG_KEYWORD, base64Data);
 
-    const btn = event.target;
-    btn.textContent = '正在生成...';
-    btn.disabled = true;
-
-    try {
-      // 1. 将数据转为 Base64 字符串
-      const jsonStr = JSON.stringify(pack);
-      const base64Data = btoa(unescape(encodeURIComponent(jsonStr)));
-
-      // 2. 获取底图（处理跨域）
-      let buffer;
-      try {
-        const res = await fetch(BASE_IMAGE_URL);
-        buffer = await res.arrayBuffer();
-      } catch(e) {
-        // 跨域失败时的备用代理
-        const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(BASE_IMAGE_URL)}`);
-        buffer = await res.arrayBuffer();
-      }
-
-      // 3. 注入 PNG 数据块
-      const newBuffer = injectPNGData(buffer, PNG_KEYWORD, base64Data);
-
-      // 4. 下载
-      const blob = new Blob([newBuffer], { type: 'image/png' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `那什么dk分享卡_${Date.now()}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast('生成成功！可以把图片发给别人了');
-    } catch(e) {
-      console.error(e);
-      toast('生成失败：网络问题无法加载底图');
-    } finally {
-      btn.textContent = '💾 生成分享卡图片 (.png)';
-      btn.disabled = false;
-    }
+    // 4. 下载
+    const blob = new Blob([newBuffer], { type: 'image/png' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `那什么dk分享卡_${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('生成成功！可以把图片发给别人了');
+  } catch(e) {
+    console.error(e);
+    toast('生成失败：' + e.message);
+  } finally {
+    btn.textContent = '💾 生成分享卡图片 (.png)';
+    btn.disabled = false;
   }
+}
 
   // ================= 核心：读取 PNG =================
   async function importPNG() {
