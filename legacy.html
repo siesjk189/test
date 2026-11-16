@@ -603,29 +603,21 @@ function renderCharacters(){
     }
 
 const cp = c.customProfile || {};
-const poolChars = state.custom_resources?.characters || [];
-let libProfileOpts = '<option value="">-- 从资源库导入设定 --</option>';
-poolChars.forEach((pc, idx) => {
-    libProfileOpts += `<option value="${idx}">${esc(pc.name)} (分享版)</option>`;
-});
+// ★ 过滤出与当前角色同名的分享包
+const poolChars = (state.custom_resources?.characters || []).filter(pc => pc.name === c.name);
 
 const profileHTML = `
   <div class="field full"><label>设定来源</label>
-    <select data-change="profile-mode" data-id="${c.id}">
+    <select onchange="handleProfileSelect('${c.id}', this)">
       <option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
-      <option value="custom" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
+      <option value="custom" ${c.useCustomProfile && !c._lastAppliedLib ? 'selected' : ''}>自定义填写</option>
+      ${poolChars.map((pc) => {
+        const isApplied = c.useCustomProfile && c._lastAppliedLib === pc.name;
+        return `<option value="lib_${esc(pc.name)}" ${isApplied ? 'selected' : ''}>🌟 资源库：${esc(pc.name)}</option>`;
+      }).join('')}
     </select>
   </div>
-  <div class="field full" style="margin-top:-10px; margin-bottom:16px;">
-    <label style="font-size:12px; color:var(--accent);">套用资源库设定</label>
-    <select onchange="applyLibProfile('${c.id}', this)">${libProfileOpts}</select>
-  </div>
-      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>身份</label><input data-profile-field="identity" value="${esc(cp.identity || '')}"></div>
-      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>与你的关系</label><input data-profile-field="relation" value="${esc(cp.relation || '')}"></div>
-      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>对你的称呼</label><input data-profile-field="address" value="${esc(cp.address || '')}"></div>
-      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>性格</label><textarea data-profile-field="personality">${esc(cp.personality || '')}</textarea></div>
-      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>设定</label><textarea data-profile-field="description">${esc(cp.description || '')}</textarea></div>
-    `;
+`;
 
     return `
       <div class="character-layout">
@@ -933,8 +925,91 @@ async function testImageAPI() {
  try {const endpoint = resolveEndpoint(state.imageApi.endpoint, 'image');const res = await smartFetch(endpoint, {method: 'POST',headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.imageApi.key },body: JSON.stringify({ model: state.imageApi.model, prompt: "A simple test image, a red apple on a wooden table", n: 1, size: "1024x1024" })});const data = await res.json().catch(()=>({}));if(!res.ok) throw new Error(data.error?.message || '请求失败');if(!data.data || !data.data[0] || !data.data[0].url) throw new Error('无有效返回');toast('生图连接成功');if(status)status.textContent='连接成功';} catch(e) { toast(e.message, 'error'); if(status)status.textContent='连接失败'; }
  finally { busy=false; }
 }
-window.applyLibVoice = function(charId, selectEl) {const val = selectEl.value;if(!val) return;const c = state.characters.find(x => x.id === charId);if(c) {c.voiceOverride = val;c.useCustomVoice = true;persist();renderPanel();toast('已应用资源库音色');}}
-window.importPoolChars = function() {const pool = state.custom_resources?.characters || [];if(pool.length === 0) return;let count = 0;pool.forEach(char => {if (!state.characters.some(c => c.name === char.name)) {const newChar = JSON.parse(JSON.stringify(char));newChar.id = 'imported_' + Date.now() + Math.floor(Math.random()*1000);if(!newChar.schemes || newChar.schemes.length===0) {newChar.schemes = [{id:'default', name:'默认方案', data:{}}];newChar.activeScheme = 'default';}state.characters.push(newChar);count++;}});if(count > 0) {toast(`成功提取 ${count} 位新角色到列表！`);persist(true);renderPanel();} else {toast('资源库的角色已经在你的列表中了');}}
+window.applyLibVoice = function(charId, selectEl) {const val = selectEl.value;if(!val) return;const c = state.characters.find(x => x.id === charId);if(c) {c.voiceOverride = val;c.useCustomVoice = true;persist();renderPanel();toast('已应用资源库音色');
+  }
+}
+
+window.importPoolChars = function() {
+  const pool = state.custom_resources?.characters || [];
+  if(pool.length === 0) return;
+  let addCount = 0;
+  let updateCount = 0;
+  
+  pool.forEach(char => {
+      const existing = state.characters.find(c => c.name === char.name);
+      
+      if (!existing) {
+          const newChar = JSON.parse(JSON.stringify(char));
+          newChar.id = 'imported_' + Date.now() + Math.floor(Math.random()*1000);
+          if(!newChar.schemes || newChar.schemes.length===0) {
+              newChar.schemes = [{id:'default', name:'默认方案', data:{}}];
+              newChar.activeScheme = 'default';
+          }
+          state.characters.push(newChar);
+          addCount++;
+      } else {
+          if(!existing.customProfile) existing.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+          existing.customProfile.identity = char.identity || existing.customProfile.identity;
+          existing.customProfile.relation = char.relation || existing.customProfile.relation;
+          existing.customProfile.address = char.address || existing.customProfile.address;
+          existing.customProfile.personality = char.personality || existing.customProfile.personality;
+          existing.customProfile.description = char.description || existing.customProfile.description;
+          
+          if(existing.builtIn) existing.useCustomProfile = true;
+          if(char.voiceOverride) existing.voiceOverride = char.voiceOverride;
+          if(char.portraitId) existing.portraitId = char.portraitId;
+          updateCount++;
+      }
+  });
+
+  state.custom_resources.characters = [];
+  
+  if(addCount > 0 || updateCount > 0) {
+      let msg = [];
+      if(addCount > 0) msg.push(`新增 ${addCount} 个角色`);
+      if(updateCount > 0) msg.push(`更新了 ${updateCount} 个角色的设定`);
+      toast(`✅ ${msg.join('，')}！`);
+  } else {
+      toast('提取完成！');
+  }
+  
+  persist(true);
+  renderPanel();
+}
+
+window.handleProfileSelect = function(charId, selectEl) {
+  const val = selectEl.value;
+  const c = state.characters.find(x => x.id === charId);
+  if (!c) return;
+
+  if (val === 'builtin') {
+    c.useCustomProfile = false;
+    c._lastAppliedLib = null;
+  } 
+  else if (val === 'custom') {
+    c.useCustomProfile = true;
+    c._lastAppliedLib = null;
+  } 
+  else if (val.startsWith('lib_')) {
+    const charName = val.replace('lib_', '');
+    const pc = (state.custom_resources.characters || []).find(x => x.name === charName);
+    if (!c.customProfile) c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+    
+    c.customProfile.identity = pc.identity || '';
+    c.customProfile.relation = pc.relation || '';
+    c.customProfile.address = pc.address || '';
+    c.customProfile.personality = pc.personality || '';
+    c.customProfile.description = pc.description || '';
+    
+    c.useCustomProfile = true;
+    c._lastAppliedLib = charName; 
+    toast(`已套用【${charName}】的分享设定`);
+  }
+  
+  persist();
+  renderPanel();
+}
+
 function handleAction(action,el){
  if(action==='open-map'){ showConfirm('前往地图', '是否结束当前剧情，回到大地图？', () => { closePanel(); openMap(); }); }
  else if(action==='close-map'){ closeMap(); renderScene(); }
@@ -1074,17 +1149,27 @@ function initNoticePage(){
   render(null);
 }
 
-window.applyLibProfile = function(charId, selectEl) {
-  const idx = selectEl.value;
-  if(idx === '') return;
-  
+// 处理下拉框合并选择（内置/自定义/资源库）
+window.handleProfileSelect = function(charId, selectEl) {
+  const val = selectEl.value;
   const state = window.state || (window.parent && window.parent.state);
-  if(!state) return;
-  
-  const pc = state.custom_resources.characters[idx];
   const c = state.characters.find(x => x.id === charId);
-  
-  if (c && pc) {
+  if (!c) return;
+
+  // 1. 选了【内置设定】
+  if (val === 'builtin') {
+    c.useCustomProfile = false;
+    c._lastAppliedLib = null;
+  } 
+  // 2. 选了【自定义填写】
+  else if (val === 'custom') {
+    c.useCustomProfile = true;
+    c._lastAppliedLib = null;
+  } 
+  // 3. 选了【🌟 资源库：xxx】
+  else if (val.startsWith('lib_')) {
+    const charName = val.replace('lib_', '');
+    const pc = (state.custom_resources.characters || []).find(x => x.name === charName);
     if (!c.customProfile) c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
     
     c.customProfile.identity = pc.identity || '';
@@ -1092,12 +1177,64 @@ window.applyLibProfile = function(charId, selectEl) {
     c.customProfile.address = pc.address || '';
     c.customProfile.personality = pc.personality || '';
     c.customProfile.description = pc.description || '';
-    c.useCustomProfile = true;
     
-    persist();
-    renderPanel();
-    toast(`已套用【${pc.name}】的分享设定`);
+    c.useCustomProfile = true;
+    c._lastAppliedLib = charName; 
+    toast(`已套用【${charName}】的分享设定`);
   }
+  
+  persist();
+  renderPanel();
+}
+
+// 提取资源库角色并清空池子（防重复提示）
+window.importPoolChars = function() {
+  const pool = state.custom_resources?.characters || [];
+  if(pool.length === 0) return;
+  let addCount = 0;
+  let updateCount = 0;
+  
+  pool.forEach(char => {
+      const existing = state.characters.find(c => c.name === char.name);
+      
+      if (!existing) {
+          const newChar = JSON.parse(JSON.stringify(char));
+          newChar.id = 'imported_' + Date.now() + Math.floor(Math.random()*1000);
+          if(!newChar.schemes || newChar.schemes.length===0) {
+              newChar.schemes = [{id:'default', name:'默认方案', data:{}}];
+              newChar.activeScheme = 'default';
+          }
+          state.characters.push(newChar);
+          addCount++;
+      } else {
+          if(!existing.customProfile) existing.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
+          existing.customProfile.identity = char.identity || existing.customProfile.identity;
+          existing.customProfile.relation = char.relation || existing.customProfile.relation;
+          existing.customProfile.address = char.address || existing.customProfile.address;
+          existing.customProfile.personality = char.personality || existing.customProfile.personality;
+          existing.customProfile.description = char.description || existing.customProfile.description;
+          
+          if(existing.builtIn) existing.useCustomProfile = true;
+          if(char.voiceOverride) existing.voiceOverride = char.voiceOverride;
+          if(char.portraitId) existing.portraitId = char.portraitId;
+          updateCount++;
+      }
+  });
+
+  // ★ 核心：清空资源库，防止按钮一直亮着
+  state.custom_resources.characters = [];
+  
+  if(addCount > 0 || updateCount > 0) {
+      let msg = [];
+      if(addCount > 0) msg.push(`新增 ${addCount} 个角色`);
+      if(updateCount > 0) msg.push(`更新了 ${updateCount} 个角色的设定`);
+      toast(`✅ ${msg.join('，')}！`);
+  } else {
+      toast('提取完成！');
+  }
+  
+  persist(true);
+  renderPanel();
 }
   
 injectBuiltins().then(() => {if (state.characters.length && !state.selectedCharacterId) state.selectedCharacterId = state.characters[0].id;if (!isInitialized) {const app = $('#noticeApp');if (app) app.hidden = false;initNoticePage();} else {const app = $('#noticeApp');if (app) app.hidden = true;renderScene();if (state.awaitingSetup) openSetup();}persist();});
