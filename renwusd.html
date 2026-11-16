@@ -5,12 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>人物设定</title>
 <style>
+  /* ===== 默认值兜底（跟随系统主题） ===== */
   :root {
     --bg: #fbf9f4; --surface: #fff; --surface-2: #faf8f3;
     --text: #1c1c1e; --muted: #8b877e; --line: rgba(28,28,30,.14);
     --accent: #1c1c1e; --radius: 8px;
     --p-paper: #fff; --p-ink: #1c1c1e;
     --font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151519; --surface: #1b1b20; --surface-2: #151519;
+      --text: #eceae5; --muted: #807d76; --line: rgba(236,234,229,.14);
+      --accent: #eceae5; --p-paper: #111; --p-ink: #eee;
+    }
   }
   
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,36 +28,38 @@
     padding: 24px 28px 60px; height: 100vh; overflow-y: auto; scrollbar-width: thin;
   }
 
-  .character-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 26px; }
-  .character-list-wrap { display: flex; flex-direction: column; gap: 12px; }
-  .character-list-title { font-size: 14px; color: var(--muted); font-family: "Microsoft YaHei", sans-serif; }
-  .character-list { display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; }
+  /* ===== 完美还原 legacy 的布局结构 ===== */
+  .character-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 26px; }
+  .character-list { display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start; }
   
   .character-select { 
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1 1 calc(50% - 8px);
+    display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; 
     min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 3px; 
-    background: var(--surface-2); color: var(--text); text-align: center; font-size: 14px; 
-    transition: all .2s; cursor: pointer; white-space: nowrap;
+    background: var(--surface-2); color: var(--text); text-align: left; font-size: 14px; 
+    transition: all .2s; cursor: pointer; flex: 1 1 45%;
   }
-  .character-select.active { border-color: var(--accent); background: oklch(0.65 0.16 250 / .15); color: var(--accent); font-weight: bold; }
+  .character-select.active { border-color: var(--accent); background: oklch(0.65 0.16 250 / .15); color: var(--accent); font-weight: 600; }
   .built-in-tag { font: 10px/1.4 sans-serif; color: var(--muted); font-weight: normal; }
   
   .add-char-btn {
-    width: 100%; min-height: 48px; border: 1px dashed var(--line); border-radius: 3px;
-    background: transparent; color: var(--text); font-size: 15px; cursor: pointer; transition: .2s;
-    display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 4px;
+    width: 100%; min-height: 44px; border: 1px dashed var(--line); border-radius: 3px;
+    background: transparent; color: var(--text); font-size: 14px; cursor: pointer; transition: .2s;
+    display: flex; align-items: center; justify-content: center; margin-top: 4px;
   }
-  .add-char-btn:hover { border-color: var(--accent); }
+  .add-char-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* 编辑器区域 */
   .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
   .editor-head h3 { font-size: 21px; font-weight: 500; letter-spacing: .1em; }
   .group { padding: 20px 0; border-bottom: 1px solid var(--line); }
   .group:first-child { padding-top: 0; }
   .group:last-child { border-bottom: none; }
-  .group-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 17px; margin-bottom: 16px; font-weight: 500; }
-  
+  .group-title { display: flex; align-items: center; gap: 10px; font-size: 17px; margin-bottom: 16px; font-weight: 500; }
+
+  /* 提示框 */
   .locked-note { padding: 14px 16px; border: 1px dashed var(--line); color: var(--muted); font: 13px/1.7 "Microsoft YaHei", sans-serif; border-radius: 3px; margin-bottom: 20px; }
 
+  /* 表单布局 */
   .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
   .field { display: grid; gap: 7px; min-width: 0; margin-bottom: 16px; }
   .field.full { grid-column: 1 / -1; }
@@ -63,6 +73,7 @@
   .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
   .field input:disabled { opacity: 0.5; background: var(--bg); cursor: not-allowed; }
   
+  /* 开关组件 */
   .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 54px; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .switch-copy strong { display: block; font-weight: 500; font-size: 16px; }
   .switch-copy small { display: block; color: var(--muted); font: 13px/1.6 "Microsoft YaHei", sans-serif; margin-top: 4px; }
@@ -73,18 +84,19 @@
   .switch input:checked + .switch-ui { background: var(--accent); border-color: var(--accent); }
   .switch input:checked + .switch-ui:after { transform: translateX(22px); background: var(--p-paper); }
 
+  /* 方案操作栏 */
   .scheme-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
   .scheme-bar select { flex: 1; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 15px; }
-  
   .btn { min-height: 44px; padding: 0 16px; border-radius: 3px; font: 500 14px/1.5 "Microsoft YaHei", sans-serif; transition: .2s; cursor: pointer; white-space: nowrap; }
   .secondary-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
   .danger-btn { background: transparent; color: oklch(0.7 0.16 25); border: 1px solid oklch(0.7 0.16 25 / .5); }
   .text-btn { min-height: 36px; border: 0; background: transparent; color: var(--muted); padding: 4px 6px; cursor: pointer; font: 13px/1.4 "Microsoft YaHei", sans-serif; }
   .text-btn:hover { color: var(--text); text-decoration: underline; }
 
+  /* ===== 手机端完全还原 legacy 的上下堆叠布局 ===== */
   @media(max-width:760px){
     body { padding: 16px 16px 60px; }
-    .character-layout { grid-template-columns: 1fr; gap: 24px; }
+    .character-layout { grid-template-columns: 1fr; gap: 16px; }
     .form-grid { grid-template-columns: 1fr; }
     .field.full { grid-column: auto; }
     .scheme-bar { flex-wrap: wrap; }
@@ -95,8 +107,8 @@
 <body>
 
 <div class="character-layout">
-  <div class="character-list-wrap">
-    <div class="character-list-title">当前登场角色 (新角色会自动加入)</div>
+  <div class="character-list-wrap" style="display:flex; flex-direction:column; gap:12px;">
+    <div style="font-size:14px; color:var(--muted); font-family:'Microsoft YaHei',sans-serif;">当前登场角色</div>
     <div class="character-list" id="charList"></div>
     <button class="add-char-btn" onclick="addCharacter()">+ 手动创建角色</button>
   </div>
@@ -108,14 +120,14 @@ let state = null;
 try {
   state = window.parent.state;
 } catch(e) {
-  document.body.innerHTML = '<p style="color:red;padding:20px;">无法获取游戏数据，请确保在游戏中打开。</p>';
+  document.body.innerHTML = '<p style="color:red;padding:20px;">无法获取游戏数据，请确保在游戏中打开此页面。</p>';
 }
 
 if (state) {
-  // ================= 1. 强制初始化与修复数据 =================
-  // 解决某些旧存档或内置角色缺失字段导致无法自定义的 Bug
+  // ================= 1. 强制修复旧版本数据缺失导致的 Bug =================
+  // 确保所有角色（特别是除秦梧外的内置角色）都有 customProfile 字段
   state.characters.forEach(c => {
-    if (!c.customProfile) {
+    if (!c.customProfile || typeof c.customProfile !== 'object') {
       c.customProfile = { identity:'', relation:'', address:'', personality:'', description:'' };
     }
     if (c.useCustomProfile === undefined) c.useCustomProfile = false;
@@ -129,6 +141,9 @@ if (state) {
       }
     }
   });
+
+  // 获取资源库导入的设定（如果有）
+  const resourceChars = state.custom_resources?.characters || [];
 
   let currentId = state.characters[0]?.id || '';
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -167,25 +182,25 @@ if (state) {
     saveState(); renderList(); renderEditor();
   };
 
-  // ================= 3. 核心：获取当前角色当前生效的数据 =================
+  // ================= 3. 获取当前生效的设定数据 =================
   function getActiveData(c) {
     if (c.builtIn) {
-      // 如果是内置角色，且开启了自定义覆盖，则使用 customProfile，否则留空代表使用原版
       return c.useCustomProfile ? c.customProfile : { identity:'', relation:'', address:'', personality:'', description:'' };
     } else {
-      // 自定义角色，从方案里取数据
       const scheme = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
       return scheme.data || {};
     }
   }
 
-  // ================= 4. 渲染右侧编辑器 =================
+  // ================= 4. 渲染右侧编辑器（原生 UI 顺序） =================
   function renderEditor() {
     const c = state.characters.find(x => x.id === currentId);
     const box = document.getElementById('charEditor');
     if (!c) { box.innerHTML = '<p style="color:var(--muted)">请选择或新建一个角色。</p>'; return; }
 
     const data = getActiveData(c);
+    // 查找资源库里是否有这个角色的同名设定
+    const sameNameRes = resourceChars.filter(r => r.name === c.name);
 
     let html = `
       <div class="editor-head">
@@ -194,31 +209,39 @@ if (state) {
       </div>
     `;
 
-    // 设定来源
+    // ===== 设定来源（下拉框） =====
     html += `<div class="field full">
       <label>设定来源</label>`;
     
     if (c.builtIn) {
-      html += `
-        <select onchange="updateField('useCustomProfile', this.value === '1')">
-          <option value="0" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
-          <option value="1" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
-        </select>
-      `;
+      // 内置角色
+      html += `<select onchange="changeSource(this.value)">`;
+      html += `<option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>`;
+      html += `<option value="custom" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>`;
+      
+      // 如果有资源库的设定，加进去
+      sameNameRes.forEach((r, i) => {
+        html += `<option value="res_${i}">资源库设定 (${esc(r.name)})</option>`;
+      });
+      html += `</select>`;
     } else {
+      // 自定义角色，显示方案选择器
       html += `
         <div class="scheme-bar" style="margin-bottom:0;">
           <select onchange="switchScheme(this.value)">
             ${c.schemes.map(s => `<option value="${s.id}" ${s.id === c.activeScheme ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
+            ${sameNameRes.length > 0 ? `<option disabled>---- 资源库设定 ----</option>` : ''}
+            ${sameNameRes.map((r, i) => `<option value="res_${i}">导入: ${esc(r.name)} 的设定</option>`).join('')}
           </select>
-          <button class="btn secondary-btn" onclick="addScheme()">新建</button>
+          <button class="btn secondary-btn" onclick="addScheme()">新建方案</button>
           <button class="btn danger-btn" onclick="deleteScheme()" ${c.schemes.length <= 1 ? 'disabled' : ''}>删除</button>
         </div>
       `;
     }
     html += `</div>`;
 
-    // 当处于“只读内置”状态时，显示提示
+    // ===== 中间详细设定表单 =====
+    // 如果是内置角色且选了“使用内置设定”，不显示这些框
     if (c.builtIn && !c.useCustomProfile) {
       html += `
         <div class="locked-note">
@@ -228,14 +251,13 @@ if (state) {
         </div>
       `;
     } else {
-      // 显示编辑表单
       html += `
         <div class="group">
-          <div class="group-title">基础信息</div>
+          <div class="group-title">详细设定</div>
           <div class="form-grid">
             <div class="field">
               <label>姓名</label>
-              <input value="${esc(c.name)}" ${c.builtIn ? 'disabled' : `oninput="updateField('name', this.value)"`} placeholder="${c.builtIn ? '内置角色不可改名' : ''}">
+              <input value="${esc(c.name)}" ${c.builtIn ? 'disabled placeholder="内置不可改名"' : `oninput="updateField('name', this.value)"`}>
             </div>
             <div class="field">
               <label>性别</label>
@@ -254,19 +276,19 @@ if (state) {
       `;
     }
 
-    // 音色配置
+    // ===== 音色配置 =====
     html += `
       <div class="group">
         <div class="field full">
           <label>音色配置</label>
           <select onchange="updateField('useCustomVoice', this.value === '1')">
             <option value="0" ${!c.useCustomVoice ? 'selected' : ''}>使用内置音色</option>
-            <option value="1" ${c.useCustomVoice ? 'selected' : ''}>自定义音色</option>
+            <option value="1" ${c.useCustomVoice ? 'selected' : ''}>自定义填写</option>
           </select>
         </div>
         ${c.useCustomVoice ? `
           <div class="field full" style="margin-top:-8px;">
-            <input value="${esc(c.voiceOverride || '')}" oninput="updateField('voiceOverride', this.value)" placeholder="填写自定义 Voice ID (例如: female-shaonv)">
+            <input value="${esc(c.voiceOverride || '')}" oninput="updateField('voiceOverride', this.value)" placeholder="填写 Voice ID (例如: female-shaonv)">
           </div>
         ` : ''}
         
@@ -280,7 +302,7 @@ if (state) {
       </div>
     `;
 
-    // 立绘与地点
+    // ===== 地点与立绘 =====
     html += `
       <div class="group">
         <div class="field full">
@@ -317,7 +339,7 @@ if (state) {
     box.innerHTML = html;
   }
 
-  // ================= 5. 核心：数据更新逻辑 =================
+  // ================= 5. 核心数据操作 =================
   window.updateField = (path, value) => {
     const c = state.characters.find(x => x.id === currentId);
     if (!c) return;
@@ -327,38 +349,68 @@ if (state) {
 
     if (baseFields.includes(path)) {
       if (c.builtIn) {
-        // 内置角色写到 customProfile
-        c.customProfile[path] = value;
+        c.customProfile[path] = value; // 内置角色写到 customProfile
       } else {
-        // 自定义角色写到方案里，并同步到顶层
         const scheme = c.schemes.find(s => s.id === c.activeScheme) || c.schemes[0];
         if (!scheme.data) scheme.data = {};
         scheme.data[path] = value;
-        c[path] = value;
+        c[path] = value; // 同步一份到顶层
       }
     } else {
-      // 属于角色本身的设置（姓名、性别、音色、立绘、小区等），直接写顶层
-      c[path] = value;
+      c[path] = value; // 其他直接写顶层
     }
     
     saveState();
     
-    // 改变 UI 结构的字段需要重绘
     if (['useCustomProfile', 'useCustomVoice', 'useSprite', 'name'].includes(path)) {
       if (path === 'name') renderList();
       renderEditor();
     }
   };
 
+  // 处理“设定来源”下拉框切换
+  window.changeSource = (val) => {
+    const c = state.characters.find(x => x.id === currentId);
+    if (!c) return;
+    
+    if (val === 'builtin') {
+      c.useCustomProfile = false;
+    } else if (val === 'custom') {
+      c.useCustomProfile = true;
+    } else if (val.startsWith('res_')) {
+      // 选用了资源库设定
+      const idx = parseInt(val.replace('res_', ''));
+      const resData = sameNameRes[idx];
+      if (resData) {
+        // 将资源库数据复制到自定义里供玩家修改
+        c.customProfile = { ...resData };
+        c.useCustomProfile = true;
+      }
+    }
+    saveState(); renderEditor();
+  };
+
   // ================= 6. 方案操作 =================
   window.switchScheme = (id) => {
     const c = state.characters.find(x => x.id === currentId);
-    if (c && !c.builtIn) {
+    if (!c || c.builtIn) return;
+
+    if (id.startsWith('res_')) {
+      // 从资源库导入为一个新方案
+      const idx = parseInt(id.replace('res_', ''));
+      const resData = sameNameRes[idx];
+      if (resData) {
+        const newId = 'scheme_res_' + Date.now();
+        c.schemes.push({ id: newId, name: '导入:' + resData.name, data: { ...resData } });
+        c.activeScheme = newId;
+      }
+    } else {
       c.activeScheme = id;
-      const active = c.schemes.find(s => s.id === id);
-      if (active && active.data) Object.assign(c, active.data);
-      saveState(); renderEditor();
     }
+    
+    const active = c.schemes.find(s => s.id === c.activeScheme);
+    if (active && active.data) Object.assign(c, active.data);
+    saveState(); renderEditor();
   };
 
   window.addScheme = () => {
