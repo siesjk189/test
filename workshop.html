@@ -20,6 +20,9 @@
   .check-item { display: flex; align-items: center; padding: 6px; font-size: 13px; border-bottom: 1px solid var(--line); }
   .check-item:last-child { border-bottom: none; }
   .check-item input { margin-right: 10px; transform: scale(1.2); }
+
+  .upload-box { border: 2px dashed var(--line); border-radius: 8px; padding: 16px; text-align: center; background: var(--bg); margin-bottom: 16px; }
+  .upload-box p { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
   
   .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 </style>
@@ -29,39 +32,42 @@
 
   <div class="section" style="border-color: var(--success);">
     <h2 style="border-color: var(--success);">📥 导入分享卡</h2>
-    <p class="intro">选择别人分享给你的 PNG 图片。</p>
     <input type="file" id="importPngFile" accept="image/png" style="width:100%; margin-bottom:12px; padding:8px; border:1px solid var(--line); border-radius:4px;">
     <button class="btn btn-success" onclick="importPNG()">读取并导入</button>
   </div>
 
   <div class="section">
     <h2>📤 制作分享卡</h2>
-    <p class="intro">系统已锁定官方底图。勾选你想分享的资源，点击下方按钮即可生成。</p>
     
+    <!-- 手动上传兜底方案 -->
+    <div class="upload-box">
+      <p>系统将使用 <code>base.png</code> 作为底图（请确保文件在同目录下）。<br>如果没放，请手动选图：</p>
+      <input type="file" id="baseImageUpload" accept="image/jpeg, image/png" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:4px;">
+    </div>
+
     <div class="check-group" id="charList"></div>
     <div class="check-group" id="imgList"></div>
     <div class="check-group" id="bgList"></div>
     <div class="check-group" id="voiceList"></div>
 
-    <button class="btn btn-primary" onclick="exportPNG()">💾 生成并下载 PNG</button>
+    <button class="btn btn-primary" onclick="exportPNG()"> 生成 PNG</button>
   </div>
 
 <script>
   try { if (window.parent.document.body.className.includes('theme-dark')) document.body.className = 'theme-dark'; } catch(e) {}
   const PNG_KEYWORD = "dk_share_data";
-  // ★ 固定底图 URL ★
-  const BASE_IMAGE_URL = "https://image.arityflow.top/uploads/2026/11/6afa992b293996.53301893_2737e32f.jpg";
 
   function toast(msg) {
     const el = document.getElementById('toast');
     el.textContent = msg; el.style.opacity = '1';
-    setTimeout(() => el.style.opacity = '0', 2000);
+    setTimeout(() => el.style.opacity = '0', 2500);
   }
   function getParentState() { try { return window.parent.eval('state'); } catch(e) { return null; } }
   function saveParentState() { try { window.parent.eval('persist(true)'); window.parent.eval('renderPanel()'); } catch(e) {} }
 
   window.onload = () => {
     const state = getParentState(); if (!state) return;
+    
     const renderList = (containerId, arr, prefix) => {
       const box = document.getElementById(containerId);
       if(!arr || arr.length === 0) { box.innerHTML = `<div class="intro" style="padding:4px;text-align:center;">无自定义${prefix}</div>`; return; }
@@ -100,46 +106,39 @@
       return toast('请至少勾选一项资源');
     }
 
-    const btn = event.target; btn.textContent = '正在下载底图并生成...'; btn.disabled = true;
+    const btn = event.target; btn.textContent = '生成中...'; btn.disabled = true;
 
     try {
       const base64Data = btoa(unescape(encodeURIComponent(JSON.stringify(pack))));
+      const fileInput = document.getElementById('baseImageUpload');
       
-      // 1. 拉取底图 (带多重代理防跨域)
-      let imgRes;
-      try {
-        imgRes = await fetch(BASE_IMAGE_URL);
-        if(!imgRes.ok) throw new Error();
-      } catch(e) {
-        try {
-          imgRes = await fetch(`https://corsproxy.io/?${encodeURIComponent(BASE_IMAGE_URL)}`);
-          if(!imgRes.ok) throw new Error();
-        } catch(e2) {
-          imgRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(BASE_IMAGE_URL)}`);
-        }
+      let dataUrl = '';
+      if (fileInput.files && fileInput.files[0]) {
+        // 如果用户手动选了图
+        dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(fileInput.files[0]); });
+      } else {
+        // 走本地同源文件 base.png（绝不跨域）
+        dataUrl = './base.png'; 
       }
-      if (!imgRes.ok) throw new Error('无法获取网络底图');
-      
-      const blob = await imgRes.blob();
-      const dataUrl = URL.createObjectURL(blob);
-      
-      // 2. 把拉到的 JPG 画到 Canvas 上，强转为纯正 PNG
+
+      // 画到 Canvas 上强转成 PNG 格式
       const img = new Image();
       img.src = dataUrl;
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+      await new Promise((res, rej) => {
+        img.onload = res;
+        // 如果加载 ./base.png 失败，给个提示
+        img.onerror = () => rej(new Error('加载底图失败，请确认目录下是否有 base.png，或者手动上传底图'));
+      });
       
       const canvas = document.createElement('canvas');
       canvas.width = img.width; canvas.height = img.height;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      URL.revokeObjectURL(dataUrl);
 
       const pngBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
       const imgBuffer = await pngBlob.arrayBuffer();
 
-      // 3. 把数据塞进 PNG 块
+      // 注入数据并下载
       const newBuffer = injectPNGData(imgBuffer, PNG_KEYWORD, base64Data);
-      
-      // 4. 下载
       const finalBlob = new Blob([newBuffer], { type: 'image/png' });
       const url = URL.createObjectURL(finalBlob);
       const a = document.createElement('a');
@@ -151,7 +150,7 @@
     } catch(e) {
       toast('生成失败：' + e.message);
     } finally {
-      btn.textContent = '💾 生成并下载 PNG'; btn.disabled = false;
+      btn.textContent = ' 生成并下载 PNG'; btn.disabled = false;
     }
   }
 
