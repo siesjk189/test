@@ -8,349 +8,180 @@
   :root { --bg: #f5f5f7; --surface: #fff; --text: #333; --muted: #888; --line: #e0e0e0; --accent: #007aff; --success: #34c759; --danger: #ff3b30; --radius: 8px; }
   body.theme-dark { --bg: #1e1e1e; --surface: #2d2d2d; --text: #e0e0e0; --muted: #888; --line: #444; --accent: #0a84ff; --success: #30d158; --danger: #ff453a; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); padding: 16px; height: 100vh; overflow-y: auto; transition: background 0.3s, color 0.3s; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); padding: 16px; height: 100vh; overflow-y: auto; }
   h2 { font-size: 16px; margin-bottom: 12px; border-left: 4px solid var(--accent); padding-left: 8px; }
-  h3 { font-size: 14px; margin: 12px 0 8px; color: var(--muted); }
   .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
   .intro { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
-  .field { margin-bottom: 12px; }
-  .field label { display: block; font-size: 13px; margin-bottom: 6px; font-weight: 600; }
-  input[type="text"], input[type="file"] { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; outline: none; }
-  .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+  input[type="text"], input[type="file"] { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 10px; font-size: 13px; outline: none; margin-bottom: 8px;}
+  .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-success { background: var(--success); color: #fff; }
-  .btn-secondary { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
-  
-  .type-checkboxes { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--line); }
-  .type-checkboxes label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
-  .type-checkboxes input { transform: scale(1.2); }
-
-  .check-group { max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--bg); margin-bottom: 12px; }
-  .check-item { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .btn-sec { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+  .check-group { max-height: 150px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--bg); margin-bottom: 12px; }
+  .check-item { display: flex; align-items: center; padding: 6px; font-size: 13px; border-bottom: 1px solid var(--line); }
+  .check-item:last-child { border-bottom: none; }
   .check-item input { margin-right: 10px; transform: scale(1.2); }
-
-  .dynamic-section { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line); }
-  .dynamic-section.active { display: block; }
-
   .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 </style>
 </head>
 <body class="theme-light">
   <div id="toast" class="toast"></div>
 
-  <!-- 导入区 -->
   <div class="section" style="border-color: var(--success);">
-    <h2 style="border-color: var(--success);">📥 导入图片</h2>
-    <p class="intro">选择别人分享给你的 PNG 图片，系统会自动读取并导入里面的资源。</p>
+    <h2 style="border-color: var(--success);">📥 导入分享卡</h2>
+    <p class="intro">选择别人发给你的 PNG 图片，读取其中的资源。</p>
     <input type="file" id="importPngFile" accept="image/png">
     <button class="btn btn-success" onclick="importPNG()">读取并导入</button>
   </div>
 
-  <!-- 导出区 -->
   <div class="section">
-    <h2>分享图片</h2>
-    <p class="intro">填写内容后生成图片，她人可导入这张图片使用你分享的内容。请注意，您所分享的内容均公开可见，谨慎填写。</p>
+    <h2>📤 制作分享卡</h2>
+    <p class="intro">勾选资源并上传底图（支持 JPG/PNG）。如果不传底图，系统自动生成黑色背景。</p>
+    
+    <input type="file" id="baseImageUpload" accept="image/jpeg, image/png">
+    
+    <div class="check-group" id="charList"></div>
+    <div class="check-group" id="imgList"></div>
+    <div class="check-group" id="bgList"></div>
+    <div class="check-group" id="voiceList"></div>
 
-    <h3>1. 选择要分享的类型</h3>
-    <div class="type-checkboxes">
-      <label><input type="checkbox" id="typeChar" onchange="toggleSection('char')"> 人物设定</label>
-      <label><input type="checkbox" id="typeImage" onchange="toggleSection('image')"> 立绘图片</label>
-      <label><input type="checkbox" id="typeBg" onchange="toggleSection('bg')"> 背景图片</label>
-      <label><input type="checkbox" id="typeVoice" onchange="toggleSection('voice')"> 音色 ID</label>
-    </div>
-
-    <!-- 人物设定 -->
-    <div id="section-char" class="dynamic-section">
-      <h3>选择角色</h3>
-      <div class="check-group" id="charList"></div>
-    </div>
-
-    <!-- 立绘图片 -->
-    <div id="section-image" class="dynamic-section">
-      <h3>添加要分享的立绘</h3>
-      <div class="field">
-        <input type="text" id="newImgName" placeholder="角色名">
-        <input type="text" id="newImgUrl" placeholder="图片 URL " style="margin-top:8px;">
-        <button class="btn btn-secondary" onclick="addNewImage()" style="margin-top:8px;">＋ 添加到分享列表</button>
-      </div>
-      <div class="check-group" id="imageList"></div>
-    </div>
-
-    <!-- 背景图片 -->
-    <div id="section-bg" class="dynamic-section">
-      <h3>添加要分享的背景</h3>
-      <div class="field">
-        <input type="text" id="newBgName" placeholder="背景名称 (如: 黄昏教室)">
-        <input type="text" id="newBgUrl" placeholder="图片 URL (https://...)" style="margin-top:8px;">
-        <button class="btn btn-secondary" onclick="addNewBg()" style="margin-top:8px;">＋ 添加到分享列表</button>
-      </div>
-      <div class="check-group" id="bgList"></div>
-    </div>
-
-    <!-- 音色 ID -->
-    <div id="section-voice" class="dynamic-section">
-      <h3>添加要分享的音色</h3>
-      <div class="field">
-        <input type="text" id="newVoiceChar" placeholder="绑定的角色名 (可选，若不填将绑定至默认音色选择栏）">
-        <input type="text" id="newVoiceId" placeholder="音色 ID （此id将公开可见，谨慎使用）" style="margin-top:8px;">
-        <button class="btn btn-secondary" onclick="addNewVoice()" style="margin-top:8px;">＋ 添加到分享列表</button>
-      </div>
-      <div class="check-group" id="voiceList"></div>
-    </div>
-
-    <button class="btn btn-primary" onclick="exportPNG()" style="margin-top:20px; padding:16px; font-size:16px;">生成图片 </button>
+    <button class="btn btn-primary" onclick="exportPNG()" style="padding:14px; font-size:15px;"> 生成并下载 PNG</button>
   </div>
 
 <script>
-  try {
-    if (window.parent.document.body.className.includes('theme-dark')) document.body.className = 'theme-dark';
-  } catch(e) {}
-
-  // 底图 URL
-  const BASE_IMAGE_URL = "https://image.arityflow.top/uploads/2026/11/6afaad615376b1.51771428_7b1566d0.png";
-  // PNG 隐藏数据标识
+  try { if (window.parent.document.body.className.includes('theme-dark')) document.body.className = 'theme-dark'; } catch(e) {}
   const PNG_KEYWORD = "dk_share_data";
-
-  // 临时存储玩家填写的分享项
-  let shareData = {
-    characters: [],
-    images: [],
-    backgrounds: [],
-    voices: []
-  };
 
   function toast(msg) {
     const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.style.opacity = '1';
+    el.textContent = msg; el.style.opacity = '1';
     setTimeout(() => el.style.opacity = '0', 2000);
   }
+  function getParentState() { try { return window.parent.eval('state'); } catch(e) { return null; } }
+  function saveParentState() { try { window.parent.eval('persist(true)'); window.parent.eval('renderPanel()'); } catch(e) {} }
 
-  function getParentState() {
-    try { return window.parent.eval('state'); } catch(e) { return null; }
-  }
-
-  function saveParentState() {
-    try { window.parent.eval('persist(true)'); window.parent.eval('renderPanel()'); } catch(e) {}
-  }
-
-  function toggleSection(type) {
-    const cb = document.getElementById(`type${type.charAt(0).toUpperCase() + type.slice(1)}`);
-    document.getElementById(`section-${type}`).classList.toggle('active', cb.checked);
-  }
-
-  // ================= 初始化已有数据 =================
   window.onload = () => {
-    const state = getParentState();
-    if (!state) return;
-
-    // 人物设定（内置如果改了自定义设定也能分享）
-    const charBox = document.getElementById('charList');
-    const validChars = state.characters.filter(c => !c.builtIn || c.useCustomProfile);
-    if (validChars.length === 0) charBox.innerHTML = '<div class="intro">暂无自定义角色</div>';
-    else {
-      charBox.innerHTML = validChars.map((c, i) => `
+    const state = getParentState(); if (!state) return;
+    
+    const renderList = (containerId, arr, prefix) => {
+      const box = document.getElementById(containerId);
+      if(!arr || arr.length === 0) { box.innerHTML = `<div class="intro" style="padding:4px;">无自定义${prefix}</div>`; return; }
+      box.innerHTML = arr.map((item, i) => `
         <label class="check-item">
-          <input type="checkbox" data-type="char" data-index="${i}" value="${c.name}">
-          <span>${c.name} ${c.builtIn ? '(自定义)' : ''}</span>
+          <input type="checkbox" data-type="${containerId}" data-index="${i}" data-obj='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+          <span>${item.name}</span>
         </label>
       `).join('');
-    }
-
-    // 默认加载已有的立绘和背景供选择
-    renderImageLists();
-  };
-
-  function renderImageLists() {
-    const state = getParentState();
-    const imgBox = document.getElementById('imageList');
-    const bgBox = document.getElementById('bgList');
-    const voiceBox = document.getElementById('voiceList');
-
-    let allImgs = [...shareData.images, ...state.images.filter(i => !i.builtIn)];
-    let allBgs = [...shareData.backgrounds, ...state.backgrounds.filter(b => !b.builtIn)];
-    
-    let allVoices = [...shareData.voices];
-    if (state.voice.customList) allVoices.push(...state.voice.customList);
-
-    const renderList = (box, arr, type, emptyText) => {
-        if(arr.length === 0) { box.innerHTML = `<div class="intro">${emptyText}</div>`; return; }
-        box.innerHTML = arr.map((item, i) => `
-          <label class="check-item">
-            <input type="checkbox" data-type="${type}" data-index="${i}" value="${item.name || i}">
-            <span>${item.name} ${item.voiceId ? '('+item.voiceId+')' : ''}</span>
-          </label>
-        `).join('');
     };
 
-    renderList(imgBox, allImgs, 'image', '暂无立绘');
-    renderList(bgBox, allBgs, 'bg', '暂无背景');
-    renderList(voiceBox, allVoices, 'voice', '暂无音色');
-  }
+    const chars = state.characters.filter(c => !c.builtIn || c.useCustomProfile);
+    const imgs = state.images.filter(i => !i.builtIn);
+    const bgs = state.backgrounds.filter(b => !b.builtIn && !b.id.startsWith('bg'));
+    let voices = state.voice.customList || [];
+    state.characters.forEach(c => { if(c.voiceOverride) voices.push({name: c.name + '的音色', voiceId: c.voiceOverride}); });
 
-  // ================= 动态添加 =================
-  function addNewImage() {
-    const name = document.getElementById('newImgName').value.trim();
-    const url = document.getElementById('newImgUrl').value.trim();
-    if (!name || !url) return toast('请填写名称和 URL');
-    shareData.images.push({ name, url, id: 'shared_' + Date.now() });
-    document.getElementById('newImgName').value = '';
-    document.getElementById('newImgUrl').value = '';
-    renderImageLists();
-    toast('立绘已加入列表');
-  }
+    renderList('charList', chars, '角色');
+    renderList('imgList', imgs, '立绘');
+    renderList('bgList', bgs, '背景');
+    renderList('voiceList', voices, '音色');
+  };
 
-  function addNewBg() {
-    const name = document.getElementById('newBgName').value.trim();
-    const url = document.getElementById('newBgUrl').value.trim();
-    if (!name || !url) return toast('请填写名称和 URL');
-    shareData.backgrounds.push({ name, url, id: 'shared_' + Date.now() });
-    document.getElementById('newBgName').value = '';
-    document.getElementById('newBgUrl').value = '';
-    renderImageLists();
-    toast('背景已加入列表');
-  }
-
-  function addNewVoice() {
-    const charName = document.getElementById('newVoiceChar').value.trim();
-    const voiceId = document.getElementById('newVoiceId').value.trim();
-    if (!voiceId) return toast('请填写音色 ID');
-    const name = charName ? `${charName}的音色` : '独立音色';
-    shareData.voices.push({ name, voiceId, bindChar: charName });
-    document.getElementById('newVoiceChar').value = '';
-    document.getElementById('newVoiceId').value = '';
-    renderImageLists();
-    toast('音色已加入列表');
-  }
-
-  // ================= 核心：生成 PNG =================
-async function exportPNG() {
-  const state = getParentState();
-  const pack = { characters: [], images: [], backgrounds: [], voices: [] };
-
-  document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
-    const type = cb.dataset.type;
-    const idx = parseInt(cb.dataset.index);
-    if (!type) return;
-
-    if (type === 'char') {
-      const validChars = state.characters.filter(c => !c.builtIn || c.useCustomProfile);
-      pack.characters.push(JSON.parse(JSON.stringify(validChars[idx])));
-    }
-    if (type === 'image') {
-      let allImgs = [...shareData.images, ...state.images.filter(i => !i.builtIn)];
-      pack.images.push(allImgs[idx]);
-    }
-    if (type === 'bg') {
-      let allBgs = [...shareData.backgrounds, ...state.backgrounds.filter(b => !b.builtIn)];
-      pack.backgrounds.push(allBgs[idx]);
-    }
-    if (type === 'voice') {
-      let allVoices = [...shareData.voices];
-      if (state.voice.customList) allVoices.push(...state.voice.customList);
-      pack.voices.push(allVoices[idx]);
-    }
-  });
-
-  if (pack.characters.length === 0 && pack.images.length === 0 && pack.backgrounds.length === 0 && pack.voices.length === 0) {
-    return toast('请至少选择或添加一项资源');
-  }
-
-  const btn = event.target;
-  btn.textContent = '正在生成...';
-  btn.disabled = true;
-
-  try {
-    // 1. 将数据转为 Base64 字符串
-    const jsonStr = JSON.stringify(pack);
-    const base64Data = btoa(unescape(encodeURIComponent(jsonStr)));
-
-    // 2. 用 Canvas 加载底图（更兼容跨域）
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = BASE_IMAGE_URL;
-
-    const buffer = await new Promise((resolve, reject) => {
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width || 1024;
-        canvas.height = img.height || 1024;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        
-        canvas.toBlob(blob => {
-          if(!blob) return reject(new Error("Canvas 转换失败"));
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsArrayBuffer(blob);
-        }, 'image/png');
-      };
-      img.onerror = () => reject(new Error("无法加载底图，请检查网络"));
+  // ================= 核心：生成并注入 PNG =================
+  async function exportPNG() {
+    const pack = { characters: [], images: [], backgrounds: [], voices: [] };
+    
+    document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+      const obj = JSON.parse(cb.getAttribute('data-obj'));
+      if(cb.dataset.type === 'charList') pack.characters.push(obj);
+      if(cb.dataset.type === 'imgList') pack.images.push(obj);
+      if(cb.dataset.type === 'bgList') pack.backgrounds.push(obj);
+      if(cb.dataset.type === 'voiceList') pack.voices.push(obj);
     });
 
-    // 3. 注入 PNG 数据块
-    const newBuffer = injectPNGData(buffer, PNG_KEYWORD, base64Data);
+    if (pack.characters.length === 0 && pack.images.length === 0 && pack.backgrounds.length === 0 && pack.voices.length === 0) {
+      return toast('请至少勾选一项资源');
+    }
 
-    // 4. 下载
-    const blob = new Blob([newBuffer], { type: 'image/png' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `那什么dk分享卡_${Date.now()}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('生成成功！可以把图片发给别人了');
-  } catch(e) {
-    console.error(e);
-    toast('生成失败：' + e.message);
-  } finally {
-    btn.textContent = '💾 生成分享卡图片 (.png)';
-    btn.disabled = false;
+    const btn = event.target; btn.textContent = '处理中...'; btn.disabled = true;
+
+    try {
+      const base64Data = btoa(unescape(encodeURIComponent(JSON.stringify(pack))));
+      const fileInput = document.getElementById('baseImageUpload');
+      
+      let imgBuffer;
+      if (fileInput.files && fileInput.files[0]) {
+        // 1. 如果有底图，用 Canvas 转成标准 PNG 的 ArrayBuffer
+        const file = fileInput.files[0];
+        const dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file); });
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise(res => img.onload = res);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        imgBuffer = await blob.arrayBuffer();
+      } else {
+        // 2. 如果没有底图，画一张纯黑的底图
+        const canvas = document.createElement('canvas');
+        canvas.width = 400; canvas.height = 600;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#1e1e1e'; ctx.fillRect(0, 0, 400, 600);
+        ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('DK 分享卡', 200, 300);
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        imgBuffer = await blob.arrayBuffer();
+      }
+
+      // 3. 把数据写进 PNG 的 tEXt 块
+      const newBuffer = injectPNGData(imgBuffer, PNG_KEYWORD, base64Data);
+      
+      // 4. 下载
+      const finalBlob = new Blob([newBuffer], { type: 'image/png' });
+      const url = URL.createObjectURL(finalBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `分享卡_${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('生成成功！');
+    } catch(e) {
+      toast('生成失败：' + e.message);
+    } finally {
+      btn.textContent = '生成并下载 PNG'; btn.disabled = false;
+    }
   }
-}
 
-  // ================= 核心：读取 PNG =================
+  // ================= 核心：读取并导入 =================
   async function importPNG() {
     const file = document.getElementById('importPngFile').files[0];
-    if (!file) return toast('请先选择一张 PNG 图片');
-
-    const btn = event.target;
-    btn.textContent = '正在读取...';
-    btn.disabled = true;
-
+    if (!file) return toast('请选择图片');
+    
     try {
       const buffer = await file.arrayBuffer();
       const base64Data = extractPNGData(buffer, PNG_KEYWORD);
-      
-      if (!base64Data) throw new Error('这张图片里没有资源数据');
+      if (!base64Data) throw new Error('该图片不包含资源数据');
 
-      const jsonStr = decodeURIComponent(escape(atob(base64Data)));
-      const pack = JSON.parse(jsonStr);
-
+      const pack = JSON.parse(decodeURIComponent(escape(atob(base64Data))));
       const state = getParentState();
       if (!state.custom_resources) state.custom_resources = { characters: [], images: [], backgrounds: [], voices: [] };
       const pool = state.custom_resources;
       
       let count = 0;
       const merge = (target, source) => {
-        if (!source || !Array.isArray(source)) return;
+        if (!source) return;
         source.forEach(item => {
-          if (!target.some(x => x.name === item.name)) {
-            target.push(item);
-            count++;
-          }
+          if (!target.some(x => x.name === item.name)) { target.push(item); count++; }
         });
       };
 
-      // 处理音色的特殊绑定逻辑
       if (pack.voices) {
         pack.voices.forEach(v => {
           if (v.bindChar) {
-            // 如果有绑定角色，尝试写入该角色的音色
-            const char = state.characters.find(c => c.name === v.bindChar);
-            if (char) { char.voiceOverride = v.voiceId; char.useCustomVoice = true; count++; return; }
+            const c = state.characters.find(x => x.name === v.bindChar);
+            if (c) { c.voiceOverride = v.voiceId; c.useCustomVoice = true; count++; return; }
           }
-          // 否则存入池子
           if (!pool.voices.some(x => x.name === v.name)) { pool.voices.push(v); count++; }
         });
       }
@@ -360,58 +191,42 @@ async function exportPNG() {
       merge(pool.backgrounds, pack.backgrounds);
 
       saveParentState();
-      toast(`✅ 成功读取并导入了 ${count} 项资源！`);
+      toast(`✅ 成功导入 ${count} 项资源！`);
       document.getElementById('importPngFile').value = '';
     } catch(e) {
-      console.error(e);
       toast('读取失败：' + e.message);
-    } finally {
-      btn.textContent = '读取并导入';
-      btn.disabled = false;
     }
   }
 
-  // ================= 底层工具：PNG tEXt 写入/读取 =================
-  
-  // 计算 CRC32 (用于 PNG 块校验)
-  function crc32(buf) {
-    let c = 0xffffffff;
-    for (let i = 0; i < buf.length; i++) {
-      c = (c >>> 8) ^ (crcTable[(c ^ buf[i]) & 0xff]);
-    }
-    return (c ^ 0xffffffff) >>> 0;
-  }
+  // ================= 底层：PNG 数据块读写 =================
   const crcTable = new Uint32Array(256);
   for (let n = 0; n < 256; n++) {
     let c = n;
     for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
     crcTable[n] = c;
   }
+  function crc32(buf) {
+    let c = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) c = (c >>> 8) ^ (crcTable[(c ^ buf[i]) & 0xff]);
+    return (c ^ 0xffffffff) >>> 0;
+  }
 
   function injectPNGData(buffer, keyword, text) {
     const uint8 = new Uint8Array(buffer);
-    // 找到 IEND 块的位置 (通常是最后12个字节)
     let iendPos = uint8.length - 12;
-    
-    // 构建 tEXt 块数据：keyword(UTF-8) + \0 + text(UTF-8)
     const enc = new TextEncoder();
     const keyBytes = enc.encode(keyword);
     const textBytes = enc.encode(text);
     const dataLen = keyBytes.length + 1 + textBytes.length;
-    
     const chunk = new Uint8Array(12 + dataLen);
     const view = new DataView(chunk.buffer);
-    
-    view.setUint32(0, dataLen); // Length
+    view.setUint32(0, dataLen);
     chunk.set([116, 69, 88, 116], 4); // "tEXt"
     chunk.set(keyBytes, 8);
-    chunk.set([0], 8 + keyBytes.length); // null separator
+    chunk.set([0], 8 + keyBytes.length);
     chunk.set(textBytes, 8 + keyBytes.length + 1);
-    
     const crcBuf = chunk.slice(4, 8 + dataLen);
-    view.setUint32(8 + dataLen, crc32(crcBuf)); // CRC
-
-    // 拼接新 PNG
+    view.setUint32(8 + dataLen, crc32(crcBuf));
     const newBuffer = new Uint8Array(uint8.length + chunk.length);
     newBuffer.set(uint8.slice(0, iendPos), 0);
     newBuffer.set(chunk, iendPos);
@@ -422,29 +237,22 @@ async function exportPNG() {
   function extractPNGData(buffer, keyword) {
     const uint8 = new Uint8Array(buffer);
     const view = new DataView(buffer);
-    let pos = 8; // 跳过 PNG 头
-
+    let pos = 8;
     const dec = new TextDecoder("utf-8");
     const keyBytes = new TextEncoder().encode(keyword);
-
     while (pos < uint8.length) {
       const length = view.getUint32(pos);
       const type = String.fromCharCode(...uint8.slice(pos + 4, pos + 8));
-      
       if (type === 'tEXt') {
         const data = uint8.slice(pos + 8, pos + 8 + length);
-        // 匹配 keyword
         let isMatch = true;
         for (let i = 0; i < keyBytes.length; i++) {
           if (data[i] !== keyBytes[i]) { isMatch = false; break; }
         }
         if (isMatch && data[keyBytes.length] === 0) {
-          // 提取 text
-          const textBytes = data.slice(keyBytes.length + 1);
-          return dec.decode(textBytes);
+          return dec.decode(data.slice(keyBytes.length + 1));
         }
       }
-      
       pos += 12 + length;
       if (type === 'IEND') break;
     }
