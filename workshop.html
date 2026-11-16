@@ -12,15 +12,15 @@
   h2 { font-size: 16px; margin-bottom: 12px; border-left: 4px solid var(--accent); padding-left: 8px; }
   .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
   .intro { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
-  input[type="text"], input[type="file"] { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 10px; font-size: 13px; outline: none; margin-bottom: 8px;}
-  .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-success { background: var(--success); color: #fff; }
-  .btn-sec { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+  
   .check-group { max-height: 150px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--bg); margin-bottom: 12px; }
   .check-item { display: flex; align-items: center; padding: 6px; font-size: 13px; border-bottom: 1px solid var(--line); }
   .check-item:last-child { border-bottom: none; }
   .check-item input { margin-right: 10px; transform: scale(1.2); }
+  
   .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 </style>
 </head>
@@ -29,28 +29,28 @@
 
   <div class="section" style="border-color: var(--success);">
     <h2 style="border-color: var(--success);">📥 导入分享卡</h2>
-    <p class="intro">选择别人发给你的 PNG 图片，读取其中的资源。</p>
-    <input type="file" id="importPngFile" accept="image/png">
+    <p class="intro">选择别人分享给你的 PNG 图片。</p>
+    <input type="file" id="importPngFile" accept="image/png" style="width:100%; margin-bottom:12px; padding:8px; border:1px solid var(--line); border-radius:4px;">
     <button class="btn btn-success" onclick="importPNG()">读取并导入</button>
   </div>
 
   <div class="section">
     <h2>📤 制作分享卡</h2>
-    <p class="intro">勾选资源并上传底图（支持 JPG/PNG）。如果不传底图，系统自动生成黑色背景。</p>
-    
-    <input type="file" id="baseImageUpload" accept="image/jpeg, image/png">
+    <p class="intro">系统已锁定官方底图。勾选你想分享的资源，点击下方按钮即可生成。</p>
     
     <div class="check-group" id="charList"></div>
     <div class="check-group" id="imgList"></div>
     <div class="check-group" id="bgList"></div>
     <div class="check-group" id="voiceList"></div>
 
-    <button class="btn btn-primary" onclick="exportPNG()" style="padding:14px; font-size:15px;"> 生成并下载 PNG</button>
+    <button class="btn btn-primary" onclick="exportPNG()">💾 生成并下载 PNG</button>
   </div>
 
 <script>
   try { if (window.parent.document.body.className.includes('theme-dark')) document.body.className = 'theme-dark'; } catch(e) {}
   const PNG_KEYWORD = "dk_share_data";
+  // ★ 固定底图 URL ★
+  const BASE_IMAGE_URL = "https://image.arityflow.top/uploads/2026/11/6afa992b293996.53301893_2737e32f.jpg";
 
   function toast(msg) {
     const el = document.getElementById('toast');
@@ -62,10 +62,9 @@
 
   window.onload = () => {
     const state = getParentState(); if (!state) return;
-    
     const renderList = (containerId, arr, prefix) => {
       const box = document.getElementById(containerId);
-      if(!arr || arr.length === 0) { box.innerHTML = `<div class="intro" style="padding:4px;">无自定义${prefix}</div>`; return; }
+      if(!arr || arr.length === 0) { box.innerHTML = `<div class="intro" style="padding:4px;text-align:center;">无自定义${prefix}</div>`; return; }
       box.innerHTML = arr.map((item, i) => `
         <label class="check-item">
           <input type="checkbox" data-type="${containerId}" data-index="${i}" data-obj='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
@@ -89,7 +88,6 @@
   // ================= 核心：生成并注入 PNG =================
   async function exportPNG() {
     const pack = { characters: [], images: [], backgrounds: [], voices: [] };
-    
     document.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
       const obj = JSON.parse(cb.getAttribute('data-obj'));
       if(cb.dataset.type === 'charList') pack.characters.push(obj);
@@ -102,39 +100,43 @@
       return toast('请至少勾选一项资源');
     }
 
-    const btn = event.target; btn.textContent = '处理中...'; btn.disabled = true;
+    const btn = event.target; btn.textContent = '正在下载底图并生成...'; btn.disabled = true;
 
     try {
       const base64Data = btoa(unescape(encodeURIComponent(JSON.stringify(pack))));
-      const fileInput = document.getElementById('baseImageUpload');
       
-      let imgBuffer;
-      if (fileInput.files && fileInput.files[0]) {
-        // 1. 如果有底图，用 Canvas 转成标准 PNG 的 ArrayBuffer
-        const file = fileInput.files[0];
-        const dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file); });
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise(res => img.onload = res);
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width; canvas.height = img.height;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-        imgBuffer = await blob.arrayBuffer();
-      } else {
-        // 2. 如果没有底图，画一张纯黑的底图
-        const canvas = document.createElement('canvas');
-        canvas.width = 400; canvas.height = 600;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#1e1e1e'; ctx.fillRect(0, 0, 400, 600);
-        ctx.fillStyle = '#fff'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('DK 分享卡', 200, 300);
-        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-        imgBuffer = await blob.arrayBuffer();
+      // 1. 拉取底图 (带多重代理防跨域)
+      let imgRes;
+      try {
+        imgRes = await fetch(BASE_IMAGE_URL);
+        if(!imgRes.ok) throw new Error();
+      } catch(e) {
+        try {
+          imgRes = await fetch(`https://corsproxy.io/?${encodeURIComponent(BASE_IMAGE_URL)}`);
+          if(!imgRes.ok) throw new Error();
+        } catch(e2) {
+          imgRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(BASE_IMAGE_URL)}`);
+        }
       }
+      if (!imgRes.ok) throw new Error('无法获取网络底图');
+      
+      const blob = await imgRes.blob();
+      const dataUrl = URL.createObjectURL(blob);
+      
+      // 2. 把拉到的 JPG 画到 Canvas 上，强转为纯正 PNG
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(dataUrl);
 
-      // 3. 把数据写进 PNG 的 tEXt 块
+      const pngBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      const imgBuffer = await pngBlob.arrayBuffer();
+
+      // 3. 把数据塞进 PNG 块
       const newBuffer = injectPNGData(imgBuffer, PNG_KEYWORD, base64Data);
       
       // 4. 下载
@@ -149,7 +151,7 @@
     } catch(e) {
       toast('生成失败：' + e.message);
     } finally {
-      btn.textContent = '生成并下载 PNG'; btn.disabled = false;
+      btn.textContent = '💾 生成并下载 PNG'; btn.disabled = false;
     }
   }
 
@@ -210,7 +212,6 @@
     for (let i = 0; i < buf.length; i++) c = (c >>> 8) ^ (crcTable[(c ^ buf[i]) & 0xff]);
     return (c ^ 0xffffffff) >>> 0;
   }
-
   function injectPNGData(buffer, keyword, text) {
     const uint8 = new Uint8Array(buffer);
     let iendPos = uint8.length - 12;
@@ -221,7 +222,7 @@
     const chunk = new Uint8Array(12 + dataLen);
     const view = new DataView(chunk.buffer);
     view.setUint32(0, dataLen);
-    chunk.set([116, 69, 88, 116], 4); // "tEXt"
+    chunk.set([116, 69, 88, 116], 4);
     chunk.set(keyBytes, 8);
     chunk.set([0], 8 + keyBytes.length);
     chunk.set(textBytes, 8 + keyBytes.length + 1);
@@ -233,7 +234,6 @@
     newBuffer.set(uint8.slice(iendPos), iendPos + chunk.length);
     return newBuffer.buffer;
   }
-
   function extractPNGData(buffer, keyword) {
     const uint8 = new Uint8Array(buffer);
     const view = new DataView(buffer);
