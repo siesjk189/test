@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d1118">
-  <link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <title>那什么dk萌</title>
 <style>
@@ -19,16 +19,8 @@ body.panel-open{overflow:auto}
 body{font:16px/1.65 "Noto Serif CJK SC","Source Han Serif SC","Songti SC","Microsoft YaHei",serif;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
 button,input,textarea,select{font:inherit}button,[role=button],select{cursor:pointer}button{color:inherit}img{display:block;max-width:100%}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button:disabled{opacity:.42;cursor:not-allowed}::selection{background:var(--accent);color:var(--p-paper)}[hidden]{display:none!important}
 
-body.theme-dark{
-  --bg:oklch(0.16 0.018 255);--text:oklch(0.96 0.008 240);--muted:oklch(0.72 0.018 250);
-  --surface:oklch(0.21 0.022 255 / .94);--surface-2:oklch(0.27 0.025 255 / .8);
-  --glass:oklch(0.15 0.02 255 / .8);--line:oklch(0.8 0.025 250 / .18);--accent:oklch(0.65 0.16 250);
-}
-body.theme-light{
-  --bg:oklch(0.94 0.01 240);--text:oklch(0.16 0.018 255);--muted:oklch(0.45 0.025 250);
-  --surface:oklch(0.98 0.008 240 / .94);--surface-2:oklch(0.92 0.015 240 / .8);
-  --glass:oklch(0.98 0.008 240 / .85);--line:oklch(0.16 0.018 255 / .15);--accent:oklch(0.5 0.15 250);
-}
+body.theme-dark{--bg:oklch(0.16 0.018 255);--text:oklch(0.96 0.008 240);--muted:oklch(0.72 0.018 250);--surface:oklch(0.21 0.022 255 / .94);--surface-2:oklch(0.27 0.025 255 / .8);--glass:oklch(0.15 0.02 255 / .8);--line:oklch(0.8 0.025 250 / .18);--accent:oklch(0.65 0.16 250);}
+body.theme-light{--bg:oklch(0.94 0.01 240);--text:oklch(0.16 0.018 255);--muted:oklch(0.45 0.025 250);--surface:oklch(0.98 0.008 240 / .94);--surface-2:oklch(0.92 0.015 240 / .8);--glass:oklch(0.98 0.008 240 / .85);--line:oklch(0.16 0.018 255 / .15);--accent:oklch(0.5 0.15 250);}
 
 .scene{position:relative;width:100%;height:100dvh;isolation:isolate;overflow:hidden}.scene-art{position:absolute;inset:0;width:100%;height:100%;z-index:-4}.dynamic-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3;opacity:0;transition:opacity 0.8s;transform-origin:center center;will-change:transform}.dynamic-bg.visible{opacity:1}.scene-shade{position:absolute;inset:0;z-index:-2;pointer-events:none;transition:background .3s}
 body.theme-dark .scene-shade{background:oklch(0.1 0.02 255 / .18)}
@@ -42,7 +34,7 @@ body.theme-light .scene-shade{background:oklch(1 0 0 / .35)}
 .story-meta .place{display:flex;align-items:center;gap:10px;margin-top:10px;font:12px/1.5 "Microsoft YaHei",sans-serif;color:#fff !important;text-shadow:0 2px 10px rgba(0,0,0,0.8) !important}
 .story-meta .place:before{content:"";width:28px;height:1px;background:#fff}
 
-.diamond-nav{position:absolute;z-index:12;right:max(20px,env(safe-area-inset-right));top:max(20px,env(safe-area-inset-top));display:flex;flex-wrap:nowrap;gap:44px;padding:12px}.diamond-wrap{position:relative;width:52px;height:52px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.diamond-nav{position:absolute;z-index:12;right:max(20px,env(safe-area-inset-right));top:max(20px,env(safe-area-inset-top));display:flex;flex-wrap:nowrap;gap:20px;padding:12px}.diamond-wrap{position:relative;width:52px;height:52px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .diamond-wrap::before{content:"";position:absolute;inset:0;border:1px solid rgba(255,255,255,0.7) !important;border-radius:8px;transform:rotate(45deg);box-shadow:0 0 12px rgba(255,255,255,0.4), inset 0 0 8px rgba(255,255,255,0.2) !important;transition:transform .25s var(--ease),opacity .2s}
 .diamond{position:relative;width:38px;height:38px;border:0;border-radius:4px;background:var(--p-paper);color:var(--p-ink);transform:rotate(45deg);box-shadow:0 0 22px rgba(255,255,255,0.3);transition:transform .22s var(--ease),background .2s;display:flex;align-items:center;justify-content:center}
 .diamond span{display:block;transform:rotate(-45deg);font:600 12px/1 "Microsoft YaHei",sans-serif;letter-spacing:.08em;white-space:nowrap}
@@ -130,62 +122,9 @@ body.theme-light #mapOverlay{background:oklch(0.9 0.01 240 / .9)}
 .sub-menu-item:hover{background:var(--accent);color:var(--p-ink);}
 .sub-menu-item:active{background:oklch(0.55 0.16 250);transform:scale(0.98);}
 
-/* ===== 公告页 · 信件式（跟随页面主题，日间白底黑字 / 夜间黑底白字） ===== */
-#noticeApp{
-  position:fixed;inset:0;z-index:10000;overflow:hidden;
-  color-scheme:light dark;
-  font-family:"Noto Serif CJK SC","Source Han Serif SC","Songti SC","Microsoft YaHei",serif;
-  font-size:16px;line-height:1.65;
-  -webkit-font-smoothing:antialiased;
-  color:var(--nt-text);
-  background:
-    radial-gradient(ellipse 120% 80% at 50% -15%, var(--nt-glow) 0%, transparent 58%),
-    var(--nt-bg-2);
-  transition:opacity .45s ease, transform .45s ease;
-  --nt-bg-1:#fbf9f4;--nt-bg-2:#eeebe4;--nt-glow:#fff;
-  --nt-card:#fff;--nt-card-2:#faf8f3;
-  --nt-text:#1c1c1e;--nt-text-soft:#56534c;--nt-muted:#8b877e;
-  --nt-line:rgba(28,28,30,.14);--nt-line-strong:rgba(28,28,30,.3);
-  --nt-accent:#1c1c1e;--nt-accent-ink:#fff;
-  --nt-paper-a:rgba(0,0,0,.035);--nt-paper-b:#fff;--nt-paper-edge:rgba(0,0,0,.08);
-  --nt-shadow:0 24px 56px -18px rgba(0,0,0,.26);
-  --nt-paper-shadow:0 14px 34px -14px rgba(0,0,0,.18);
-}
-#noticeApp[hidden]{display:none!important}
-#noticeApp.leaving{opacity:0;transform:scale(.985);pointer-events:none}
-#noticeApp *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-@media (prefers-color-scheme: dark){
-  #noticeApp{
-    --nt-bg-1:#1c1c21;--nt-bg-2:#0b0b0e;--nt-glow:#25252c;
-    --nt-card:#1b1b20;--nt-card-2:#151519;
-    --nt-text:#eceae5;--nt-text-soft:#b4b1a9;--nt-muted:#807d76;
-    --nt-line:rgba(236,234,229,.14);--nt-line-strong:rgba(236,234,229,.28);
-    --nt-accent:#eceae5;--nt-accent-ink:#111114;
-    --nt-paper-a:rgba(255,255,255,.045);--nt-paper-b:#1d1d22;--nt-paper-edge:rgba(255,255,255,.08);
-    --nt-shadow:0 26px 60px -14px rgba(0,0,0,.8);
-    --nt-paper-shadow:0 18px 44px -16px rgba(0,0,0,.7);
-  }
-}
-body.theme-light #noticeApp{
-  --nt-bg-1:#fbf9f4;--nt-bg-2:#eeebe4;--nt-glow:#fff;
-  --nt-card:#fff;--nt-card-2:#faf8f3;
-  --nt-text:#1c1c1e;--nt-text-soft:#56534c;--nt-muted:#8b877e;
-  --nt-line:rgba(28,28,30,.14);--nt-line-strong:rgba(28,28,30,.3);
-  --nt-accent:#1c1c1e;--nt-accent-ink:#fff;
-  --nt-paper-a:rgba(0,0,0,.035);--nt-paper-b:#fff;--nt-paper-edge:rgba(0,0,0,.08);
-  --nt-shadow:0 24px 56px -18px rgba(0,0,0,.26);
-  --nt-paper-shadow:0 14px 34px -14px rgba(0,0,0,.18);
-}
-body.theme-dark #noticeApp{
-  --nt-bg-1:#1c1c21;--nt-bg-2:#0b0b0e;--nt-glow:#25252c;
-  --nt-card:#1b1b20;--nt-card-2:#151519;
-  --nt-text:#eceae5;--nt-text-soft:#b4b1a9;--nt-muted:#807d76;
-  --nt-line:rgba(236,234,229,.14);--nt-line-strong:rgba(236,234,229,.28);
-  --nt-accent:#eceae5;--nt-accent-ink:#111114;
-  --nt-paper-a:rgba(255,255,255,.045);--nt-paper-b:#1d1d22;--nt-paper-edge:rgba(255,255,255,.08);
-  --nt-shadow:0 26px 60px -14px rgba(0,0,0,.8);
-  --nt-paper-shadow:0 18px 44px -16px rgba(0,0,0,.7);
-}
+/* ===== 公告页 · 信件式 ===== */
+#noticeApp{position:fixed;inset:0;z-index:10000;overflow:hidden;color:var(--nt-text);background:radial-gradient(ellipse 120% 80% at 50% -15%, var(--nt-glow) 0%, transparent 58%),var(--nt-bg-2);transition:opacity .45s ease, transform .45s ease;--nt-bg-1:#fbf9f4;--nt-bg-2:#eeebe4;--nt-glow:#fff;--nt-card:#fff;--nt-card-2:#faf8f3;--nt-text:#1c1c1e;--nt-text-soft:#56534c;--nt-muted:#8b877e;--nt-line:rgba(28,28,30,.14);--nt-line-strong:rgba(28,28,30,.3);--nt-accent:#1c1c1e;--nt-accent-ink:#fff;--nt-paper-a:rgba(0,0,0,.035);--nt-paper-b:#fff;--nt-paper-edge:rgba(0,0,0,.08);--nt-shadow:0 24px 56px -18px rgba(0,0,0,.26);--nt-paper-shadow:0 14px 34px -14px rgba(0,0,0,.18);}
+body.theme-dark #noticeApp{--nt-bg-1:#1c1c21;--nt-bg-2:#0b0b0e;--nt-glow:#25252c;--nt-card:#1b1b20;--nt-card-2:#151519;--nt-text:#eceae5;--nt-text-soft:#b4b1a9;--nt-muted:#807d76;--nt-line:rgba(236,234,229,.14);--nt-line-strong:rgba(236,234,229,.28);--nt-accent:#eceae5;--nt-accent-ink:#111114;--nt-paper-a:rgba(255,255,255,.045);--nt-paper-b:#1d1d22;--nt-paper-edge:rgba(255,255,255,.08);--nt-shadow:0 26px 60px -14px rgba(0,0,0,.8);--nt-paper-shadow:0 18px 44px -16px rgba(0,0,0,.7);}
 #noticeApp .stage{position:relative;width:100%;height:100dvh;display:flex;align-items:center;justify-content:center;perspective:1400px;touch-action:pan-y}
 #noticeApp .motes{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 #noticeApp .mote{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--nt-accent);opacity:.22;filter:blur(.3px);animation:nt-float-mote 9s ease-in-out infinite}
@@ -196,7 +135,6 @@ body.theme-dark #noticeApp{
 #noticeApp .invite{position:absolute;inset:0;border-radius:3px;background:radial-gradient(ellipse 140% 100% at 20% 0%, rgba(255,255,255,.05), transparent 55%),linear-gradient(160deg, var(--nt-card) 0%, var(--nt-card-2) 100%);border:1px solid var(--nt-paper-edge);box-shadow:var(--nt-shadow);padding:7% 8% 6%;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden;transition:transform .45s cubic-bezier(.22,.9,.32,1), opacity .35s ease;will-change:transform}
 #noticeApp .invite::before{content:"";position:absolute;inset:5%;border:1px solid var(--nt-line);border-radius:2px;pointer-events:none}
 #noticeApp .seal{width:34px;height:34px;flex-shrink:0;margin-bottom:3.5%;color:var(--nt-accent);opacity:.75}
-#noticeApp .seal svg{width:100%;height:100%;display:block}
 #noticeApp .route-eyebrow{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--nt-muted);margin-bottom:2px;flex-shrink:0}
 #noticeApp .route-title{font-size:clamp(18px,5vw,23px);font-weight:600;letter-spacing:.14em;color:var(--nt-text);margin:4px 0 3.5%;flex-shrink:0}
 #noticeApp .route-divider{width:32px;height:1px;flex-shrink:0;margin-bottom:4.5%;background:linear-gradient(90deg,transparent,var(--nt-line-strong),transparent)}
@@ -229,9 +167,6 @@ body.theme-dark #noticeApp{
 #noticeApp .enter-btn:not(:disabled){border-color:var(--nt-accent)}
 #noticeApp .enter-btn:not(:disabled):hover{background:var(--nt-accent);color:var(--nt-accent-ink)}
 #noticeApp .enter-btn:not(:disabled):active{transform:translateX(-50%) scale(.97)}
-@media (prefers-reduced-motion: reduce){
-  #noticeApp *,#noticeApp *::before,#noticeApp *::after{animation:none!important;transition:none!important}
-}
 
 /* ===== 模型下拉（自定义） ===== */
 .combo{position:relative;display:flex;flex:1;min-width:0;}
@@ -250,7 +185,7 @@ body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
 .story-meta .chapter{display:block!important;font-size:8px;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .story-meta h1{font-size:16px;margin-top:4px}
 .story-meta .place{display:none}
-  .diamond-nav{right:10px;top:14px;gap:32px;padding:6px;}
+  .diamond-nav{right:10px;top:14px;gap:16px;padding:6px;}
   .diamond-wrap{width:44px;height:44px;}
   .diamond-wrap:before{inset:-4px;border-radius:6px;}
   .diamond{width:32px;height:32px;border-radius:3px;}
@@ -289,7 +224,7 @@ body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
   .send-btn{padding:10px 14px}
   .offset-row{grid-template-columns:1fr}
 
-  .map-nav{right:10px;top:14px;gap:32px;padding:6px;}
+  .map-nav{right:10px;top:14px;gap:16px;padding:6px;}
   .map-edit-btn{left:10px;width:44px;height:44px;font-size:16px;}
   .map-spot{width:46px;height:46px;}
   .map-spot .inner{width:32px;height:32px;}
@@ -333,7 +268,6 @@ body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
   </section>
 </main>
 
-<!-- 启动公告页（信件式，跟随主题） -->
 <div id="noticeApp" hidden>
   <div class="stage">
     <div class="motes" id="motes"></div>
@@ -359,7 +293,6 @@ body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
   <button class="enter-btn" id="enterGameBtn" type="button" disabled>强制阅读 (15s)</button>
 </div>
 
-<!-- 隐藏的原文案，供「菜单 → 公告」页读取 -->
 <div id="noticeBody" hidden>这是一个属于你的故事。
 你可以是一名普通的学生，也可以再次选择成为与“他”并肩的人。
 
@@ -394,15 +327,17 @@ body.theme-light .combo-list{box-shadow:0 14px 40px oklch(0.8 0.02 250 / .25);}
 ◆有任何疑问，请通过以下方式联系创作者
 小红书：Aswnzs
 QQ群：1107469751</div>
-  <div id="changelogBody" hidden>
-【V1.1 |2026.11.12】
-新增：手机系统（支持微信聊天、朋友圈、约见）。
-目前剧情模式尚未开启，仅占位。
-刚更新可能有较多bug，有问题请联系xhs:Aswnzs
 
-【V1.0 |2026.10.31】
-初始版本。
-  </div>
+<div id="changelogBody" hidden>
+【V3.2 稳定版|2024.10.25|最新】
+🔥 新增：手机系统（支持微信聊天、朋友圈、约见）。
+🧠 深度联动：手机聊天与线下剧情完全打通。
+💬 AI 主动出击：AI 会在特殊剧情时发朋友圈。
+
+【V3.1 旧版本|2024.09.15】
+上线基础 AI 自由模式。
+支持角色立绘与背景切换。
+</div>
 
 <div class="overlay" id="mapOverlay" hidden>
   <div class="map-container" id="mapContainer">
@@ -666,13 +601,9 @@ function baseState(){
 }
 
 let state=loadState(), panel='home', settingsTab='world', busy=false, summarizing=false, audio=null, persistTimer=null;
-
-// 把 state 暴露给 window（用 getter，保证 state 被重新赋值时仍然同步）
-// 这样 index.html 里的 win.state 才不是 undefined，hookScene 才能立即安装，
-// “获得秦梧联系方式”等基于 state.story 的检测才能正常工作。
-Object.defineProperty(window, 'state', { get: () => state, configurable: true });
 let builtinReady=false, isEditingMap=false, mapDragging=false, dragTarget=null, dragStartX=0, dragStartY=0;
 let panelContext = 'scene';
+let apiTab = 'text', imgTab = 'sprite', resTab = 'public', noticeSubTab = 'rules';
 
 function loadState(){
  const d=baseState();
@@ -781,7 +712,6 @@ async function injectBuiltins(){
  try{
   if (!Array.isArray(state.characters)) state.characters = [];
 
-  // 保证旧存档也能获得新增的内置角色，同时保留玩家已保存的修改。
   const existingBuiltinIds = new Set(state.characters.filter(c => c && c.builtIn).map(c => c.id));
   RAW_BUILTIN_LIB.forEach(b => {
     if (!existingBuiltinIds.has(b.id)) state.characters.push(builtinCharacterTemplate(b));
@@ -828,10 +758,8 @@ function charFull(c){
   if(real) {
     const builtinVoice = String(real.voiceId || '').trim();
     const customVoice = String(c.voiceOverride || '').trim();
-    // 没有内置音色的角色（如骆云影），即使没切换下拉框，也应使用已填写的自定义音色
     const voiceId = c.useCustomVoice ? customVoice : (builtinVoice || customVoice);
     const base = { ...real, voiceId, district:c.district, preferredLocations:c.preferredLocations, voiceEnabled:c.voiceEnabled };
-    // 自定义设定覆盖内置设定（名称与性别固定不覆盖）
     if (c.useCustomProfile && c.customProfile) {
       ['identity','relation','address','personality','description'].forEach(k=>{
         if (typeof c.customProfile[k] === 'string') base[k] = c.customProfile[k];
@@ -863,7 +791,9 @@ function findPortrait(speaker,text){
  }
  if (img) return { ...img, isSilhouette: false };
 
- const gender = c.gender === '女' ? 'female' : 'male';
+ const isFemale = c.gender === '女' || c.gender === 'female' || ['钟月茹','元宝','米桔'].includes(c.name);
+ const gender = isFemale ? 'female' : 'male';
+ 
  let sil = state.silhouettes.find(s => s.gender === gender && Array.isArray(s.boundCharacters) && s.boundCharacters.includes(c.id));
  if (!sil) {
    const unbound = state.silhouettes.filter(s => s.gender === gender && (!Array.isArray(s.boundCharacters) || s.boundCharacters.length === 0));
@@ -974,7 +904,8 @@ function renderScene(){
    }
  }
 }
-const NAV=[['home','菜单'],['memory','记忆'],['settings','设定'],['images','立绘库'],['backgrounds','背景库'],['api','API 配置'],['voice','语音配置'],['imageapi','生图 API'],['notice','公告']];
+const NAV=[['home','菜单'],['memory','记忆'],['settings','设定'],['api','API 配置'],['images','图片配置'],['resources','资源库'],['notice','公告']];
+
 function openPanel(name){
  panel=name;$('#overlay').hidden=false;
  document.body.classList.add('panel-open');
@@ -1132,24 +1063,26 @@ function renderPanel(){
   load:['导入存档','从此文件恢复故事、设定与配置'],
   memory:['记忆','让漫长的故事拥有清晰的脉络'],
   settings:['设定','世界、人物与叙事规则'],
-  images:['立绘库','每张立绘独立调节 X / Y 偏移与缩放'],
-  backgrounds:['背景库','每张背景独立调节 X / Y 偏移与缩放'],
-  api:['API 配置','连接兼容 OpenAI Chat Completions 的剧情模型'],
-  voice:['语音配置','MiniMax 语音合成 · 密钥仅保存在当前浏览器'],
-  imageapi:['生图 API','根据剧情自动生成背景或立绘'],
+  images:['图片配置','立绘与背景的集中管理'],
+  resources:['资源库','创意工坊与共享中心'],
+  api:['API 配置','文本、语音与生图统一设置'],
   notice:['公告','进入游戏前的重要须知'],
   replay:['剧情回放','回望每一句对白与旁白']
  };
  const t=titles[panel]||titles.home;
  $('#panelTitle').textContent=t[0];
  $('#panelSubtitle').textContent=t[1];
- const renderers={home:renderHome,save:renderSave,load:renderLoad,memory:renderMemory,settings:renderSettings,images:renderImages,backgrounds:renderBackgrounds,api:renderAPI,voice:renderVoice,imageapi:renderImageAPI,notice:renderNotice,replay:renderReplay};
+ const renderers={
+  home:renderHome, save:renderSave, load:renderLoad, memory:renderMemory, 
+  settings:renderSettings, images:renderImageConfig, resources:renderResources, 
+  api:renderApiConfig, notice:renderNotice, replay:renderReplay
+ };
  $('#panelContent').innerHTML=(renderers[panel]||renderHome)();
 }
 function renderHome(){
- return `<p class="section-intro">当前进度 ${state.cursor+1} / ${state.story.length}。请注意，所有剧情、设定与图片默认只保存在此浏览器中，如需换设备请先导出存档。</p><div class="menu-grid">${[['save','存档'],['load','读档'],['memory','记忆'],['settings','设定'],['images','立绘库'],['backgrounds','背景库'],['api','API 配置'],['voice','语音配置'],['imageapi','生图 API'],['notice','公告'],['replay','剧情回放']].map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div><div class="actions"><button class="primary-btn" data-action="close-panel">继续剧情</button><button class="danger-btn" data-action="new-story">重新开始</button></div>`;
+ return `<p class="section-intro">当前进度 ${state.cursor+1} / ${state.story.length}。请注意，所有剧情、设定与图片默认只保存在此浏览器中，如需换设备请先导出存档。</p><div class="menu-grid">${[['save','存档'],['load','读档'],['memory','记忆'],['settings','设定'],['images','图片配置'],['api','API 配置'],['resources','资源库'],['notice','公告'],['replay','剧情回放']].map(([id,n])=>`<button class="menu-item" data-panel="${id}"><span>${n}</span><span>↗</span></button>`).join('')}</div><div class="actions"><button class="primary-btn" data-action="close-panel">继续剧情</button><button class="danger-btn" data-action="new-story">重新开始</button></div>`;
 }
-let noticeSubTab = 'rules'; 
+
 function switchNoticeTab(tab) {
   noticeSubTab = tab;
   renderPanel(); 
@@ -1164,45 +1097,25 @@ function renderNotice(){
   `;
 
   let contentHtml = '';
-  
   if (noticeSubTab === 'rules') {
     contentHtml = `<div style="white-space: pre-wrap; line-height: 1.8; color: var(--text); font-size: 15px;">${esc($('#noticeBody').textContent.trim())}</div>`;
   } else if (noticeSubTab === 'changelog') {
-    const rawText = $('#changelogBody').textContent.trim();
-    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
-    let html = '';
-    let isFirst = true; 
-    let block = null;
-
-    lines.forEach(line => {
-      const match = line.match(/^【(.*?)\|(.*?)(?:\|(最新))?】$/);
-      if (match) {
-        if (block) html += buildBlock(block);
-        block = { version: match[1], date: match[2], isLatest: match[3] === '最新' || isFirst, items: [] };
-        isFirst = false;
-      } else if (block) {
-        block.items.push(line);
-      }
-    });
-    if (block) html += buildBlock(block);
-    contentHtml = `<div style="line-height: 1.8; color: var(--text); font-size: 15px;">${html}</div>`;
+    contentHtml = `
+      <div style="line-height: 1.8; color: var(--text); font-size: 15px;">
+        <div style="margin-bottom: 24px; padding: 16px; background: var(--surface-2); border-radius: var(--radius); border-left: 3px solid var(--accent);">
+          <h3 style="color: var(--accent); margin-bottom: 12px; font-size: 16px;">V3.2 稳定版</h3>
+          <ul style="padding-left: 20px; margin-bottom: 0;">
+            <li>🔥 新增：手机系统与深度联动。</li>
+            <li>🖼️ 新增：资源库（创意工坊分享）。</li>
+            <li>🛠️ 系统优化：菜单合并分类与女角色剪影修复。</li>
+          </ul>
+        </div>
+      </div>
+    `;
   }
   return tabsHtml + contentHtml;
 }
 
-function buildBlock(block) {
-  return `
-    <div style="margin-bottom: 24px; padding: 16px; background: var(--surface-2); border-radius: var(--radius); border-left: 3px solid ${block.isLatest ? 'var(--accent)' : 'transparent'}; ${!block.isLatest ? 'opacity: 0.7;' : ''}">
-      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
-        <h3 style="color: ${block.isLatest ? 'var(--accent)' : 'var(--text)'}; font-size: 16px; margin: 0;">${esc(block.version)}</h3>
-        <span style="font-size: 12px; color: var(--muted);">${esc(block.date)}</span>
-      </div>
-      <ul style="padding-left: 20px; margin-bottom: 0;">
-        ${block.items.map(item => `<li style="margin-bottom: 6px;">${item}</li>`).join('')}
-      </ul>
-    </div>
-  `;
-}
 function renderSave(){
  return `<p class="section-intro">存档包含剧情进度、记忆摘要、人物方案、世界书、背景与图片链接、地点背景设置、自定义字体等所有配置。<strong>文件仍会包含你填写的 API 与语音密钥，请妥善保管。</strong></p><div class="status-line">共 ${state.story.length} 条剧情 · ${state.memory.summaries.length} 条记忆 · ${state.characters.length} 位人物 · ${state.images.length} 张立绘 · ${state.silhouettes.length} 张剪影 · ${state.backgrounds.length} 张背景</div><div class="actions"><button class="primary-btn" data-action="export">导出存档文件</button><button class="secondary-btn" data-action="go-home">返回</button></div>`;
 }
@@ -1261,7 +1174,8 @@ function renderCharacters(){
          <label>自定义音色 ID</label><input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID">
       </div>`;
   } else {
-    voiceHTML = `<div class="field full"><label>音色 ID</label><input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID"></div>`;
+    const displayVoice = c.__hidden ? '******** (分享者已隐藏)' : (c.voiceOverride || '');
+voiceHTML = `<div class="field full"><label>音色 ID</label><input data-char-field="voiceOverride" value="${esc(displayVoice)}" placeholder="填入你的音色 ID"></div>`;
   }
 
   const cp = c.customProfile || {};
@@ -1300,7 +1214,7 @@ function renderCharacters(){
   const v=full?full[k]:'';
   return `<div class="field ${['personality','description'].includes(k)?'full':''}"><label>${({name:'姓名',gender:'性别',identity:'身份',relation:'与你的关系',address:'对你的称呼',personality:'性格',description:'设定'})[k]}</label>${['personality','description'].includes(k)?`<textarea data-char-field="${k}">${esc(v)}</textarea>`:`<input data-char-field="${k}" value="${esc(v)}">`}</div>`;
  }).join('');
- return `<div class="character-layout"><div>${libSection}</div><div><div class="editor-head"><h3>${esc(c.name)}</h3><button class="text-btn danger" data-action="delete-character" data-id="${c.id}">删除角色</button></div><div class="form-grid"><div class="field full"><label>设定方案</label><select data-change="character-scheme">${(c.schemes||[]).map(s=>`<option value="${s.id}" ${s.id===c.activeScheme?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${fields}<div class="field full"><label>音色 ID（可选）</label><input data-char-field="voiceId" value="${esc(c.voiceId||'')}"></div>
+ return `<div class="character-layout"><div>${libSection}</div><div><div class="editor-head"><h3>${esc(c.name)}</h3><button class="text-btn danger" data-action="delete-character" data-id="${c.id}">删除角色</button></div><div class="form-grid"><div class="field full"><label>设定方案</label><select data-change="character-scheme">${(c.schemes||[]).map(s=>`<option value="${s.id}" ${s.id===c.activeScheme?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${fields}<div class="field full"><label>音色 ID（可选）</label><input data-char-field="voiceId" value="${esc(c.__hidden ? '******** (分享者已隐藏)' : (c.voiceId||''))}"></div>
    ${extraFields}
    ${switchRow('使用立绘', '说话时是否展示该角色立绘', `characters.${state.characters.indexOf(c)}.useSprite`, c.useSprite)}
    <div class="field full"><label>绑定立绘</label><select data-char-field="portraitId"><option value="">自动匹配</option>${imageOpts}</select></div>
@@ -1342,6 +1256,32 @@ function renderOther(){
  const dir=`<section class="group"><div class="group-head"><div class="group-title">剧情走向</div></div><p class="section-intro" style="margin-bottom:12px">在此填写内容，可以让 AI 往这个方向推进。可随时修改，也可以留空。</p><textarea class="inline-input" style="min-height:96px" data-bind="plotDirection" placeholder="例如：先写日常校园与捉鬼师的初识，再逐渐卷入灵异事件。">${esc(state.plotDirection||'')}</textarea></section>`;
  const groups=state.groups.map(g=>`<section class="group"><div class="group-head"><input class="inline-input" style="max-width:280px" data-group-field="name" data-id="${g.id}" value="${esc(g.name)}" aria-label="分组名称"><button class="text-btn danger" data-action="delete-group" data-id="${g.id}">删除分组</button></div><div class="field" style="max-width:320px;margin-bottom:12px"><label>作用对象</label><select data-group-field="target" data-id="${g.id}"><option value="all" ${g.target==='all'?'selected':''}>全体</option>${state.characters.map(c=>`<option value="${c.id}" ${g.target===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>${g.entries.map(e=>`<div class="entry"><div class="entry-head"><input class="inline-input" data-entry-field="title" data-group="${g.id}" data-id="${e.id}" value="${esc(e.title)}" aria-label="条目标题"><div><label style="font-size:13px;color:var(--muted)"><input type="checkbox" data-entry-field="enabled" data-group="${g.id}" data-id="${e.id}" ${e.enabled?'checked':''}> 启用</label><button class="text-btn danger" data-action="delete-entry" data-group="${g.id}" data-id="${e.id}">删除</button></div></div><textarea class="inline-input" style="min-height:90px" data-entry-field="content" data-group="${g.id}" data-id="${e.id}">${esc(e.content)}</textarea></div>`).join('')}<button class="text-btn" data-action="add-entry" data-id="${g.id}">＋ 添加条目</button></section>`).join('');
  return `${uiSection}${themeSection}${fontSection}${locBgSection}${visitBgSection}${dir}<p class="section-intro">分组条目类似酒馆世界书。作用对象选“全体”时始终注入；选择人物时，仅当该人物参与当前对话或作为目标时注入。</p><div class="actions" style="margin:0 0 20px"><button class="secondary-btn" data-action="add-group">新增分组</button></div>${groups||'<div class="empty">还没有分组</div>'}`;
+}
+
+function renderApiConfig(){
+  const tabs=[['text','文本 API'],['voice','语音 API'],['image','生图 API']];
+  let html = `<div class="tabs">${tabs.map(([id,n])=>`<button class="tab ${apiTab===id?'active':''}" onclick="apiTab='${id}';renderPanel()">${n}</button>`).join('')}</div>`;
+  
+  if(apiTab === 'text') {
+    html += `<p class="section-intro">请填写接口</p><div class="form-grid">${field('接口地址','api.endpoint',state.api.endpoint,'url',true,'placeholder="https://api.openai.com/v1"')}${field('API 密钥','api.key',state.api.key,'password',true,'autocomplete="off"')}${modelField('模型名称','api.model',state.api.model,'model-list-api')}${field('Temperature','api.temperature',state.api.temperature,'number',false,'min="0" max="2" step="0.1"')}${field('单次剧情生成长度','settings.generateLength',state.settings.generateLength||600,'number',false,'min="50" max="2000" step="50"')}${field('写进思维链（可选）','api.thoughtChain',state.api.thoughtChain,'textarea',true,'placeholder="生成剧情前会先读取这里的内容，可用于约束文风、格式或强调设定。"')}</div>
+    ${switchRow('启用 MVU 变量同步','开启后生成剧情会附带当前世界变量，并解析 AI 输出的 UpdateVariable 来推进数值','settings.enableMVU',state.settings.enableMVU)}
+    <div class="status-line">输出协议：角色名A：台词。旁白：叙述。角色名B：台词。开启选项时，结尾另起四行输出 A：、B：、C：、D：。</div><div class="actions"><button class="primary-btn" data-action="test-api" ${busy?'disabled':''}>测试连接</button><span id="apiStatus" style="align-self:center;color:var(--muted);font-size:13px"></span></div>`;
+  } 
+  else if(apiTab === 'voice') {
+    html += `<p class="section-intro">请使用 Minimax 语音接口。</p>${switchRow('开启语音','开启后，回放中的朗读按钮与自动朗读可用','voice.enabled',state.voice.enabled)}<div class="form-grid" style="margin-top:20px"><div class="field"><label>服务端口</label><select data-change="voice-region"><option value="cn" ${state.voice.region==='cn'?'selected':''}>国内</option><option value="global" ${state.voice.region==='global'?'selected':''}>国际</option></select></div>${field('接口地址（填到 /v1 即可）', 'voice.endpoint', state.voice.endpoint, 'url', true, 'placeholder="https://api.minimax.chat/v1"')}${field('Group ID','voice.groupId',state.voice.groupId)}${field('API 密钥','voice.key',state.voice.key,'password',true,'autocomplete="off"')}${modelField('语音模型','voice.model',state.voice.model,'model-list-voice')}${field('默认音色 ID','voice.defaultVoiceId',state.voice.defaultVoiceId)}</div><div class="actions"><button class="primary-btn" data-action="test-voice" type="button">测试当前角色语音</button></div>`;
+  }
+  else if(apiTab === 'image') {
+    html += `<p class="section-intro">当剧情生成时，会自动提取场景或人物特征并生成图像，相同的场景或角色不会重复生成。</p>${switchRow('开启自动生图', '开启后，AI 将根据剧情自动生成背景或新角色立绘','imageApi.enabled', state.imageApi.enabled)}<div class="form-grid" style="margin-top:20px">${field('接口地址（填到 /v1 即可）', 'imageApi.endpoint', state.imageApi.endpoint, 'url', true, 'placeholder="https://api.openai.com/v1"')}${field('API 密钥', 'imageApi.key', state.imageApi.key, 'password', true, 'autocomplete="off"')}${modelField('模型名称','imageApi.model',state.imageApi.model,'model-list-image')}</div><div class="switch-row" style="margin-top:20px; border-bottom:0"><div class="switch-copy"><strong>生成内容类型</strong><small>可选择生成当前场景的背景图或新生角色的立绘</small></div></div><div style="display:flex; gap:20px; margin-top:10px; padding:10px 0; border-bottom:1px solid var(--line)"><label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="checkbox" data-bind="imageApi.genScene" ${state.imageApi.genScene?'checked':''}> 生成场景背景图</label><label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="checkbox" data-bind="imageApi.genSprite" ${state.imageApi.genSprite?'checked':''}> 生成新人物立绘</label></div><div class="actions"><button class="primary-btn" data-action="test-image-api" ${busy?'disabled':''}>测试连接</button><span id="imageApiStatus" style="align-self:center;color:var(--muted);font-size:13px"></span></div>`;
+  }
+  return html;
+}
+
+function renderImageConfig(){
+  const tabs=[['sprite','立绘库'],['background','背景库']];
+  let html = `<div class="tabs">${tabs.map(([id,n])=>`<button class="tab ${imgTab===id?'active':''}" onclick="imgTab='${id}';renderPanel()">${n}</button>`).join('')}</div>`;
+  if (imgTab === 'sprite') html += renderImages(); 
+  else html += renderBackgrounds(); 
+  return html;
 }
 function renderImages(){
  const cards=state.images.map(i=>{
@@ -1443,36 +1383,16 @@ function renderBackgrounds(){
  <form class="image-form" id="bgGenForm"><p class="section-intro">使用生图 API 根据文字描述生成新背景，生成后自动加入下方背景库。<strong>不会自动切换当前场景背景</strong>；若希望应用，请到地点背景或地图中切换。请先在“生图 API”中填写接口与密钥。</p><div class="form-grid"><div class="field"><label>背景名</label><input id="genBgName" placeholder="请输入使用地点"></div><div class="field full"><label>生图描述</label><textarea id="genBgPrompt" placeholder="请描述图片"></textarea></div><div class="field full"><label>负面提示词（可选）</label><input id="genBgNeg" placeholder=""></div><div class="field full"><label>适用场景描述（可选）</label><input id="genBgDesc" placeholder=""></div></div><div class="actions"><button class="primary-btn" type="submit">生成背景</button></div></form>
  <div class="image-grid" style="grid-template-columns:repeat(2,1fr);">${cards}</div>`;
 }
-function renderAPI(){
- return `<p class="section-intro">请填写接口</p><div class="form-grid">${field('接口地址','api.endpoint',state.api.endpoint,'url',true,'placeholder="https://api.openai.com/v1"')}${field('API 密钥','api.key',state.api.key,'password',true,'autocomplete="off"')}${modelField('模型名称','api.model',state.api.model,'model-list-api')}${field('Temperature','api.temperature',state.api.temperature,'number',false,'min="0" max="2" step="0.1"')}${field('单次剧情生成长度（字数）','settings.generateLength',state.settings.generateLength||600,'number',false,'min="50" max="2000" step="50"')}${field('写进思维链（可选）','api.thoughtChain',state.api.thoughtChain,'textarea',true,'placeholder="生成剧情前会先读取这里的内容，可用于约束文风、格式或强调设定。"')}</div><div class="status-line">输出协议：角色名A：台词。旁白：叙述。角色名B：台词。开启选项时，结尾另起四行输出 A：、B：、C：、D：。</div><div class="actions"><button class="primary-btn" data-action="test-api" ${busy?'disabled':''}>测试连接</button><span id="apiStatus" style="align-self:center;color:var(--muted);font-size:13px"></span></div>`;
+
+function renderResources(){
+  return `
+    <p class="section-intro">创意工坊已独立为单独文件。在这里你可以导入其他玩家的素材，或生成分享码发给别人。</p>
+    <div style="width: 100%; height: 650px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface);">
+      <iframe src="./workshop.html" style="width: 100%; height: 100%; border: 0;"></iframe>
+    </div>
+  `;
 }
-function renderVoice(){
- return `<p class="section-intro">请使用Minimax语音</p>${switchRow('开启语音','开启后，回放中的朗读按钮与自动朗读可用','voice.enabled',state.voice.enabled)}<div class="form-grid" style="margin-top:20px">
- <div class="field"><label>服务端口</label><select data-change="voice-region"><option value="cn" ${state.voice.region==='cn'?'selected':''}>国内</option><option value="global" ${state.voice.region==='global'?'selected':''}>国际</option></select></div>
- ${field('接口地址（填到 /v1 即可，自动补 /t2a_v2）', 'voice.endpoint', state.voice.endpoint, 'url', true, 'placeholder="https://api.minimax.chat/v1"')}
- ${field('Group ID','voice.groupId',state.voice.groupId)}
- ${field('API 密钥','voice.key',state.voice.key,'password',true,'autocomplete="off"')}
- ${modelField('语音模型','voice.model',state.voice.model,'model-list-voice')}
- ${field('默认音色 ID','voice.defaultVoiceId',state.voice.defaultVoiceId)}
- </div><div class="actions"><button class="primary-btn" data-action="test-voice" type="button">测试当前角色语音</button></div>`;
-}
-function renderImageAPI() {
- return `<p class="section-intro">当剧情生成时，会自动提取场景或人物特征并生成图像，相同的场景或角色不会重复生成。</p>
- ${switchRow('开启自动生图', '开启后，AI 将根据剧情自动生成背景或新角色立绘并保存在本地', 'imageApi.enabled', state.imageApi.enabled)}
- <div class="form-grid" style="margin-top:20px">
-   ${field('接口地址（填到 /v1 即可，后续路径自动补全）', 'imageApi.endpoint', state.imageApi.endpoint, 'url', true, 'placeholder="https://api.openai.com/v1"')}
-   ${field('API 密钥', 'imageApi.key', state.imageApi.key, 'password', true, 'autocomplete="off"')}
-   ${modelField('模型名称','imageApi.model',state.imageApi.model,'model-list-image')}
- </div>
- <div class="switch-row" style="margin-top:20px; border-bottom:0">
-    <div class="switch-copy"><strong>生成内容类型</strong><small>可选择生成当前场景的背景图或新生角色的立绘</small></div>
- </div>
- <div style="display:flex; gap:20px; margin-top:10px; padding:10px 0; border-bottom:1px solid var(--line)">
-    <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="checkbox" data-bind="imageApi.genScene" ${state.imageApi.genScene?'checked':''}> 生成场景背景图</label>
-    <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;"><input type="checkbox" data-bind="imageApi.genSprite" ${state.imageApi.genSprite?'checked':''}> 生成新人物立绘</label>
- </div>
- <div class="actions"><button class="primary-btn" data-action="test-image-api" ${busy?'disabled':''}>测试连接</button><span id="imageApiStatus" style="align-self:center;color:var(--muted);font-size:13px"></span></div>`;
-}
+
 function renderReplay(){
  return `<div class="replay-list">${state.story.map((e,i)=>`<article class="replay-line"><div class="replay-speaker">${esc(e.speaker)}</div><div class="replay-text">${esc(e.text)}</div><button class="icon-btn" data-action="replay-line" data-index="${i}" aria-label="朗读第 ${i+1} 条" ${e.speaker==='旁白'?'disabled':''}><svg viewBox="0 0 24 24"><path d="M5 9v6h4l5 4V5L9 9H5zM17 9c1.4 1.7 1.4 4.3 0 6"/></svg></button></article>`).join('')}</div>`;
 }
@@ -1592,14 +1512,14 @@ function stopDrag(){
  document.removeEventListener('touchmove', onDrag);
  document.removeEventListener('touchend', stopDrag);
 }
-  function handleMapSpotClick(spot) {
-  // ★ 核心拦截：如果当前有约见，必须先去约定地点
+function handleMapSpotClick(spot) {
+  // ★ 拦截：如果当前有约见，且目的地不匹配
   const p = JSON.parse(localStorage.getItem('sft_phone_v1') || '{}');
   if (p.activeMeetup) {
     const meetLoc = p.activeMeetup.location;
     const spotName = spot.name;
     
-    // 模糊匹配地点名，防止细节偏差
+    // 判断是否吻合（模糊匹配）
     let isMatch = false;
     if (spotName === meetLoc) isMatch = true;
     else if (spotName === '学校' && ['教室','操场','学校寝室','学校道路','学校走廊','食堂'].includes(meetLoc)) isMatch = true;
@@ -1607,20 +1527,16 @@ function stopDrag(){
     else if (spotName.includes(meetLoc) || meetLoc.includes(spotName)) isMatch = true;
     
     if (!isMatch) {
-      // 如果不匹配，弹窗拦住！
       showConfirm('有约在先', `你当前与 ${p.activeMeetup.charName} 约在「${meetLoc}」见面，还是先去那里吧。`, ()=>{});
-      return; // 终止执行，不关闭地图，不生成剧情
+      return;
     } else {
-      // 如果目的地对了，清除约见状态，顺利放行
+      // 到达目的地，解除约见
       p.activeMeetup = null;
       localStorage.setItem('sft_phone_v1', JSON.stringify(p));
-      if (typeof toast === 'function') toast(`已到达约定地点：${meetLoc}`);
+      toast(`已到达约定地点：${meetLoc}`);
     }
   }
 
-  // ==========================================
-  // 以下是原本的大地图点击逻辑（不用动它）
-  // ==========================================
   const name = spot.name;
   if(name === '学校') {
     showMapSubMenu('学校', [
@@ -1645,7 +1561,7 @@ function stopDrag(){
       }
     }
   }
-  }
+}
 let currentSubPage = 0;
 function showMapSubMenu(title, options) {
   let html = `<div class="sub-menu-list">`;
@@ -2245,7 +2161,6 @@ async function speak(text, speaker, lineId, force=false) {
     return;
   }
 
-  // 缓存键绑定音色与模型，避免切换音色后仍播放旧声音。
   const cacheKey = lineId ? `${lineId}::${voiceId}::${state.voice.model || 'default'}` : '';
   if (cacheKey && state.audioCache[cacheKey]) {
     if (audio) audio.pause();
@@ -2676,7 +2591,6 @@ applyTheme();
 const DATA_VERSION = 'v1.8';
 const isInitialized = localStorage.getItem('story_data_initialized') === DATA_VERSION;
 
-/* 公告页点击「进入游戏」后由公告脚本调用 */
 window.onNoticeAccepted = function(){
   try {
     state = baseState();
@@ -2789,7 +2703,6 @@ function initNoticePage(){
 
   let current = 0;
 
-  // —— 进入按钮的双重条件状态 ——
   let timeUp = false;
   let hasReachedLastPage = false;
   let remain = 15;
@@ -2802,7 +2715,6 @@ function initNoticePage(){
       enterBtn.disabled = true;
       enterBtn.textContent = `强制阅读 (${remain}s)`;
     } else {
-      // 计时已满，但还没翻到最后一页
       enterBtn.disabled = true;
       enterBtn.textContent = '请继续阅读';
     }
@@ -2824,7 +2736,6 @@ function initNoticePage(){
     prevBtn.style.visibility = current === 0 ? 'hidden' : 'visible';
     nextBtn.style.visibility = isLast ? 'hidden' : 'visible';
 
-    // 记录是否已到达过最后一页（到达即永久生效，回翻不重置）
     if (isLast) hasReachedLastPage = true;
     updateEnterBtn();
 
@@ -2892,7 +2803,6 @@ function initNoticePage(){
     motesWrap.appendChild(m);
   }
 
-  // —— 15 秒强制阅读计时 ——
   const READ_SECONDS = 15;
   let timer = null;
 
