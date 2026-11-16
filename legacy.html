@@ -537,27 +537,128 @@ function renderWorld(){return `<p class="section-intro">这里记录始终生效
 function renderPlayer(){return `<p class="section-intro">性别固定为女，不可更改。</p><div class="form-grid">${field('姓名','player.name',state.player.name)}<div class="field"><label>性别</label><input value="女" disabled></div>${field('身份','player.identity',state.player.identity)}${field('设定','player.description',state.player.description,'textarea',true)}</div>`;}
 function renderOptions(){return `<p class="section-intro">开启后，每轮剧情末尾要求模型给出 A／B／C 三个回应方向，以及 D 自由输入。</p>${switchRow('生成剧情选项','不同选择会作为你的下一句回应，影响后续剧情走向','settings.generateOptions',state.settings.generateOptions)}${switchRow('自动朗读角色台词','显示新台词时使用 MiniMax 与角色音色 ID 朗读','settings.autoVoice',state.settings.autoVoice)}`;}
 function renderCharacters(){
- const c=selectedChar();
- const currentListHtml = state.characters.map(x =>`<button class="character-select ${x.id===c?.id?'active':''}" data-action="select-character" data-id="${x.id}"><span>${esc(x.name)}</span>${x.builtIn?'<span class="built-in-tag">内置</span>':'<span class="built-in-tag">自动捕获</span>'}</button>`).join('');
- const libSection = `<div style="margin-bottom:16px;"><label style="font-size:13px; color:var(--muted); display:block; margin-bottom:10px;">当前登场角色</label><div class="character-list">${currentListHtml}</div></div><button class="secondary-btn" style="width:100%; margin-bottom:20px;" data-action="add-character">＋ 手动创建角色</button>`;
- if(!c) return `<div>${libSection}<div class="empty">暂无角色</div></div>`;
- let allImages = [...state.images];if (state.custom_resources?.images) allImages = allImages.concat(state.custom_resources.images);
- let imageOpts = allImages.map(i => `<option value="${i.id}" ${c.portraitId === i.id ? 'selected' : ''}>${esc(i.name)}</option>`).join('');
- const extraFields = `${switchRow('开启单角色语音','允许该角色说话时发声（即使填写了ID也要开启才会发声）', `characters.${state.characters.indexOf(c)}.voiceEnabled`, c.voiceEnabled)}<div class="field"><label>所在小区</label><select data-char-field="district"><option value="常去" ${c.district==='常去'?'selected':''}>常去小区</option><option value="其他" ${c.district==='其他'?'selected':''}>其他小区</option></select></div><div class="field"><label>偏好地点</label><input data-char-field="preferredLocations" value="${esc(c.preferredLocations||'')}" placeholder="可在此输入大地图中的地点名"></div>`;
- if(c.builtIn){
-  const hasBuiltinVoice = !!(RAW_BUILTIN_LIB.find(x=>x.id===c.id)?.voiceId || '').trim();
-  let voiceHTML = '';let libVoiceOpts = '<option value="">-- 从资源库选择 --</option>';const poolVoices = state.custom_resources?.voices || [];
-  if (poolVoices.length > 0) {poolVoices.forEach(v => {libVoiceOpts += `<option value="${v.voiceId}">${esc(v.name)}</option>`;});}
-  if (hasBuiltinVoice) {
-    voiceHTML = `<div class="field full"><label>音色配置</label><select data-change="voice-mode" data-id="${c.id}"><option value="builtin" ${!c.useCustomVoice ? 'selected' : ''}>使用内置音色</option><option value="custom" ${c.useCustomVoice ? 'selected' : ''}>自定义音色</option></select></div><div class="field full" ${!c.useCustomVoice ? 'hidden' : ''}><label>自定义音色 ID</label><select onchange="applyLibVoice('${c.id}', this)" style="margin-bottom:8px;">${libVoiceOpts}</select><input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID"></div>`;
-  } else {
-    voiceHTML = `<div class="field full"><label>音色 ID</label><select onchange="applyLibVoice('${c.id}', this)" style="margin-bottom:8px;">${libVoiceOpts}</select><input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID"></div>`;
+  // 1. 检查资源库是否有待提取角色，生成按钮
+  const poolChars = state.custom_resources?.characters || [];
+  let poolBtnHtml = poolChars.length > 0 ? `<div style="margin-bottom:16px;"><button class="primary-btn" style="width:100%; border:1px solid var(--accent); background:var(--surface-2); color:var(--accent);" onclick="importPoolChars()">📥 从资源库提取新角色 (${poolChars.length} 个待提取)</button></div>` : '';
+
+  const c = selectedChar();
+  const currentListHtml = state.characters.map(x =>
+    `<button class="character-select ${x.id===c?.id?'active':''}" data-action="select-character" data-id="${x.id}"><span>${esc(x.name)}</span>${x.builtIn?'<span class="built-in-tag">内置</span>':'<span class="built-in-tag">自动捕获</span>'}</button>`
+  ).join('');
+
+  // 2. 左侧的角色列表区域，强制把上面的提取按钮塞进去
+  const libSection = `
+    ${poolBtnHtml}
+    <div style="margin-bottom:16px;">
+      <label style="font-size:13px; color:var(--muted); display:block; margin-bottom:10px;">当前登场角色</label>
+      <div class="character-list">${currentListHtml}</div>
+    </div>
+    <button class="secondary-btn" style="width:100%; margin-bottom:20px;" data-action="add-character">＋ 手动创建角色</button>
+  `;
+
+  if(!c) return `<div>${libSection}<div class="empty">暂无角色</div></div>`;
+
+  // 3. 准备立绘下拉框（包含资源库的图）
+  let allImages = [...state.images];
+  if (state.custom_resources?.images) allImages = allImages.concat(state.custom_resources.images);
+  let imageOpts = allImages.map(i => `<option value="${i.id}" ${c.portraitId === i.id ? 'selected' : ''}>${esc(i.name)}</option>`).join('');
+
+  // 4. 额外字段
+  const extraFields = `
+    ${switchRow('开启单角色语音','允许该角色说话时发声（即使填写了ID也要开启才会发声）', `characters.${state.characters.indexOf(c)}.voiceEnabled`, c.voiceEnabled)}
+    <div class="field"><label>所在小区</label><select data-char-field="district"><option value="常去" ${c.district==='常去'?'selected':''}>常去小区</option><option value="其他" ${c.district==='其他'?'selected':''}>其他小区</option></select></div>
+    <div class="field"><label>偏好地点</label><input data-char-field="preferredLocations" value="${esc(c.preferredLocations||'')}" placeholder="可在此输入大地图中的地点名"></div>
+  `;
+
+  // 5. 如果是内置角色
+  if(c.builtIn){
+    const hasBuiltinVoice = !!(RAW_BUILTIN_LIB.find(x=>x.id===c.id)?.voiceId || '').trim();
+    let voiceHTML = '';
+    let libVoiceOpts = '<option value="">-- 从资源库选择 --</option>';
+    const poolVoices = state.custom_resources?.voices || [];
+    if (poolVoices.length > 0) {
+        poolVoices.forEach(v => { libVoiceOpts += `<option value="${v.voiceId}">${esc(v.name)}</option>`; });
+    }
+
+    if (hasBuiltinVoice) {
+      voiceHTML = `
+        <div class="field full"><label>音色配置</label>
+          <select data-change="voice-mode" data-id="${c.id}">
+             <option value="builtin" ${!c.useCustomVoice ? 'selected' : ''}>使用内置音色</option>
+             <option value="custom" ${c.useCustomVoice ? 'selected' : ''}>自定义音色</option>
+          </select>
+        </div>
+        <div class="field full" ${!c.useCustomVoice ? 'hidden' : ''}>
+           <label>自定义音色 ID</label>
+           <select onchange="applyLibVoice('${c.id}', this)" style="margin-bottom:8px;">${libVoiceOpts}</select>
+           <input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID">
+        </div>`;
+    } else {
+      voiceHTML = `
+        <div class="field full">
+           <label>音色 ID</label>
+           <select onchange="applyLibVoice('${c.id}', this)" style="margin-bottom:8px;">${libVoiceOpts}</select>
+           <input data-char-field="voiceOverride" value="${esc(c.voiceOverride || '')}" placeholder="填入你的音色 ID">
+        </div>`;
+    }
+
+    const cp = c.customProfile || {};
+    const profileHTML = `
+      <div class="field full"><label>设定来源</label>
+        <select data-change="profile-mode" data-id="${c.id}">
+          <option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option>
+          <option value="custom" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option>
+        </select>
+      </div>
+      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>身份</label><input data-profile-field="identity" value="${esc(cp.identity || '')}"></div>
+      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>与你的关系</label><input data-profile-field="relation" value="${esc(cp.relation || '')}"></div>
+      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>对你的称呼</label><input data-profile-field="address" value="${esc(cp.address || '')}"></div>
+      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>性格</label><textarea data-profile-field="personality">${esc(cp.personality || '')}</textarea></div>
+      <div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>设定</label><textarea data-profile-field="description">${esc(cp.description || '')}</textarea></div>
+    `;
+
+    return `
+      <div class="character-layout">
+        <div>${libSection}</div>
+        <div>
+          <div class="editor-head"><h3>${esc(c.name)}</h3></div>
+          <div class="locked-note" style="margin-bottom:20px;">该角色为内置角色：名称与性别固定；设定可在“使用内置设定 / 自定义填写”之间切换。</div>
+          <div class="form-grid">
+            ${profileHTML}${voiceHTML}${extraFields}
+            ${switchRow('使用立绘', '说话时是否展示该角色立绘', `characters.${state.characters.indexOf(c)}.useSprite`, c.useSprite)}
+            <div class="field full"><label>绑定立绘</label><select data-char-field="portraitId"><option value="">自动匹配</option>${imageOpts}</select></div>
+          </div>
+        </div>
+      </div>`;
   }
-  const cp = c.customProfile || {};const profileHTML = `<div class="field full"><label>设定来源</label><select data-change="profile-mode" data-id="${c.id}"><option value="builtin" ${!c.useCustomProfile ? 'selected' : ''}>使用内置设定</option><option value="custom" ${c.useCustomProfile ? 'selected' : ''}>自定义填写</option></select></div><div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>身份</label><input data-profile-field="identity" value="${esc(cp.identity || '')}"></div><div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>与你的关系</label><input data-profile-field="relation" value="${esc(cp.relation || '')}"></div><div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>对你的称呼</label><input data-profile-field="address" value="${esc(cp.address || '')}"></div><div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>性格</label><textarea data-profile-field="personality">${esc(cp.personality || '')}</textarea></div><div class="field full" ${!c.useCustomProfile ? 'hidden' : ''}><label>设定</label><textarea data-profile-field="description">${esc(cp.description || '')}</textarea></div>`;
-  return `<div class="character-layout"><div>${libSection}</div><div><div class="editor-head"><h3>${esc(c.name)}</h3></div><div class="locked-note" style="margin-bottom:20px;">该角色为内置角色：名称与性别固定；设定可在“使用内置设定 / 自定义填写”之间切换。</div><div class="form-grid">${profileHTML}${voiceHTML}${extraFields}${switchRow('使用立绘', '说话时是否展示该角色立绘', `characters.${state.characters.indexOf(c)}.useSprite`, c.useSprite)}<div class="field full"><label>绑定立绘</label><select data-char-field="portraitId"><option value="">自动匹配</option>${imageOpts}</select></div></div></div></div>`;
- }
- const full=charFull(c);const fields=CHAR_FIELDS.filter(k=>!['voiceId','voiceEnabled','district','preferredLocations'].includes(k)).map(k=>{const v=full?full[k]:'';return `<div class="field ${['personality','description'].includes(k)?'full':''}"><label>${({name:'姓名',gender:'性别',identity:'身份',relation:'与你的关系',address:'对你的称呼',personality:'性格',description:'设定'})[k]}</label>${['personality','description'].includes(k)?`<textarea data-char-field="${k}">${esc(v)}</textarea>`:`<input data-char-field="${k}" value="${esc(v)}">`}</div>`;}).join('');
- return `<div class="character-layout"><div>${libSection}</div><div><div class="editor-head"><h3>${esc(c.name)}</h3><button class="text-btn danger" data-action="delete-character" data-id="${c.id}">删除角色</button></div><div class="form-grid"><div class="field full"><label>设定方案</label><select data-change="character-scheme">${(c.schemes||[]).map(s=>`<option value="${s.id}" ${s.id===c.activeScheme?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>${fields}<div class="field full"><label>音色 ID（可选）</label><input data-char-field="voiceId" value="${esc(c.voiceId||'')}"></div>${extraFields}${switchRow('使用立绘', '说话时是否展示该角色立绘', `characters.${state.characters.indexOf(c)}.useSprite`, c.useSprite)}<div class="field full"><label>绑定立绘</label><select data-char-field="portraitId"><option value="">自动匹配</option>${imageOpts}</select></div></div><div class="actions"><button class="primary-btn" data-action="update-scheme">保存当前方案</button><button class="secondary-btn" data-action="add-scheme">另存为新方案</button><button class="text-btn danger" data-action="delete-scheme" ${c.schemes.length<=1?'disabled':''}>删除此方案</button></div></div></div>`;
+
+  // 6. 如果是玩家自己建的普通角色
+  const full=charFull(c);
+  const fields=CHAR_FIELDS.filter(k=>!['voiceId','voiceEnabled','district','preferredLocations'].includes(k)).map(k=>{
+    const v=full?full[k]:'';
+    return `<div class="field ${['personality','description'].includes(k)?'full':''}"><label>${({name:'姓名',gender:'性别',identity:'身份',relation:'与你的关系',address:'对你的称呼',personality:'性格',description:'设定'})[k]}</label>${['personality','description'].includes(k)?`<textarea data-char-field="${k}">${esc(v)}</textarea>`:`<input data-char-field="${k}" value="${esc(v)}">`}</div>`;
+  }).join('');
+
+  return `
+    <div class="character-layout">
+      <div>${libSection}</div>
+      <div>
+        <div class="editor-head"><h3>${esc(c.name)}</h3><button class="text-btn danger" data-action="delete-character" data-id="${c.id}">删除角色</button></div>
+        <div class="form-grid">
+          <div class="field full"><label>设定方案</label><select data-change="character-scheme">${(c.schemes||[]).map(s=>`<option value="${s.id}" ${s.id===c.activeScheme?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+          ${fields}
+          <div class="field full"><label>音色 ID（可选）</label><input data-char-field="voiceId" value="${esc(c.voiceId||'')}"></div>
+          ${extraFields}
+          ${switchRow('使用立绘', '说话时是否展示该角色立绘', `characters.${state.characters.indexOf(c)}.useSprite`, c.useSprite)}
+          <div class="field full"><label>绑定立绘</label><select data-char-field="portraitId"><option value="">自动匹配</option>${imageOpts}</select></div>
+        </div>
+        <div class="actions">
+          <button class="primary-btn" data-action="update-scheme">保存当前方案</button>
+          <button class="secondary-btn" data-action="add-scheme">另存为新方案</button>
+          <button class="text-btn danger" data-action="delete-scheme" ${c.schemes.length<=1?'disabled':''}>删除此方案</button>
+        </div>
+      </div>
+    </div>`;
 }
 function renderOther(){
  const scale = Math.min(1.6, Math.max(0.7, Number(state.settings.uiScale)||1));const uiSection = `<section class="group"><div class="group-head"><div class="group-title">界面缩放</div></div><p class="section-intro">请注意，若浏览器不支持 zoom，此项可能无效。</p><div class="field full"><div class="range-wrap"><input type="range" min="0.7" max="1.6" step="0.05" value="${scale}" data-ui-scale><output>${(+scale).toFixed(2)}</output></div></div></section>`;
