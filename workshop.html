@@ -3,104 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
-<title>资源库 / 创意工坊</title>
+<title>云端资源共享大厅</title>
 <style>
-  :root {
-    --bg: #f5f5f7; --surface: #ffffff; --text: #333333; --muted: #888888; 
-    --line: #e0e0e0; --accent: #007aff; --danger: #ff3b30; --radius: 8px;
-  }
-  body.theme-dark {
-    --bg: #1e1e1e; --surface: #2d2d2d; --text: #e0e0e0; --muted: #888888; 
-    --line: #444444; --accent: #0a84ff; --danger: #ff453a;
-  }
+  :root { --bg: #f5f5f7; --surface: #fff; --text: #333; --muted: #888; --line: #e0e0e0; --accent: #007aff; --success: #34c759; --radius: 8px; }
+  body.theme-dark { --bg: #1e1e1e; --surface: #2d2d2d; --text: #e0e0e0; --muted: #888; --line: #444; --accent: #0a84ff; --success: #30d158; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s;
-    padding: 16px; height: 100vh; overflow-y: auto;
-  }
-  h2 { font-size: 18px; margin-bottom: 12px; border-left: 4px solid var(--accent); padding-left: 8px; }
-  .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-  .intro { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
-  .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--text); font-weight: 600; }
-  textarea, select {
-    width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text);
-    border-radius: 6px; padding: 10px; font-family: inherit; font-size: 13px; outline: none;
-    transition: border-color 0.2s;
-  }
-  textarea:focus, select:focus { border-color: var(--accent); }
-  textarea { min-height: 100px; resize: vertical; }
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; width: 100%;
-    padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600;
-    cursor: pointer; transition: background 0.2s, transform 0.1s;
-  }
-  .btn:active { transform: scale(0.98); }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); padding: 16px; height: 100vh; overflow-y: auto; transition: background 0.3s, color 0.3s; }
+  h2 { font-size: 16px; margin-bottom: 12px; border-left: 4px solid var(--accent); padding-left: 8px; }
+  .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+  .intro { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; margin-bottom: 6px; font-weight: 600; }
+  textarea { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; outline: none; min-height: 80px; resize: vertical; }
+  .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; }
   .btn-primary { background: var(--accent); color: #fff; }
-  .btn-secondary { background: var(--surface); border: 1px solid var(--line); color: var(--text); margin-top: 10px; }
-  .switch-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--line); }
-  .switch-row span { font-size: 14px; font-weight: 500; }
-  .switch-row small { display: block; font-size: 11px; color: var(--muted); font-weight: normal; margin-top: 4px; }
-  .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--line); transition: .4s; border-radius: 24px; }
-  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-  input:checked + .slider { background-color: var(--accent); }
-  input:checked + .slider:before { transform: translateX(20px); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-secondary { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+  
+  .check-group { max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--bg); margin-bottom: 12px; }
+  .check-item { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .check-item:last-child { border-bottom: none; }
+  .check-item input { margin-right: 10px; transform: scale(1.2); }
+  
   .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 </style>
 </head>
 <body class="theme-light">
   <div id="toast" class="toast"></div>
 
-  <div class="section">
-    <h2>获取资源</h2>
-    <p class="intro">导入其他玩家分享的素材。遇到同名素材会提示是否覆盖。</p>
-    <div class="field">
-      <textarea id="importCode" placeholder="在此粘贴分享码..."></textarea>
-    </div>
-    <button class="btn btn-primary" onclick="doImport()">导入资源</button>
+  <!-- 你的 Github 仓库配置（这里我预填了示例，你发布前需改成你自己的） -->
+  <script>
+    const GITHUB_OWNER = "你的GitHub用户名"; 
+    const GITHUB_REPO = "你的仓库名";
+    // 云端清单文件路径
+    const MANIFEST_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@main/manifest.json`;
+  </script>
+
+  <div class="section" style="border-color: var(--success);">
+    <h2 style="border-color: var(--success);">☁️ 下载共享资源</h2>
+    <p class="intro">从公共仓库拉取所有玩家分享的素材。拉取后，你可以去【人物设定】或【图片配置】中直接选用。</p>
+    <button class="btn btn-success" onclick="syncCloudResources()">📥 一键同步公共资源</button>
   </div>
 
   <div class="section">
-    <h2>分享资源</h2>
-    <p class="intro">将你的设定、立绘、背景等打包成分享码。</p>
-    
-    <div class="switch-row">
-      <div>
-        <span>公开音色 ID</span>
-        <small>关闭后，别人导入的角色声音依然可用，但看不到具体代码</small>
-      </div>
-      <label class="switch">
-        <input type="checkbox" id="isPublic" checked>
-        <span class="slider"></span>
-      </label>
-    </div>
+    <h2>📤 上传我的资源</h2>
+    <p class="intro">勾选你想分享的内容。生成代码后，系统会带你跳转到 GitHub 提交页面，审核合并后所有人即可下载。</p>
 
     <div class="field">
-      <label>包含内容</label>
-      <select id="includeList" multiple size="4">
-        <option value="characters" selected>自定义角色与好感</option>
-        <option value="images" selected>自定义立绘与偏移</option>
-        <option value="backgrounds" selected>自定义背景与偏移</option>
-        <option value="voice">全局默认音色</option>
-      </select>
-      <small style="color:var(--muted); font-size:12px; margin-top:4px; display:block;">按住 Ctrl / Cmd 可多选</small>
+      <label>我创建的角色</label>
+      <div class="check-group" id="exportChars"></div>
+    </div>
+    <div class="field">
+      <label>我添加的立绘</label>
+      <div class="check-group" id="exportImages"></div>
+    </div>
+    <div class="field">
+      <label>我添加的背景</label>
+      <div class="check-group" id="exportBackgrounds"></div>
+    </div>
+    <div class="field">
+      <label>我的音色配置</label>
+      <div class="check-group" id="exportVoices"></div>
     </div>
 
-    <button class="btn btn-primary" onclick="doExport()">生成分享码</button>
-    <div class="field" style="margin-top:16px;">
-      <textarea id="exportCode" readonly placeholder="点击上方按钮生成..." style="font-family:monospace; font-size:12px;"></textarea>
-    </div>
-    <button class="btn btn-secondary" onclick="copyCode()">一键复制</button>
+    <button class="btn btn-primary" onclick="prepareUpload()">生成提交代码</button>
+    <textarea id="uploadCode" readonly placeholder="点击上方按钮生成..." style="margin-top:12px;"></textarea>
+    <button class="btn btn-secondary" onclick="goToGithubIssue()">🚀 一键前往 GitHub 提交</button>
   </div>
 
 <script>
   try {
-    const parentTheme = window.parent.document.body.className;
-    if (parentTheme.includes('theme-dark')) document.body.className = 'theme-dark';
-    else document.body.className = 'theme-light';
+    if (window.parent.document.body.className.includes('theme-dark')) document.body.className = 'theme-dark';
   } catch(e) {}
 
   function toast(msg) {
@@ -118,130 +91,144 @@
     try { window.parent.eval('persist(true)'); window.parent.eval('renderPanel()'); } catch(e) {}
   }
 
-  function doImport() {
-    const code = document.getElementById('importCode').value.trim();
-    if (!code) return toast('请先粘贴分享码');
-    const state = getParentState();
-    if (!state) return toast('读取主游戏数据失败');
+  // ================= 核心 1：云端同步 =================
+  async function syncCloudResources() {
+    const btn = event.target;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '⏳ 正在拉取...';
+    btn.disabled = true;
 
     try {
-      const data = JSON.parse(decodeURIComponent(escape(atob(code))));
-      let importedCount = 0;
+      // 加上时间戳防止浏览器缓存
+      const res = await fetch(MANIFEST_URL + '?t=' + Date.now());
+      if (!res.ok) throw new Error('云端清单不存在或网络异常');
+      const data = await res.json();
+
+      const state = getParentState();
+      if (!state) throw new Error('读取主游戏数据失败');
+      if (!state.custom_resources) state.custom_resources = { characters: [], images: [], backgrounds: [], voices: [] };
       
-      // 1. 导入背景
-      if (data.backgrounds && data.backgrounds.length) {
-        data.backgrounds.forEach(bg => {
-          const exist = state.backgrounds.find(b => b.name === bg.name);
-          if (exist) {
-            if (confirm(`背景【${bg.name}】已存在，是否覆盖替换？`)) {
-              Object.assign(exist, bg);
-              importedCount++;
-            }
-          } else {
-            state.backgrounds.push(bg);
-            importedCount++;
+      const pool = state.custom_resources;
+      let count = 0;
+
+      // 去重合并逻辑
+      const merge = (target, source) => {
+        if (!source) return;
+        source.forEach(item => {
+          if (!target.some(x => x.name === item.name)) {
+            target.push(item);
+            count++;
           }
         });
-      }
+      };
 
-      // 2. 导入立绘
-      if (data.images && data.images.length) {
-        data.images.forEach(img => {
-          const exist = state.images.find(i => i.name === img.name);
-          if (exist) {
-            if (confirm(`立绘【${img.name}】已存在，是否覆盖替换？`)) {
-              Object.assign(exist, img);
-              importedCount++;
-            }
-          } else {
-            state.images.push(img);
-            importedCount++;
-          }
-        });
-      }
+      merge(pool.characters, data.characters);
+      merge(pool.images, data.images);
+      merge(pool.backgrounds, data.backgrounds);
+      merge(pool.voices, data.voices);
 
-      // 3. 导入角色
-      if (data.characters && data.characters.length) {
-        data.characters.forEach(char => {
-          const exist = state.characters.find(c => c.name === char.name);
-          if (exist) {
-            if (confirm(`角色【${char.name}】已存在，是否覆盖人设数据？（你的好感度等游玩记录会保留）`)) {
-              const oldVoiceEnabled = exist.voiceEnabled;
-              Object.assign(exist, char);
-              exist.voiceEnabled = oldVoiceEnabled; // 保留原本的开关
-              importedCount++;
-            }
-          } else {
-            state.characters.push(char);
-            importedCount++;
-          }
-        });
-      }
-
-      // 4. 导入全局音色配置
-      if (data.voice) {
-        state.voice = { ...state.voice, ...data.voice };
-        importedCount++;
-      }
-      
       saveParentState();
-      toast(`成功处理 ${importedCount} 项资源！`);
-      document.getElementById('importCode').value = '';
+      toast(`✅ 同步成功！新增了 ${count} 项资源。`);
     } catch(e) {
-      toast('导入失败：分享码无效或已损坏');
+      toast('拉取失败：仓库尚未配置或网络错误');
       console.error(e);
+    } finally {
+      btn.innerHTML = oldText;
+      btn.disabled = false;
     }
   }
 
-  function doExport() {
+  // ================= 核心 2：上传准备 =================
+  function renderExportLists() {
     const state = getParentState();
-    if (!state) return toast('读取主游戏数据失败');
+    if (!state) return;
 
-    const includeSelect = document.getElementById('includeList');
-    const includes = [...includeSelect.selectedOptions].map(o => o.value);
-    const isPublic = document.getElementById('isPublic').checked;
-    
-    const pack = { version: 1, images: [], backgrounds: [], characters: [], voice: null };
-    
-    if (includes.includes('images')) {
-      pack.images = state.images.filter(i => !i.builtIn);
-    }
-    if (includes.includes('backgrounds')) {
-      pack.backgrounds = state.backgrounds.filter(b => !b.name.startsWith('bg_')); 
-    }
-    if (includes.includes('characters')) {
-      pack.characters = state.characters.filter(c => !c.builtIn).map(c => {
-        const cCopy = JSON.parse(JSON.stringify(c));
-        // 如果不公开，添加隐藏标记
-        if (!isPublic && cCopy.voiceId) {
-          cCopy.__hidden = true; 
-        }
-        return cCopy;
-      });
-    }
-    if (includes.includes('voice')) {
-      pack.voice = JSON.parse(JSON.stringify(state.voice));
-      if (!isPublic && pack.voice.defaultVoiceId) {
-        pack.voice.__hidden = true;
+    const makeList = (containerId, items) => {
+      const box = document.getElementById(containerId);
+      if (!items || items.length === 0) {
+        box.innerHTML = '<div class="intro" style="margin:0;padding:8px;">暂无内容</div>';
+        return;
       }
-    }
+      box.innerHTML = items.map((item, i) => `
+        <label class="check-item">
+          <input type="checkbox" data-type="${containerId}" data-index="${i}" value="${item.id || i}">
+          <span>${item.name}</span>
+        </label>
+      `).join('');
+    };
+
+    const myChars = state.characters.filter(c => !c.builtIn);
+    const myImgs = state.images.filter(i => !i.builtIn);
+    const myBgs = state.backgrounds.filter(b => !b.builtIn && !b.id.startsWith('bg'));
     
-    try {
-      const code = btoa(unescape(encodeURIComponent(JSON.stringify(pack))));
-      document.getElementById('exportCode').value = code;
-      toast('分享码生成成功！');
-    } catch(e) {
-      toast('生成失败，图片数据可能过大');
-    }
+    let myVoices = [];
+    if (state.voice.customList) myVoices = state.voice.customList;
+    state.characters.forEach(c => { if (c.voiceOverride) myVoices.push({ name: c.name + '的音色', voiceId: c.voiceOverride }); });
+    
+    // 音色去重
+    const seenVoices = new Set();
+    myVoices = myVoices.filter(v => { if (seenVoices.has(v.voiceId)) return false; seenVoices.add(v.voiceId); return true; });
+
+    makeList('exportChars', myChars);
+    makeList('exportImages', myImgs);
+    makeList('exportBackgrounds', myBgs);
+    makeList('exportVoices', myVoices);
   }
 
-  function copyCode() {
-    const output = document.getElementById('exportCode');
-    if (!output.value) return toast('没有可复制的内容');
-    output.select();
-    document.execCommand('copy');
-    toast('已复制到剪贴板');
+  function prepareUpload() {
+    const state = getParentState();
+    if (!state) return;
+
+    const pack = { characters: [], images: [], backgrounds: [], voices: [] };
+    
+    document.querySelectorAll('input[type="checkbox"][data-type]:checked').forEach(cb => {
+      const type = cb.dataset.type;
+      const idx = parseInt(cb.dataset.index);
+
+      if (type === 'exportChars') {
+        pack.characters.push(JSON.parse(JSON.stringify(state.characters.filter(c => !c.builtIn)[idx])));
+      }
+      if (type === 'exportImages') {
+        pack.images.push(JSON.parse(JSON.stringify(state.images.filter(i => !i.builtIn)[idx])));
+      }
+      if (type === 'exportBackgrounds') {
+        pack.backgrounds.push(JSON.parse(JSON.stringify(state.backgrounds.filter(b => !b.builtIn && !b.id.startsWith('bg'))[idx])));
+      }
+      if (type === 'exportVoices') {
+        let myVoices = [...(state.voice.customList||[])];
+        state.characters.forEach(c => { if(c.voiceOverride) myVoices.push({ name: c.name + '的音色', voiceId: c.voiceOverride }); });
+        const seen = new Set();
+        myVoices = myVoices.filter(v => { if(seen.has(v.voiceId)) return false; seen.add(v.voiceId); return true; });
+        pack.voices.push(JSON.parse(JSON.stringify(myVoices[idx])));
+      }
+    });
+
+    if (pack.characters.length === 0 && pack.images.length === 0 && pack.backgrounds.length === 0 && pack.voices.length === 0) {
+      return toast('请至少勾选一项想要分享的资源');
+    }
+
+    // 格式化为美化后的 JSON，方便你直接复制到 Github
+    document.getElementById('uploadCode').value = JSON.stringify(pack, null, 2);
+    toast('代码已生成，请前往 GitHub 提交');
   }
+
+  // ================= 核心 3：跳转 Issue =================
+  function goToGithubIssue() {
+    const code = document.getElementById('uploadCode').value;
+    if (!code) return toast('请先点击上方按钮生成代码');
+
+    const title = encodeURIComponent(`[新资源提交] 来自玩家的分享`);
+    const body = encodeURIComponent(`请作者审核我的资源。\n\n\`\`\`json\n${code}\n\`\`\`\n\n*(提交后请等待作者合并至主库)*`);
+    
+    const issueUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/issues/new?title=${title}&body=${body}`;
+    
+    // 打开新窗口提交
+    window.open(issueUrl, '_blank');
+  }
+
+  window.onload = () => {
+    renderExportLists();
+  };
 </script>
 </body>
 </html>
