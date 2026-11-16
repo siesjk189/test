@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>公告 - 那什么dk萌</title>
+<style>
+  /* ===== 默认值兜底（当单独打开时生效，或者被主游戏覆盖） ===== */
+  :root {
+    --bg: #fbf9f4; --surface: #fff; --surface-2: #faf8f3;
+    --text: #1c1c1e; --muted: #8b877e; --line: rgba(28,28,30,.14);
+    --accent: #1c1c1e; --radius: 8px;
+    --font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151519; --surface: #1b1b20; --surface-2: #151519;
+      --text: #eceae5; --muted: #807d76; --line: rgba(236,234,229,.14);
+      --accent: #eceae5;
+    }
+  }
+  
+  * { box-sizing: border-box; }
+  
+  body { 
+    margin: 0; 
+    padding: 16px; 
+    background: var(--bg); 
+    color: var(--text); 
+    font-size: 15px; 
+    line-height: 1.8; 
+    font-family: var(--font-family);
+    -webkit-font-smoothing: antialiased; 
+  }
+  
+  /* ===== 完美还原主游戏的 Tab 样式 ===== */
+  .tabs { 
+    display: flex; gap: 22px; border-bottom: 1px solid var(--line); margin: 0 0 20px; 
+  }
+  .tab { 
+    flex: 0 0 auto; min-height: 46px; border: 0; border-bottom: 2px solid transparent; 
+    background: transparent; color: var(--muted); padding: 0 2px; cursor: pointer; 
+    font-family: inherit; font-size: 15px; transition: all 0.2s;
+  }
+  .tab.active { 
+    color: var(--text); border-bottom-color: var(--text); font-weight: 600; 
+  }
+  
+  .content { display: none; }
+  .content.active { display: block; animation: fadein 0.3s; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  
+  .text-block { white-space: pre-wrap; }
+  
+  /* ===== 更新日志块样式 ===== */
+  .log-block { 
+    margin-bottom: 24px; padding: 16px; background: var(--surface-2); 
+    border-radius: var(--radius); border-left: 3px solid transparent; 
+  }
+  .log-block.latest { border-left-color: var(--accent); }
+  .log-block:not(.latest) { opacity: 0.7; }
+  .log-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .log-version { color: var(--text); font-size: 16px; font-weight: 600; margin: 0; }
+  .log-block.latest .log-version { color: var(--accent); }
+  .log-date { font-size: 12px; color: var(--muted); }
+  .log-list { padding-left: 20px; margin: 0; }
+  .log-list li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('rules', event)">玩家须知</button>
+  <button class="tab" onclick="switchTab('changelog', event)">更新日志</button>
+</div>
+
+<div id="content-rules" class="content active text-block"></div>
+<div id="content-changelog" class="content"></div>
+
+<!-- ========================================== -->
+<!-- 👇👇👇 纯文本数据区（以后只改这里就行了） 👇👇👇 -->
+<!-- ========================================== -->
+
+<script type="text/plain" id="data-rules">
+这是一个属于你的故事。
+你可以是一名普通的学生，也可以再次选择成为与“他”并肩的人。
+
+[进入游戏前，请确认您已年满十八周岁，并满足以下要求]
+1.您从未将“捉鬼师”任意角色割席。[禁割席]
+2.您从未以任何形式对《捉鬼师后日谈》及作者爱发电任意内容进行恶意辱骂/造谣。[禁造谣]
+3.您始终坚信《捉鬼师后日谈》内的主控就是你。[禁女主党]
+4.您不会观看/创作任何《捉鬼师后日谈》内的乙女腐内容[禁乙女腐]
+5.由于创作者是秦梧梦女，因此需要额外确认：如果您是拒一切，请退出作品。
+
+【当前主要功能如下】
+1.剧情续写：接入兼容 OpenAI 格式的大语言模型（如 GPT-4o、DeepSeek 等），根据玩家输入和预设世界观续写剧情。
+2.多模态交互：支持点击“继续”阅读，也支持在底部输入框自由输入台词，也可通过 AI 生成的 A/B/C 选项进行分支选择。
+3.场景与地图移动：内置大地图（学校、居住区、酒吧等），点击地点会自动触发前往该地的剧情。
+4.记忆总结：剧情过长时，自动调用 AI 将前文浓缩成摘要，防止 AI 遗忘设定，也可手动修改摘要。
+5.立绘显示与剪影兜底：说话时会自动匹配角色立绘；如果没有立绘，会自动分配对应性别的“剪影”。
+6.动态背景切换：根据 AI 输出的【场景：xxx】指令，自动匹配并切换对应的场景背景图。
+7.背景/立绘位置微调：可以在菜单里用滑块实时调节背景图和立绘的 X/Y 偏移及缩放，适配不同画风的素材。
+8.自定义角色方案：内置角色有专属设定；玩家手动创建的角色可以保存多套设定方案。
+9.语音合成：接入 MiniMax 语音模型，支持自动朗读角色台词，每个角色可独立配置音色 ID 和开关，自带本地音频缓存。
+10.AI 生图补全：接入兼容的生图 API（如 DALL-E 3）。
+11.人物立绘：遇到没立绘的新角色时，可弹窗让 AI 生成。
+12.场景背景：遇到没有背景的新场景时，可弹窗让 AI 生成。
+13.日夜主题模式：一键切换日间（白底黑字）/ 夜间（黑底白字）阅读模式。
+14.自定义字体：支持上传 .ttf / .otf 等字体文件全局替换。
+15.界面缩放：支持 0.7 - 1.6 倍的 UI 缩放，适配不同尺寸的屏幕。同时做了适配。
+16.本地持久化：所有数据（API密钥、剧情进度、设定、图片链接）默认保存在浏览器本地。
+17.存档读档：支持一键导入导出 JSON 存档备份。
+
+◆请不要使用本作品进行任何不适内容创作。文本、语音、生图均为ai创作，与创作者无关，请理性看待。
+◆本作品完全免费，如果您是通过付费进入，请联系卖家退款。本作品只提供给《捉鬼师后日谈》的玩家，禁止任何形式的付费、也禁止私下二传。
+◆有任何疑问，请通过以下方式联系创作者
+小红书：Aswnzs
+QQ群：1107469751
+</script>
+
+<script type="text/plain" id="data-changelog">
+  【V1.3 |2026.11.16】
+新增<strong>数据库</strong>：现在可以跟她人分享设定了。
+  
+  【V1.1 |2026.11.12】
+新增：手机系统（支持微信聊天、朋友圈、约见）。
+目前剧情模式尚未开启，仅占位。
+刚更新可能有较多bug，有问题请联系xhs:Aswnzs
+
+【V1.0 |2026.10.31】
+初始版本。
+</script>
+
+<!-- ========================================== -->
+<!-- 👆👆👆 纯文本数据区结束 👆👆👆 -->
+<!-- ========================================== -->
+
+<script>
+// ===== 榨取父窗口的主题变量，强行应用到当前公告 =====
+function syncThemeFromParent() {
+  try {
+    const parentBody = window.parent.document.body;
+    
+    // 提取父窗口的所有核心 CSS 变量
+    const computedStyle = window.parent.getComputedStyle(parentBody);
+    const varsToCopy = ['--bg', '--surface', '--surface-2', '--text', '--muted', '--line', '--accent', '--glass', '--radius'];
+    
+    varsToCopy.forEach(v => {
+      let val = computedStyle.getPropertyValue(v);
+      if(val) document.documentElement.style.setProperty(v, val);
+    });
+
+    // 同步字体
+    let fontVar = computedStyle.getPropertyValue('font-family');
+    if(fontVar) document.documentElement.style.setProperty('--font-family', fontVar);
+
+  } catch(e) {
+    // 如果单独打开文件（没有父窗口），就会报错并进入这里，直接使用默认样式
+  }
+}
+
+// 执行同步
+syncThemeFromParent();
+
+// ===== 渲染数据 =====
+document.addEventListener('DOMContentLoaded', () => {
+  const rulesEl = document.getElementById('data-rules');
+  const changelogEl = document.getElementById('data-changelog');
+  
+  if (rulesEl && changelogEl) {
+    // 渲染玩家须知
+    document.getElementById('content-rules').textContent = rulesEl.textContent.trim();
+
+    // 渲染更新日志
+    const lines = changelogEl.textContent.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    let html = '';
+    let isFirst = true; 
+    let block = null;
+
+    lines.forEach(line => {
+      // 匹配如 【V1.1 |2026.11.12】 的格式
+      const match = line.match(/^【(.*?)\|(.*?)(?:\|(最新))?】$/);
+      if (match) {
+        if (block) html += buildBlock(block);
+        block = { version: match[1], date: match[2], isLatest: match[3] === '最新' || isFirst, items: [] };
+        isFirst = false;
+      } else if (block) {
+        block.items.push(line);
+      }
+    });
+    if (block) html += buildBlock(block);
+    document.getElementById('content-changelog').innerHTML = html;
+  }
+});
+
+function buildBlock(b) {
+  return `
+    <div class="log-block ${b.isLatest ? 'latest' : ''}">
+      <div class="log-head">
+        <h3 class="log-version">${b.version}</h3>
+        <span class="log-date">${b.date}</span>
+      </div>
+      <ul class="log-list">
+        ${b.items.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function switchTab(id, event) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('content-' + id).classList.add('active');
+}
+</script>
+
+</body>
+</html>
